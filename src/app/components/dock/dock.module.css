@@ -1,0 +1,24 @@
+.dock {
+    position: fixed; 
+    left: 50%;
+    transform: translateX(-50%);
+
+    height: 75px;
+
+    border-radius: 20px;
+    background: rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(12.5px);
+}
+  
+.dockContainer {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 30px;
+
+    padding-top: 15px;
+
+    padding-left: 25px;
+    padding-right: 25px;
+
+    margin-right: 20px;
+}
