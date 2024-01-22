@@ -1,23 +1,26 @@
 {
-  "name": "my-app",
-  "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "lint": "eslint . --ext .cjs,.js,.jsx,.mjs,.ts,.tsx",
+    "prettier": "prettier --write --ignore-unknown .",
+    "prettier:check": "prettier --check --ignore-unknown .",
     "start": "next start",
-    "lint": "next lint"
+    "test": "npm run lint && npm run prettier:check"
   },
   "dependencies": {
-    "react": "^18",
-    "react-dom": "^18",
-    "next": "14.1.0"
+    "@tailwindcss/forms": "^0.5.7",
+    "next": "^14.0.0"
   },
   "devDependencies": {
-    "autoprefixer": "^10.0.1",
-    "postcss": "^8",
-    "tailwindcss": "^3.3.0",
-    "eslint": "^8",
-    "eslint-config-next": "14.1.0"
+    "@vercel/style-guide": "^5.0.1",
+    "eslint": "8.52.0",
+    "eslint-config-next": "14.0.0",
+    "eslint-config-prettier": "9.0.0",
+    "prettier": "3.0.3",
+    "prettier-plugin-tailwindcss": "0.5.4"
+  },
+  "packageManager": "pnpm@8.7.0",
+  "engines": {
+    "node": ">=18.17.0"
   }
 }

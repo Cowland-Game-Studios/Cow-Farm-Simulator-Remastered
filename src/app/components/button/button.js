@@ -3,10 +3,12 @@
 import Image from "next/image";
 import styles from "./button.module.css";
 
-export default function Button({text, image, onClick = () => {}}) {
+export default function Button({text, image, onClick = null}) {
     return (
-        <a onClick={onClick}>
-            <div className={styles.buttonContainer}>
+        <a onClick={onClick ? onClick : () => {}}>
+            <div className={styles.buttonContainer} style={{
+                cursor: onClick ? "pointer" : "default"
+            }}>
                 {
                     image && <img className={styles.buttonImage} src={image} />
                 }
