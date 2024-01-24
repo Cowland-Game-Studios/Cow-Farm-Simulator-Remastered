@@ -9,7 +9,7 @@ export default function Pasture() {
             <Cow />
             <Cow />
 
-            <div>
+            <div className={styles.UI}>
                 <Dock style={{top: 25}}>
                     <Button text="10,000" image={"./images/buttons/coinIcon.svg"}/>
                     <Button text="5.2/10k" image={"./images/buttons/starIcon.svg"}/>

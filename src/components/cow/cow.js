@@ -20,11 +20,7 @@ export default function Cow({defaultColor = "cyan"}) {
     const [color, setColor] = useState(defaultColor);
 
     return (
-        <Draggable
-            defaultLocation={
-                {x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight}
-            }
-        >
+        <Draggable>
             <CowSVG color={color} />
         </Draggable>
     );

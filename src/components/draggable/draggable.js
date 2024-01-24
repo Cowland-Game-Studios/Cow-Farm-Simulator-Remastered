@@ -2,17 +2,7 @@ import styles from "./draggable.module.css";
 import { useContext, useEffect, useState } from "react";
 import MousePositionContext from "../../contexts/MousePositionContext";
 
-export default function Draggable({canGoOffScreen = false, safeArea = 25, defaultLocation = null, ...props}) {
-
-    const getCenterOfLocation = () => {
-        return {x: window.innerWidth/2, y: window.innerHeight/2};
-    }
-
-    const [position, setPosition] = useState(defaultLocation ?? getCenterOfLocation());
-    
-    const {mousePosition} = useContext(MousePositionContext);
-
-    const [dragging, setDragging] = useState(false);
+export default function Draggable({canGoOffScreen = false, safeArea = 25, ...props}) {
 
     const isPositionBad = (x, y) => {
         if (canGoOffScreen) {
@@ -22,6 +12,23 @@ export default function Draggable({canGoOffScreen = false, safeArea = 25, defaul
         return (x < safeArea || x > window.innerWidth - safeArea) || (y < safeArea || y > window.innerHeight - safeArea)
     }
 
+    const getValidLocation = () => {
+        const x = Math.random() * (window.innerWidth - safeArea * 4) + safeArea;
+        const y = Math.random() * (window.innerHeight - safeArea * 4) + safeArea;
+
+        if (isPositionBad(x, y)) {
+            return getValidLocation();
+        }
+
+        return {x, y};
+    }
+
+    const [position, setPosition] = useState(getValidLocation());
+    
+    const {mousePosition} = useContext(MousePositionContext);
+
+    const [dragging, setDragging] = useState(false);
+
     useEffect(() => {
         const up = () => {
             setDragging(false);
@@ -29,7 +36,7 @@ export default function Draggable({canGoOffScreen = false, safeArea = 25, defaul
 
         const resize = () => {
             if (isPositionBad(position.x, position.y)) {
-                setPosition(getCenterOfLocation());
+                setPosition(getValidLocation());
             }
         };
 
@@ -43,7 +50,7 @@ export default function Draggable({canGoOffScreen = false, safeArea = 25, defaul
         if (dragging) {return}
 
         if (isPositionBad(mousePosition.x, mousePosition.y)) {
-            setPosition(getCenterOfLocation());
+            setPosition(getValidLocation());
         }
         else {
             setPosition({x: mousePosition.x, y: mousePosition.y});
