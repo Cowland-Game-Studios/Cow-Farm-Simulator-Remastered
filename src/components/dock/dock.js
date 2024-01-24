@@ -1,4 +1,3 @@
-import Image from "next/image";
 import styles from "./dock.module.css";
 
 export default function Dock ({...props}) {

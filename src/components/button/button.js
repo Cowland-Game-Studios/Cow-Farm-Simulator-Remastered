@@ -1,6 +1,3 @@
-"use client"
-
-import Image from "next/image";
 import styles from "./button.module.css";
 
 export default function Button({text, image, onClick = null}) {

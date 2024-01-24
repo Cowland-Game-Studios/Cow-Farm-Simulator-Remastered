@@ -1,29 +1,32 @@
-"use client"
-
-import Image from "next/image";
 import styles from "./draggable.module.css";
-import { useState } from "react";
+import { useContext, useState } from "react";
+import MousePositionContext from "../../contexts/MousePositionContext";
 
 export default function Draggable({...props}) {
 
     const [position, setPosition] = useState({x: 10, y: 50});
-    const [mousePosition, setMousePosition] = useState({x: 0, y: 0});
+    
+    const {mousePosition} = useContext(MousePositionContext);
 
     const [dragging, setDragging] = useState(false);
     
-
-    
     return (
         <div
-            onMouseDown={(e) => {
+            onMouseDown={() => {
                 setDragging(true);
             }}
+
             onMouseMove={(e) => {
                 if (dragging) {
-                    handleDrag(e);
+                    console.log(mousePosition)
+                    // setPosition({
+                    //     x: mousePosition.x,
+                    //     y: mousePosition.y
+                    // });
                 }
             }}
-            onMouseUp={(e) => {
+
+            onMouseUp={() => {
                 setDragging(false);
             }}
 

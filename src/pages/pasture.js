@@ -1,6 +1,3 @@
-"use client"
-
-import Image from "next/image";
 import styles from "./pasture.module.css";
 import Dock from "../components/dock/dock";
 import Button from "../components/button/button";
