@@ -1,5 +1,6 @@
 import styles from "./cow.module.css";
 import Draggable from "../draggable/draggable";
+import { useState } from "react";
 
 function CowSVG({color="white"}) {
     return <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -14,10 +15,16 @@ function CowSVG({color="white"}) {
     </svg>
 }
 
-export default function Cow({color = "cyan"}) {
+export default function Cow({defaultColor = "cyan"}) {
+
+    const [color, setColor] = useState(defaultColor);
 
     return (
-        <Draggable>
+        <Draggable
+            defaultLocation={
+                {x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight}
+            }
+        >
             <CowSVG color={color} />
         </Draggable>
     );

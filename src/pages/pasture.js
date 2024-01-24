@@ -5,7 +5,8 @@ import Cow from "../components/cow/cow";
 
 export default function Pasture() {
     return (
-        <main className={styles.pasture}>
+        <div className={styles.pasture}>
+            <Cow />
             <Cow />
 
             <div>
@@ -21,6 +22,6 @@ export default function Pasture() {
                     <Button text="shop" image={"./images/buttons/shopIcon.svg"}/>
                 </Dock>
             </div>
-        </main>
+        </div>
     );
 }

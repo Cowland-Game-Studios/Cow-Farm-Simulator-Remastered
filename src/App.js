@@ -15,9 +15,11 @@ function App() {
   }, []);
 
   return (
-    <MousePositionContext.Provider value={mousePosition}>
-      <Pasture />
-    </MousePositionContext.Provider>
+    <main className="canvas">
+      <MousePositionContext.Provider value={{mousePosition: mousePosition}}>
+        <Pasture />
+      </MousePositionContext.Provider>
+    </main>
   );
 }
 
