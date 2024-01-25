@@ -14,7 +14,7 @@ export default function Pasture() {
                 ${Math.random() * 255},
                 ${Math.random() * 255},
                 ${Math.random() * 255},
-                ${Math.random()}
+                0.25
             )`}/>)}
 
             <div className={styles.UI}>
