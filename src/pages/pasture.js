@@ -6,8 +6,16 @@ import Cow from "../components/cow/cow";
 export default function Pasture() {
     return (
         <div className={styles.pasture}>
-            <Cow />
-            <Cow />
+            <Cow defaultColor="red" />
+            <Cow defaultColor="blue"/>
+            <Cow defaultColor="yellow"/>
+
+            {Array(100).fill(0).map(() => <Cow defaultColor={`rgba(
+                ${Math.random() * 255},
+                ${Math.random() * 255},
+                ${Math.random() * 255},
+                ${Math.random()}
+            )`}/>)}
 
             <div className={styles.UI}>
                 <Dock style={{top: 25}}>

@@ -13,8 +13,8 @@ export default function Draggable({canGoOffScreen = false, safeArea = 25, ...pro
     }
 
     const getValidLocation = () => {
-        const x = Math.random() * (window.innerWidth - safeArea * 4) + safeArea;
-        const y = Math.random() * (window.innerHeight - safeArea * 4) + safeArea;
+        const x = Math.random() * (window.innerWidth - safeArea * 2) + safeArea;
+        const y = Math.random() * (window.innerHeight - safeArea * 2) + safeArea;
 
         if (isPositionBad(x, y)) {
             return getValidLocation();
