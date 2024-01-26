@@ -1,9 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@100;200;300;400;500;600;700;800;900&display=swap');
+/* todo remove this later at top */
 
 .buttonContainer {
     cursor: pointer;
-
-    user-select: none;
+    -webkit-user-drag: none;
+	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
 }
 
 .buttonImage {

@@ -3,7 +3,7 @@ import { useContext, useEffect, useRef, useState } from "react";
 import MousePositionContext from "../../contexts/MousePositionContext";
 import { v4 as uuidv4 } from 'uuid';
 
-export default function Draggable({canGoOffScreen = false, safeArea = 25, ...props}) {
+export default function Draggable({canGoOffScreen = false, safeArea = 25, initialDragging = false, ...props}) {
 
     const draggabelRef = useRef(null);
 
@@ -36,7 +36,7 @@ export default function Draggable({canGoOffScreen = false, safeArea = 25, ...pro
     
     const {mousePosition} = useContext(MousePositionContext);
 
-    const [dragging, setDragging] = useState(false);
+    const [dragging, setDragging] = useState(initialDragging);
 
     useEffect(() => {
         const up = () => {
@@ -91,8 +91,6 @@ scale(${(dragging ? 1.25 : 1)})
 
                 transformOrigin: "center",
                 transition: dragging ? "transform 0.1s ease-out" : "all 0.1s ease-out",
-
-                opacity: dragging ? 0.75 : 1,
 
                 zIndex: dragging ? 1000 : 0,
                 ...props.style

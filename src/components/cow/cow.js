@@ -48,7 +48,7 @@ export default function Cow({defaultColor = "cyan", initialFullness = 0}) {
 
     useEffect(() => {
         const interval = setInterval(() => {
-            setFullness(fullness => fullness + 1/60)
+            setFullness(fullness => fullness + 1/30)
         }, 1000)
         return () => clearInterval(interval)
     }, [])
