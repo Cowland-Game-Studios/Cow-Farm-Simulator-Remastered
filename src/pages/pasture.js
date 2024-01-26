@@ -10,11 +10,11 @@ export default function Pasture() {
             <Cow defaultColor="blue"/>
             <Cow defaultColor="yellow"/>
 
-            {Array(100).fill(0).map(() => <Cow defaultColor={`rgba(
-                ${Math.random() * 255},
-                ${Math.random() * 255},
-                ${Math.random() * 255},
-                0.25
+            {Array(10).fill(0).map(() => <Cow defaultColor={`rgba(
+                ${Math.random() * 100  + 155},
+                ${Math.random() * 100 + 155},
+                ${Math.random() * 100 + 155},
+                1
             )`}/>)}
 
             <div className={styles.UI}>

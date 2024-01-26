@@ -1,8 +1,11 @@
 import styles from "./draggable.module.css";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import MousePositionContext from "../../contexts/MousePositionContext";
+import { v4 as uuidv4 } from 'uuid';
 
 export default function Draggable({canGoOffScreen = false, safeArea = 25, ...props}) {
+
+    const draggabelRef = useRef(null);
 
     const isPositionBad = (x, y) => {
         if (canGoOffScreen) {
@@ -21,6 +24,12 @@ export default function Draggable({canGoOffScreen = false, safeArea = 25, ...pro
         }
 
         return {x, y};
+    }
+
+    const getCurrentDraggableLocation = () => {
+        const {x, y} = draggabelRef.current.getBoundingClientRect();
+
+        return {x: x + draggabelRef.current.offsetWidth / 2, y: y + draggabelRef.current.offsetHeight / 2};
     }
 
     const [position, setPosition] = useState(getValidLocation());
@@ -59,6 +68,8 @@ export default function Draggable({canGoOffScreen = false, safeArea = 25, ...pro
     
     return (
         <div
+            ref={draggabelRef}
+
             onMouseDown={() => {
                 setDragging(true);
             }}
@@ -69,9 +80,19 @@ export default function Draggable({canGoOffScreen = false, safeArea = 25, ...pro
 
             style={{
                 position: "absolute",                
-                transform: `translate(-50%, -50%) translate(${dragging ? mousePosition.x : position.x}px, ${dragging ? mousePosition.y : position.y}px)`,
+                transform: `
+translate(-50%, -50%)
+translate(${dragging ? mousePosition.x : position.x}px, ${dragging ? mousePosition.y : position.y}px)
+scale(${(dragging ? 1.25 : 1)})
+`,
+
+// rotate(${!dragging ? 0 : Math.atan2(mousePosition.y - getCurrentDraggableLocation().y, mousePosition.x - getCurrentDraggableLocation().x)}rad)
+//scaleX(${(dragging ? (mousePosition.x - getCurrentDraggableLocation().x > 25 ? -1 : 1) : 1)})
+
                 transformOrigin: "center",
-                transition: dragging ? "all 0.1s ease-out" : "all 1s ease-out",
+                transition: dragging ? "transform 0.1s ease-out" : "all 0.1s ease-out",
+
+                opacity: dragging ? 0.75 : 1,
 
                 zIndex: dragging ? 1000 : 0,
                 ...props.style
