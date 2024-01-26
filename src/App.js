@@ -2,6 +2,8 @@ import Pasture from "./pages/pasture";
 import MousePositionContext from "./contexts/MousePositionContext";
 import { useEffect, useState } from "react";
 
+import "./App.css";
+
 function App() {
   const [mousePosition, setMousePosition] = useState({x: 0, y: 0});
 
