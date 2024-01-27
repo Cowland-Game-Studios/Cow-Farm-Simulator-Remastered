@@ -40,19 +40,11 @@ export default function Pasture() {
             <div className={styles.UI}>
 
                 {isMilking && <Draggable initialDragging>
-                    <div onMouseUp={() => {
-                        setIsMilking(false);
-                    }}>
-                        <img src="./images/pasture/bucket.svg" />
-                    </div>    
+                    <img draggable={false} src="./images/pasture/bucket.svg" />
                 </Draggable>}
 
                 {isFeeding && <Draggable initialDragging>
-                    <div onMouseUp={() => {
-                        setIsMilking(false);
-                    }}>
-                        <img src="./images/pasture/grass.svg" />
-                    </div>    
+                    <img draggable={false} src="./images/pasture/grass.svg" />
                 </Draggable>}
 
                 {showQuestMenu && <QuestMenu style={{bottom: 100}} />}
