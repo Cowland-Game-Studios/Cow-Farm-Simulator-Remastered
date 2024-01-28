@@ -4,15 +4,19 @@ import { useContext, useEffect, useState } from "react";
 import PastureStateContext from "../../contexts/PastureStateContext";
 import { v4 as uuidv4 } from 'uuid';
 import { CowSVG } from "./CowSVG";
+import CowListContext from "../../contexts/CowListContext";
 
-export default function Cow({initialColor = "cyan", initialFullness = 1, getStats = () => {}}) {
+export default function Cow({id = uuidv4(), initialState = "hungry", initialColor = "cyan", initialFullness = 0}) {
 
-    const [cowID, setCowID] = useState(uuidv4());
+    const colorPollingFrequency = 1000
+
+    const [cowID, setCowID] = useState(id);
     const {isMilking, isFeeding} = useContext(PastureStateContext);
+    const {cowList, setCowList} = useContext(CowListContext);
 
     const [color, setColor] = useState(initialColor);
 
-    const [cowState, setCowState] = useState("producing milk")
+    const [cowState, setCowState] = useState(initialState)
     const [fullness, setFullness] = useState(initialFullness);
 
     useEffect(() => {
@@ -20,9 +24,14 @@ export default function Cow({initialColor = "cyan", initialFullness = 1, getStat
             return
         }
 
-        const interval = setInterval(() => {
-            setFullness(fullness => fullness + 1/30)
-        }, 1000)
+        const pollColor = () => {
+            setFullness(fullness => fullness + 1 / (30 * 1000 / colorPollingFrequency))
+        }
+
+        const interval = setInterval(pollColor, colorPollingFrequency)
+
+        pollColor()
+
         return () => clearInterval(interval)
     }, [cowState])
 
@@ -31,6 +40,31 @@ export default function Cow({initialColor = "cyan", initialFullness = 1, getStat
             setCowState("full")
         }
     }, [fullness])
+
+    const isTouching = (bucketID, maxDistance = 50) => {
+        const cowRect = document.getElementById(cowID)?.getBoundingClientRect();
+        const bucketRect = document.getElementById(bucketID)?.getBoundingClientRect();
+
+        if (!cowRect || !bucketRect) {
+            return false;
+        }
+
+        const cowCenter = {
+            x: cowRect.x + cowRect.width / 2,
+            y: cowRect.y + cowRect.height / 2,
+        }
+
+        const bucketCenter = {
+            x: bucketRect.x + bucketRect.width / 2,
+            y: bucketRect.y + bucketRect.height / 2,
+        }
+
+        const distance = Math.sqrt(
+            Math.pow(cowCenter.x - bucketCenter.x, 2) + Math.pow(cowCenter.y - bucketCenter.y, 2)
+        );
+
+        return distance < maxDistance;
+    }
 
 
     useEffect(() => {
@@ -41,30 +75,7 @@ export default function Cow({initialColor = "cyan", initialFullness = 1, getStat
 
         if (isMilking || isFeeding) {
             const a = setInterval(() => {
-                    const cowRect = document.getElementById(cowID)?.getBoundingClientRect();
-                    // console.log(cowRect)
-                    const bucketRect = document.getElementById("bucket")?.getBoundingClientRect();
-                    // console.log(bucketRect)
-
-                    if (!cowRect || !bucketRect) {
-                        return;
-                    }
-
-                    const cowCenter = {
-                        x: cowRect.x + cowRect.width / 2,
-                        y: cowRect.y + cowRect.height / 2,
-                    }
-
-                    const bucketCenter = {
-                        x: bucketRect.x + bucketRect.width / 2,
-                        y: bucketRect.y + bucketRect.height / 2,
-                    }
-
-                    const distance = Math.sqrt(
-                        Math.pow(cowCenter.x - bucketCenter.x, 2) + Math.pow(cowCenter.y - bucketCenter.y, 2)
-                    );
-
-                    if (distance < 50) {
+                    if (isTouching("bucket")) {
                         if (isMilking && cowState === "full") {
                             setCowState("hungry");
                             setFullness(0.1);
@@ -84,8 +95,53 @@ export default function Cow({initialColor = "cyan", initialFullness = 1, getStat
         }
     }, [isMilking, isFeeding, cowState]);
 
+    //
+    //breeding
+    //
+    const canBreed = () => {
+        return cowState === "full";
+    }
+
+    const ifTouchingBreed = () => {
+
+        //average 2 string rgba() colors
+        const averageTwoRGB = (rgb1, rgb2) => {
+            const rgb1Array = rgb1.substring(5, rgb1.length - 1).split(",");
+            const rgb2Array = rgb2.substring(5, rgb2.length - 1).split(",");
+
+            const averageArray = rgb1Array.map((value, index) => {
+                return (parseInt(value) + parseInt(rgb2Array[index])) / 2;
+            }
+            );
+
+            return `rgba(${averageArray[0]}, ${averageArray[1]}, ${averageArray[2]}, 1)`;
+        }
+
+        for (const cow of cowList) {
+            if (cow.id == cowID) {
+                continue;
+            }
+
+            if (isTouching(cow.id)) { //somehow check other cow fullness
+                const newCow = {
+                    id: uuidv4(),
+                    color: averageTwoRGB(cow.color, color),
+                    state: "hungry"
+                }
+    
+                setCowList(cowList => [...cowList, newCow]);
+            }
+        }
+    }
+
+    const onDrop = () => {
+        if (canBreed()) {
+            ifTouchingBreed();
+        }
+    }
+
     return (
-        <Draggable id={cowID} trackRotationSettings={{rotates: true, sensitivity: 1, displacement: 90}}>
+        <Draggable onDrop={onDrop} id={cowID} trackRotationSettings={{rotates: true, sensitivity: 1, displacement: 90}}>
             <div style={{
                 position: "absolute",
                 top: 0,
@@ -99,7 +155,7 @@ export default function Cow({initialColor = "cyan", initialFullness = 1, getStat
             <div style={{
 
             }}>
-                <CowSVG color={color} fullness={fullness}/>
+                <CowSVG color={color} fullness={fullness} colorPollingFrequency={colorPollingFrequency}/>
             </div>
         </Draggable>
     );

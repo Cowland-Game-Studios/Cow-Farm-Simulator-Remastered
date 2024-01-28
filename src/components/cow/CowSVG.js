@@ -1,7 +1,7 @@
 import styles from "./cow.module.css";
 
 //.27 start | .7 end
-export function CowSVG({ color = "white", fullness = 0.7 }) {
+export function CowSVG({ color = "white", fullness = 0.7, colorPollingFrequency = 1000 }) {
     return <>
         <div className={styles.moveForever} style={{
             //crop to 50% height
@@ -9,7 +9,7 @@ export function CowSVG({ color = "white", fullness = 0.7 }) {
             overflow: "hidden",
             position: "absolute",
 
-            transition: "all 1s ease-in-out",
+            transition: "all " + colorPollingFrequency / 1000 + "s ease-in-out",
         }}>
             <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M8.64197 45.679L11.7284 40.7407L17.2839 33.3333L20.1106 32.5L22.5 33.3333L24.6914 34.5679L44.4444 32.0988L78.75 32.5L83.3333 34.5679L87.5 38.75L88.8889 45.0617L88.75 55L82.0988 58.642V60.4938V64.1975L80.8642 76.5432L79.6296 78.395H77.7778L75.9259 77.7778L75.4349 77.5H73.75L72.2222 77.1605L71.25 75L73.75 63.75L71.6049 59.2592L67.5 61.25L58.642 62.3457L50 61.7284L45.679 61.25V70.3704L45.3944 76.25L44.4444 77.7778L41.9753 78.395L40.7407 77.7778L38.75 78.75L35.9225 77.5L36.4197 72.8395L37.5 67.5L35.8025 63.5802L35 63.75L32.0988 62.9629L29.6296 61.1111L27.5 53.75L25.3086 51.25L22.5 50L17.2839 51.2346L11.25 51.25L8.74998 48.75L8.64197 45.679Z" fill={"white"} />

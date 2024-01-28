@@ -2,7 +2,7 @@ import styles from "./draggable.module.css";
 import { useContext, useEffect, useRef, useState } from "react";
 import MousePositionContext from "../../contexts/MousePositionContext";
 
-export default function Draggable({canGoOffScreen = false, safeArea = 25, initialDragging = false, offset={x: 0, y: 0}, trackRotationSettings = {rotates: true, sensitivity: 1, displacement: 0}, ...props}) {
+export default function Draggable({onPickup = () => {}, onDrop = () => {}, canGoOffScreen = false, safeArea = 25, initialDragging = false, offset={x: 0, y: 0}, trackRotationSettings = {rotates: true, sensitivity: 1, displacement: 0}, ...props}) {
 
     const draggabelRef = useRef(null);
 
@@ -69,6 +69,8 @@ export default function Draggable({canGoOffScreen = false, safeArea = 25, initia
         else {
             setPosition({x: mousePosition.x, y: mousePosition.y});
         }
+
+        onDrop();
     }, [dragging])
 
     return (
@@ -80,10 +82,12 @@ export default function Draggable({canGoOffScreen = false, safeArea = 25, initia
 
             onMouseDown={() => {
                 setDragging(true);
+                onPickup();
             }}
 
             onTouchStart={() => {
                 setDragging(true);
+                onPickup();
             }}
 
             style={{
