@@ -28,7 +28,7 @@ export default function Pasture() {
         <PastureStateContext.Provider value={{isMilking: isMilking, isFeeding: isFeeding}}>
             <div className={styles.pasture}>
 
-                {Array(1).fill(0).map(() => <Cow initialFullness={Math.random()} defaultColor={`rgba(
+                {Array(1).fill(0).map(() => <Cow initialFullness={Math.random()} initialColor={`rgba(
                     ${Math.random() * 100  + 155},
                     ${Math.random() * 100 + 155},
                     ${Math.random() * 100 + 155},
