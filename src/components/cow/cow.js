@@ -19,6 +19,9 @@ export default function Cow({id = uuidv4(), initialState = "hungry", initialColo
     const [cowState, setCowState] = useState(initialState)
     const [fullness, setFullness] = useState(initialFullness);
 
+    const [cowOffset, setCowOffset] = useState({x: 0, y: 0});
+    const [cowFlipHorizontal, setCowFlipHorizontal] = useState(false);
+
     useEffect(() => {
         if (cowState != "producing milk") {
             return
@@ -29,7 +32,6 @@ export default function Cow({id = uuidv4(), initialState = "hungry", initialColo
         }
 
         const interval = setInterval(pollColor, colorPollingFrequency)
-
         pollColor()
 
         return () => clearInterval(interval)
@@ -95,6 +97,27 @@ export default function Cow({id = uuidv4(), initialState = "hungry", initialColo
         }
     }, [isMilking, isFeeding, cowState]);
 
+    useState(() => {
+        const moveRandomly = () => {
+
+            const cowMoveMaxDistance = 100 * (cowState != "full" ? 1 : 0.25);
+
+            if (cowState != "hungry") {
+                const randomX = Math.random() * cowMoveMaxDistance - cowMoveMaxDistance / 2;
+                const randomY = Math.random() * cowMoveMaxDistance - cowMoveMaxDistance / 2;
+
+                setCowOffset({x: randomX, y: randomY})
+                setCowFlipHorizontal(randomX > 0)
+            }
+
+            setTimeout(() => {
+                moveRandomly()
+            }, Math.random() * 10000);
+        }
+
+        moveRandomly()
+    }, [])
+
     //
     //breeding
     //
@@ -144,22 +167,39 @@ export default function Cow({id = uuidv4(), initialState = "hungry", initialColo
     }
 
     return (
-        <Draggable onDrop={onDrop} id={cowID} trackRotationSettings={{rotates: true, sensitivity: 1, displacement: 90}}>
-            <div style={{
-                position: "absolute",
-                top: 0,
-                left: 30,
-                transition: "all 1s ease-in-out",
-            }}>
-                {isMilking && cowState === "full" && <img src="./images/cows/thinkMilk.svg" draggable={false} className={styles.bucket}/>}  
-                {isFeeding && cowState === "hungry" && <img src="./images/cows/thinkFood.svg" draggable={false} className={styles.bucket}/>}  
-            </div>
+        <div
+            // style={{
+            //     transform: `scaleX(${cowFlipHorizontal ? -1 : 1})`,
+            //     transition: "all 0.25s ease-in-out",
+            // }}
+        >
+            <div
+                style={{
+                    transform: `translate(${cowOffset.x}px, ${cowOffset.y}px)`,
+                    transition: "all 1s ease-in-out",
+                }}
+            >
+                <Draggable onDrop={onDrop} id={cowID} trackRotationSettings={{rotates: true, sensitivity: 1, displacement: 90}}>
+                    <div style={{
+                        position: "absolute",
+                        top: -5,
+                        left: 50,
+                        transition: "all 1s ease-in-out",
+                    }}>
+                        {isMilking && cowState === "full" && <img src="./images/cows/thinkMilk.svg" draggable={false} className={styles.bucket}/>}  
+                        {isFeeding && cowState === "hungry" && <img src="./images/cows/thinkFood.svg" draggable={false} className={styles.bucket}/>}  
+                    </div>
 
-            <div style={{
-
-            }}>
-                <CowSVG color={color} fullness={fullness} colorPollingFrequency={colorPollingFrequency}/>
+                    <div
+                        style={{
+                            transform: `scaleX(${cowFlipHorizontal ? -1 : 1}) scale(${cowState == "full" ? 1.1 : cowState == "hungry" ? 0.8 : 1})`,
+                            transition: "all 0.25s ease-in-out",
+                        }}
+                    >
+                        <CowSVG color={color} fullness={fullness} colorPollingFrequency={colorPollingFrequency}/>
+                    </div>
+                </Draggable>
             </div>
-        </Draggable>
+        </div>
     );
 }
