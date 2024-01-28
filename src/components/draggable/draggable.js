@@ -96,6 +96,7 @@ export default function Draggable({onPickup = () => {}, onDrop = () => {}, canGo
 translate(-50%, -50%)
 translate(${(dragging ? mousePosition.x : position.x) + offset.x}px, ${(dragging ? mousePosition.y : position.y) + offset.y}px)
 scale(${(dragging ? 1.25 : 1)})
+rotate(${dragging ? (trackRotationSettings.rotates ? Math.atan2(mousePosition.y - position.y, mousePosition.x - position.x) * 180 / Math.PI + 90 : 0) : 0}deg)
 `,
 
                 transformOrigin: "center",

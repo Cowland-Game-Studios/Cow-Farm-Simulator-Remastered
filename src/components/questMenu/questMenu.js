@@ -5,14 +5,12 @@ export default function QuestMenu ({...props}) {
         <div className={styles.questMenu} {...props}>
             <div className={styles.questMenuContainer}>
                 <div className={styles.questItem}>
-                    <h3>Learning The Ropes</h3>
-                    <p>- Feed 3 Cows</p>
+                    <h3>Breed 3 cows</h3>
+                    <p>- 1/3</p>
                 </div>
-            </div>
-            <div className={styles.questMenuContainer}>
                 <div className={styles.questItem}>
-                    <h3>Baals</h3>
-                    <p>- Larry</p>
+                    <h3>Side quest</h3>
+                    <p>- Sunny Park 😩</p>
                 </div>
             </div>
         </div>

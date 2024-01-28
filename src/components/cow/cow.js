@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { CowSVG } from "./CowSVG";
 import CowListContext from "../../contexts/CowListContext";
 
-export default function Cow({id = uuidv4(), initialState = "hungry", initialColor = "cyan", initialFullness = 0}) {
+export default function Cow({id = uuidv4(), initialState = "hungry", initialColor = "cyan", initialFullness = 0.1}) {
 
     const colorPollingFrequency = 1000
 
@@ -128,6 +128,9 @@ export default function Cow({id = uuidv4(), initialState = "hungry", initialColo
                     color: averageTwoRGB(cow.color, color),
                     state: "hungry"
                 }
+
+                setCowState("hungry");
+                setFullness(0.1);
     
                 setCowList(cowList => [...cowList, newCow]);
             }
