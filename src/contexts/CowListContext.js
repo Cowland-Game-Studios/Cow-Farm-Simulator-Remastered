@@ -5,23 +5,25 @@ const CowListContext = createContext([]);
 
 export default CowListContext;
 
+export const opacity = 0.5;
+
 export const defaultCowList = [
     //rgb
     {
         id: uuidv4(),
-        color: "rgba(255, 0, 0)",
+        color: "rgba(255, 0, 0, " + opacity + ")",
         fullness: 1,
         state: "full",
     },
     {
         id: uuidv4(),
-        color: "rgba(0, 255, 0)",
+        color: "rgba(255, 230, 0, " + opacity + ")",
         fullness: 1,
         state: "full",
     },
     {
         id: uuidv4(),
-        color: "rgba(0, 0, 255)",
+        color: "rgba(0, 0, 255, " + opacity + ")",
         fullness: 1,
         state: "full",
     },

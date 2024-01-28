@@ -4,7 +4,7 @@ import { useContext, useEffect, useState } from "react";
 import PastureStateContext from "../../contexts/PastureStateContext";
 import { v4 as uuidv4 } from 'uuid';
 import { CowSVG } from "./CowSVG";
-import CowListContext from "../../contexts/CowListContext";
+import CowListContext, { opacity } from "../../contexts/CowListContext";
 
 export default function Cow({id = uuidv4(), initialState = "hungry", initialColor = "cyan", initialFullness = 0.1}) {
 
@@ -137,7 +137,7 @@ export default function Cow({id = uuidv4(), initialState = "hungry", initialColo
             }
             );
 
-            return `rgba(${averageArray[0]}, ${averageArray[1]}, ${averageArray[2]}, 1)`;
+            return `rgba(${averageArray[0]}, ${averageArray[1]}, ${averageArray[2]}, ${opacity})`;
         }
 
         for (const cow of cowList) {
