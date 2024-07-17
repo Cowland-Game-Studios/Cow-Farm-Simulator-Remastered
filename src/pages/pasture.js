@@ -7,12 +7,14 @@ import Draggable from "../components/draggable/draggable";
 import QuestMenu from "../components/questMenu/questMenu";
 import PastureStateContext from "../contexts/PastureStateContext";
 import CowListContext, { defaultCowList } from "../contexts/CowListContext";
+import Crafting from "./crafting";
 
 export default function Pasture() {
 
     // const [showQuestMenu, setShowQuestMenu] = useState(false);
     const [isMilking, setIsMilking] = useState(false);
     const [isFeeding, setIsFeeding] = useState(false);
+    const [isCrafting, setIsCrafting] = useState(false);
 
     const [cowList, setCowList] = useState(defaultCowList);
 
@@ -30,6 +32,9 @@ export default function Pasture() {
     return (
         <PastureStateContext.Provider value={{isMilking: isMilking, isFeeding: isFeeding}}>
             <CowListContext.Provider value={{cowList: cowList, setCowList: setCowList}}> 
+                
+                {isCrafting && <Crafting onClose={() => setIsCrafting(false)}/>}
+
                 <div className={styles.pasture}>
 
                     {cowList.map((cow) => <Cow key={cow.id} id={cow.id} initialColor={cow.color} initialFullness={cow.fullness} initialState={cow.state} />)}
@@ -65,7 +70,9 @@ export default function Pasture() {
                             <Button text="feed" image={"./images/buttons/grassIcon.svg"} onMouseDown={() => {
                                 setIsFeeding(true);
                             }}/>
-                            <Button text="make" image={"./images/buttons/milkIcon.svg"}/>
+                            <Button text="make" image={"./images/buttons/milkIcon.svg"} onMouseDown={() => {
+                                setIsCrafting(true);
+                            }}/>
                             <Button text="shop" image={"./images/buttons/shopIcon.svg"}/>
                         </Dock>
                     </div>

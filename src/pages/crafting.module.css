@@ -1,0 +1,66 @@
+.craftingBlurBackground {
+    position: absolute;
+
+    width: 100vw;
+    height: 100vh;
+
+    overflow: hidden;
+
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    z-index: 1;
+}
+
+.spreadEvenlyContainer {
+    width: 100vw;
+    height: 100vh;
+
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+}
+
+.benchTop {
+    position: relative;
+
+    width: 25vw;
+    height: 25vw;
+
+    border-radius: 50px;
+
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.craftingInstructions {
+    position: absolute;
+
+    left: 50%;
+    top: 50%;
+
+    transform: translate(-50%, -50%);
+
+    width: 8vw;
+    height: 8vw;
+
+    opacity: 25%;
+}
+
+.standardedizedList {
+    width: 100px;
+}
+
+.list {
+    /* background-color: blue; */
+
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.closeText {
+    position: absolute;
+    left: 50%;
+    bottom: 25%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+}

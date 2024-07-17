@@ -3,6 +3,7 @@ import MousePositionContext from "./contexts/MousePositionContext";
 import { useEffect, useState } from "react";
 
 import "./App.css";
+import { loadSave } from "./save/saveFunctions";
 
 function App() {
   const [mousePosition, setMousePosition] = useState({x: 0, y: 0});
@@ -13,6 +14,9 @@ function App() {
       setMousePosition({x: ev.clientX, y: ev.clientY});
     }
     window.addEventListener("mousemove", updateMousePosition);
+
+    loadSave()
+
     return () => window.removeEventListener("mousemove", updateMousePosition);
   }, []);
 

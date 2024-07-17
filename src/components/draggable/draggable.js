@@ -70,7 +70,7 @@ export default function Draggable({onPickup = () => {}, onDrop = () => {}, canGo
             setPosition({x: mousePosition.x, y: mousePosition.y});
         }
 
-        onDrop();
+        onDrop({x: mousePosition.x, y: mousePosition.y});
     }, [dragging])
 
     return (
