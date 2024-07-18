@@ -78,9 +78,9 @@ const craftingRecipies = [
     },
 ]
 
-function CraftingItem({time = 60, inputs = [], outputs = []}) {
+function CraftingItem({time = 60, inputs = [], outputs = [], enabled = false}) {
     return (
-    <div style={{ textAlign: "center" }}>
+    <div style={{ textAlign: "center", opacity: enabled ? 1 : 0.25}}>
         <div style={{ display: "flex", flexDirection: "row", gap: 7, justifyContent: "center", alignItems: "center" }}>
             <img style={{ width: 10 }} src="./images/crafting/time.svg" />
             <p style={{ color: "black", marginTop: 5 }}>10 min</p>
@@ -88,12 +88,12 @@ function CraftingItem({time = 60, inputs = [], outputs = []}) {
         <div style={{ display: "flex", flexDirection: "row", gap: 7, justifyContent: "center", alignItems: "center" }}>
             <div>
                 <img src="./images/crafting/products/milk.svg" />
-                <p style={{ marginTop: 0 }}>2x</p>
+                <p style={{  color: "black", marginTop: 0 }}>2x</p>
             </div>
             <p style={{ color: "black", fontSize: 20, marginTop: -20 }}>=</p>
             <div>
                 <img src="./images/crafting/products/milk.svg" />
-                <p style={{ marginTop: 0 }}>2x</p>
+                <p style={{  color: "black", marginTop: 0 }}>2x</p>
             </div>
         </div>
     </div>
@@ -104,6 +104,7 @@ export default function Crafting({onClose = () => {}}) {
 
     const [selectedIngredient, setSelectedIngredient] = useState(null);
     const [ingredientsPlaced, setIngredientsPlaced] = useState([]);
+    // const [canPlaceIngredient, setCanPlaceIngredient] = useState(false);
 
     return (
         // onClick={onClose}
@@ -111,22 +112,36 @@ export default function Crafting({onClose = () => {}}) {
 
             {selectedIngredient && <Draggable id="ingredient" initialDragging onDrop={({x, y}) => {
                 setSelectedIngredient(null);
-                setIngredientsPlaced([...ingredientsPlaced, {name: selectedIngredient.name, image: selectedIngredient.image, x, y}]);
+
+                // if (canPlaceIngredient) {
+
+                    // const xRelativeToTable = x - document.getElementById("craftingBench").getBoundingClientRect().left;
+                    // const yRelativeToTable = y - document.getElementById("craftingBench").getBoundingClientRect().top;
+
+                    setIngredientsPlaced([...ingredientsPlaced, {name: selectedIngredient.name, image: selectedIngredient.image, x, y}]);
+                // }
             }} trackRotationSettings={{rotates: false}}>
-                <div>
+                {/* <div> */}
                     <img draggable={false} src={selectedIngredient.image}/>
-                </div>
+                {/* </div> */}
             </Draggable>}
 
             {
                 ingredientsPlaced.map(ingredient => {
                     return (
-                        <img style={{
+                        <a style={{
                             position: "absolute",
                             left: ingredient.x,
                             top: ingredient.y,
                             transform: "translate(-50%, -50%)",
-                        }} draggable={false} src={ingredient.image}/>
+                            zIndex: 2
+                        }} onMouseDown={() => {
+                            //find this current ingredient with this coordinates and remove it from the list
+                            setIngredientsPlaced(ingredientsPlaced.filter(ing => ing.x !== ingredient.x && ing.y !== ingredient.y));
+                            setSelectedIngredient({name: ingredient.name, image: ingredient.image});
+                        }}>
+                            <img draggable={false} src={ingredient.image}/>
+                        </a>
                     )
                 })
             }
@@ -148,19 +163,35 @@ export default function Crafting({onClose = () => {}}) {
                         </div>
                     </div>
                 </div>
-                <div className={styles.benchTop}>
-                    <img className={styles.craftingInstructions} src="./images/crafting/instruction.svg" />
+                <div className={styles.benchTop} id="craftingBench" 
+                // onMouseEnter={() => {
+                //     setCanPlaceIngredient(true);
+                // }}
+                // onMouseLeave={() => {
+                //     setCanPlaceIngredient(false);
+                // }}
+                >
+                    <img draggable={false} className={styles.craftingInstructions} src="./images/crafting/instruction.svg" />
                 </div>
                 <div className={styles.standardedizedList}>
                     <div className={styles.list}>
-                        <CraftingItem />
+                        <CraftingItem enabled/>
                         <CraftingItem />
                         <CraftingItem />
                     </div>
                 </div>
             </div>
 
-            <p className={styles.closeText} onClick={onClose}>Click Here To Close</p>
+            <div className={styles.buttonContainers}>
+                <div className={styles.casualButton} onClick={() => {
+                    setIngredientsPlaced([]);
+                }}>
+                    <p className={styles.casualButtonText}>clear</p>
+                </div>
+                <div className={styles.casualButton} onClick={onClose}>
+                    <p className={styles.casualButtonText} style={{color: "red"}}>cancel & close</p>
+                </div>
+            </div>
         </div>
     )
 }

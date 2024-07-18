@@ -2,11 +2,12 @@
     position: absolute;
 
     border-radius: 20px;
-    background: rgba(0, 0, 0, 0.05);
+    /* background: rgba(0, 0, 0, 0.05); */
     backdrop-filter: blur(10px);
 
-    bottom: 25px;
-    left: 25px;
+    top: 100px;
+    left: 50%;
+    transform: translate(-50%, 0);
 }
   
 .questMenuContainer {

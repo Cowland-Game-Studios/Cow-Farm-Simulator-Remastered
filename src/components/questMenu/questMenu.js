@@ -1,18 +1,26 @@
 import styles from "./questMenu.module.css";
 
+const quests = [
+    {
+        name: "Breed 3 cows",
+        progress: 1,
+        goal: 3,
+    }
+]
+
 export default function QuestMenu ({...props}) {
     return (
         <div className={styles.questMenu} {...props}>
-            <div className={styles.questMenuContainer}>
+            {/* <div className={styles.questMenuContainer}> */}
                 <div className={styles.questItem}>
-                    <h3>Breed 3 cows</h3>
-                    <p>- 1/3</p>
+                    <h3>breeder</h3>
+                    <p>- breed cows (1/3) </p>
                 </div>
                 <div className={styles.questItem}>
-                    <h3>Side quest</h3>
-                    <p>- Sunny Park 😩</p>
+                    <h3>cheesy</h3>
+                    <p>- obtain cheese</p>
                 </div>
-            </div>
+            {/* </div> */}
         </div>
     );
 }

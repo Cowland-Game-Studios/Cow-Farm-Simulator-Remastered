@@ -11,7 +11,6 @@ import Crafting from "./crafting";
 
 export default function Pasture() {
 
-    // const [showQuestMenu, setShowQuestMenu] = useState(false);
     const [isMilking, setIsMilking] = useState(false);
     const [isFeeding, setIsFeeding] = useState(false);
     const [isCrafting, setIsCrafting] = useState(false);
@@ -56,25 +55,27 @@ export default function Pasture() {
 
                         {true && <QuestMenu />}
 
-                        <Dock style={{top: 25}}>
-                            <Button keepOriginalCursor text="10,000" image={"./images/buttons/coinIcon.svg"}/>
-                            <Button keepOriginalCursor text="5.2/10k" image={"./images/buttons/starIcon.svg"}/>
-                        </Dock>
-                        <Dock style={{bottom: 25}}>
-                            {/* <Button text="quest" image={"./images/buttons/questIcon.svg"} onClick={() => {
-                                setShowQuestMenu(!showQuestMenu);
-                            }}/> */}
-                            <Button text="collect" image={"./images/buttons/bucketIcon.svg"} onMouseDown={() => {
-                                setIsMilking(true);
-                            }}/>
-                            <Button text="feed" image={"./images/buttons/grassIcon.svg"} onMouseDown={() => {
-                                setIsFeeding(true);
-                            }}/>
-                            <Button text="make" image={"./images/buttons/milkIcon.svg"} onMouseDown={() => {
-                                setIsCrafting(true);
-                            }}/>
-                            <Button text="shop" image={"./images/buttons/shopIcon.svg"}/>
-                        </Dock>
+                        {/* {!(isCrafting) && <> */}
+                            <Dock style={{top: 25}}>
+                                <Button keepOriginalCursor text="10,000" image={"./images/buttons/coinIcon.svg"}/>
+                                <Button keepOriginalCursor text="5.2/10k" image={"./images/buttons/starIcon.svg"}/>
+                            </Dock>
+                            <Dock style={{bottom: 25}}>
+                                {/* <Button text="quest" image={"./images/buttons/questIcon.svg"} onClick={() => {
+                                    setShowQuestMenu(!showQuestMenu);
+                                }}/> */}
+                                <Button text="collect" image={"./images/buttons/bucketIcon.svg"} onMouseDown={() => {
+                                    setIsMilking(true);
+                                }}/>
+                                <Button text="feed" image={"./images/buttons/grassIcon.svg"} onMouseDown={() => {
+                                    setIsFeeding(true);
+                                }}/>
+                                <Button text="make" image={"./images/buttons/milkIcon.svg"} onMouseDown={() => {
+                                    setIsCrafting(true);
+                                }}/>
+                                <Button text="shop" image={"./images/buttons/shopIcon.svg"}/>
+                            </Dock>
+                        {/* </>} */}
                     </div>
                 </div>
             </CowListContext.Provider>
