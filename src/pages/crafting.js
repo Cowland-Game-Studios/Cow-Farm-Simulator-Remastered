@@ -453,11 +453,9 @@ export default function Crafting({ onClose = () => {} }) {
                         return (
                             <div 
                                 key={product.id}
-                                className={styles.ingredientItem}
+                                className={`${styles.ingredientItem} ${!hasItem ? styles.ingredientDisabled : ''}`}
                                 data-cursor-target="true"
                                 style={{
-                                    opacity: hasItem ? 1 : 0.35,
-                                    transition: 'opacity 0.2s ease',
                                     cursor: hasItem ? 'pointer' : 'not-allowed',
                                 }}
                             >

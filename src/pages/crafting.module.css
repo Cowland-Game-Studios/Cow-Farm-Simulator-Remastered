@@ -193,7 +193,7 @@
 
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(5px);
-    z-index: 1;
+    z-index: 2000; /* Above fence (100) and UI (1000) */
 
     animation: blurFadeIn 0.4s ease-out forwards;
 
@@ -482,6 +482,11 @@
 
 .ingredientItem:hover {
     transform: scale(1.15);
+}
+
+/* Disabled ingredient items - dimmed after animation completes */
+.ingredientDisabled {
+    filter: opacity(0.35);
 }
 
 .recipeItem > button {
