@@ -63,6 +63,100 @@ export const setByPath = (obj, path, value) => {
     return newObj;
 };
 
+// ============================================
+// TYPE-SAFE PATH DEFINITIONS
+// ============================================
+
+/**
+ * Defines which paths are safe to modify and what type they should be.
+ * Patterns use:
+ *   - Exact paths: "resources.coins"
+ *   - Wildcards: "inventory.*" (matches inventory.milk, inventory.grass, etc.)
+ *   - Array indices: "cows[*].fullness" (matches cows[0].fullness, cows[1].fullness, etc.)
+ */
+const SAFE_PATHS = {
+    // Resources - numeric values
+    'resources.coins': { type: 'number', min: 0 },
+    'resources.stars': { type: 'number', min: 0 },
+    
+    // Inventory - all items are numeric
+    'inventory.milk': { type: 'number', min: 0 },
+    'inventory.grass': { type: 'number', min: 0 },
+    'inventory.cream': { type: 'number', min: 0 },
+    'inventory.butter': { type: 'number', min: 0 },
+    'inventory.cheese': { type: 'number', min: 0 },
+    'inventory.yogurt': { type: 'number', min: 0 },
+    'inventory.iceCream': { type: 'number', min: 0 },
+    'inventory.cheesecake': { type: 'number', min: 0 },
+    
+    // Cow properties (with array index wildcard)
+    'cows[*].fullness': { type: 'number', min: 0, max: 1 },
+    'cows[*].state': { type: 'enum', values: ['hungry', 'producing', 'full'] },
+    'cows[*].color.r': { type: 'number', min: 0, max: 255 },
+    'cows[*].color.g': { type: 'number', min: 0, max: 255 },
+    'cows[*].color.b': { type: 'number', min: 0, max: 255 },
+    'cows[*].color.a': { type: 'number', min: 0, max: 1 },
+    'cows[*].position.x': { type: 'number' },
+    'cows[*].position.y': { type: 'number' },
+};
+
+/**
+ * Match a path against safe path patterns
+ * @param {string} path - The actual path (e.g., "cows[0].fullness")
+ * @returns {Object|null} - The constraint object or null if not allowed
+ */
+const getPathConstraint = (path) => {
+    // Direct match
+    if (SAFE_PATHS[path]) {
+        return SAFE_PATHS[path];
+    }
+    
+    // Check wildcard patterns (replace [number] with [*])
+    const wildcardPath = path.replace(/\[\d+\]/g, '[*]');
+    if (SAFE_PATHS[wildcardPath]) {
+        return SAFE_PATHS[wildcardPath];
+    }
+    
+    return null;
+};
+
+/**
+ * Validate a value against type constraints
+ * @param {*} value - The value to validate
+ * @param {Object} constraint - The constraint definition
+ * @returns {{ valid: boolean, error?: string }}
+ */
+const validateValue = (value, constraint) => {
+    switch (constraint.type) {
+        case 'number':
+            if (typeof value !== 'number' || isNaN(value)) {
+                return { valid: false, error: 'Value must be a number' };
+            }
+            if (constraint.min !== undefined && value < constraint.min) {
+                return { valid: false, error: `Value must be >= ${constraint.min}` };
+            }
+            if (constraint.max !== undefined && value > constraint.max) {
+                return { valid: false, error: `Value must be <= ${constraint.max}` };
+            }
+            return { valid: true };
+            
+        case 'enum':
+            if (!constraint.values.includes(value)) {
+                return { valid: false, error: `Value must be one of: ${constraint.values.join(', ')}` };
+            }
+            return { valid: true };
+            
+        case 'boolean':
+            if (typeof value !== 'boolean') {
+                return { valid: false, error: 'Value must be true or false' };
+            }
+            return { valid: true };
+            
+        default:
+            return { valid: false, error: 'Unknown type constraint' };
+    }
+};
+
 /**
  * Format a value for display in the console
  */
@@ -166,7 +260,7 @@ const commands = {
     },
 
     /**
-     * Set a value - uses game actions when possible
+     * Set a value - TYPE-SAFE with whitelist validation
      */
     set: (args, state, dispatch) => {
         const [path, ...valueParts] = args;
@@ -174,6 +268,21 @@ const commands = {
         
         if (!path || valueStr === '') {
             return { success: false, output: 'Usage: set <path> <value>\nExample: set inventory.milk 99' };
+        }
+        
+        // Check if path is allowed
+        const constraint = getPathConstraint(path);
+        if (!constraint) {
+            return { 
+                success: false, 
+                output: `🚫 Path "${path}" is not settable.\n\nAllowed paths:\n  inventory.* (milk, grass, cream, etc.)\n  resources.coins, resources.stars\n  cows[n].fullness, cows[n].state\n  cows[n].color.r/g/b/a\n  cows[n].position.x/y` 
+            };
+        }
+        
+        // Verify the path exists (for array indices)
+        const currentValue = getByPath(state, path);
+        if (currentValue === undefined) {
+            return { success: false, output: `Error: Path "${path}" not found in state` };
         }
         
         // Parse the value
@@ -184,24 +293,24 @@ const commands = {
         else if (!isNaN(valueStr) && valueStr !== '') value = Number(valueStr);
         else value = valueStr;
         
-        // Handle known paths with proper actions
-        const pathParts = path.split('.');
+        // Validate value against constraints
+        const validation = validateValue(value, constraint);
+        if (!validation.valid) {
+            return { success: false, output: `Error: ${validation.error}` };
+        }
         
-        // Inventory items
+        // Handle known paths with proper actions
+        const pathParts = path.replace(/\[(\d+)\]/g, '.$1').split('.');
+        
+        // Inventory items - use setItem action
         if (pathParts[0] === 'inventory' && pathParts.length === 2) {
             const itemType = pathParts[1];
-            if (typeof value !== 'number') {
-                return { success: false, output: `Error: Inventory values must be numbers` };
-            }
             dispatch(actions.setItem(itemType, value));
             return { success: true, output: `✓ ${path} set to ${value}` };
         }
         
-        // Resources
+        // Resources - use coin actions
         if (path === 'resources.coins') {
-            if (typeof value !== 'number') {
-                return { success: false, output: `Error: Coins must be a number` };
-            }
             const diff = value - state.resources.coins;
             if (diff > 0) {
                 dispatch(actions.addCoins(diff));
@@ -211,8 +320,7 @@ const commands = {
             return { success: true, output: `✓ ${path} set to ${value}` };
         }
         
-        // For other paths, use the generic LOAD_SAVE (acts as a state override)
-        // This is a bit hacky but works for dev console purposes
+        // For other validated paths, use LOAD_SAVE
         const newState = setByPath(state, path, value);
         dispatch({ type: 'LOAD_SAVE', payload: { saveData: newState } });
         

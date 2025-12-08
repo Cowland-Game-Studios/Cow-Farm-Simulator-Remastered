@@ -365,19 +365,28 @@ export default function Crafting({ onClose = () => {} }) {
                 <div className={styles.list}>
                     {PRODUCTS.map(product => {
                         const itemCount = inventory[product.id] || 0;
+                        const hasItem = itemCount > 0;
                         return (
-                            <Button
+                            <div 
                                 key={product.id}
-                                text={`x${itemCount}`}
-                                image={product.image}
-                                disabled={itemCount === 0}
-                                onMouseDown={(e) => {
-                                    e.stopPropagation();
-                                    if (itemCount > 0) {
-                                        setSelectedIngredient({ name: product.id, image: product.image });
-                                    }
+                                style={{
+                                    opacity: hasItem ? 1 : 0.35,
+                                    transition: 'opacity 0.2s ease',
+                                    cursor: hasItem ? 'pointer' : 'not-allowed',
                                 }}
-                            />
+                            >
+                                <Button
+                                    text={`x${itemCount}`}
+                                    image={product.image}
+                                    disabled={!hasItem}
+                                    onMouseDown={(e) => {
+                                        e.stopPropagation();
+                                        if (hasItem) {
+                                            setSelectedIngredient({ name: product.id, image: product.image });
+                                        }
+                                    }}
+                                />
+                            </div>
                         );
                     })}
                 </div>
