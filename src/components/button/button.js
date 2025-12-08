@@ -1,11 +1,20 @@
 import PropTypes from 'prop-types';
 import styles from "./button.module.css";
 
-export default function Button({ text, image, onClick, keepOriginalCursor = false, hidden = false, ...props }) {
+export default function Button({ text, image, onClick, onMouseDown, keepOriginalCursor = false, hidden = false, ...props }) {
+    // Handle both mouse and touch for mobile support
+    const handlePointerDown = (e) => {
+        if (onMouseDown) {
+            onMouseDown(e);
+        }
+    };
+
     return (
         <button 
             type="button"
             onClick={onClick ? onClick : () => {}} 
+            onMouseDown={handlePointerDown}
+            onTouchStart={handlePointerDown}
             className={`${styles.buttonWrapper} ${hidden ? styles.hidden : ''}`}
             {...props}
         >
