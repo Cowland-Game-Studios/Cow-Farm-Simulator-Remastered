@@ -184,6 +184,7 @@ export default function DraggableSwinging({
         if (onPositionChange) {
             onPositionChange(initialPos);
         }
+    // Intentionally run only on mount - onPositionChange excluded to avoid re-reporting position on callback changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [onPositionChange]);
 
@@ -242,6 +243,8 @@ export default function DraggableSwinging({
             }, UI.HIDE_TIMEOUT_MS);
             return () => clearTimeout(hideTimeout);
         }
+    // mousePosition and ropeLength excluded - we capture current values when isActive changes,
+    // not when these values change (would cause unwanted re-positioning during drag)
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isActive, isControlled]);
 
@@ -250,6 +253,7 @@ export default function DraggableSwinging({
         const initialPos = { x: restPosition.x, y: restPosition.y + ropeLength };
         objectPosRef.current = initialPos;
         setObjectPos(initialPos);
+    // Intentionally run only on mount - restPosition/ropeLength read from initial values only
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -432,6 +436,8 @@ export default function DraggableSwinging({
                 cancelAnimationFrame(animationRef.current);
             }
         };
+    // bottomSafeArea excluded - uses current value via closure in animation loop (not reactive)
+    // Helper functions use refs to avoid stale closures in requestAnimationFrame
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dragging, flying, gravity, damping, ropeLength, safeArea, checkCollisions, onDrop, onPositionChange]);
 
@@ -483,6 +489,8 @@ export default function DraggableSwinging({
             window.removeEventListener("touchend", up);
             window.removeEventListener("resize", resize);
         };
+    // Helper functions (isPositionBad, getClosestSafePosition) use component-scoped values
+    // Uses draggingRef to avoid stale closure issues with event listeners
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dragging, flying, restPosition, isControlled, throwable]);
 
@@ -516,6 +524,8 @@ export default function DraggableSwinging({
         }
 
         onDrop(finalPos);
+    // mousePosition, ropeLength, onDrop, onPositionChange excluded - this effect handles state transitions,
+    // not prop changes. Uses refs and current values when dragging/flying state changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dragging, flying, isControlled]);
 

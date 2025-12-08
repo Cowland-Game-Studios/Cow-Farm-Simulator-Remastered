@@ -22,16 +22,48 @@ interface CownsoleProps {
 }
 
 // ============================================
+// CONSTANTS
+// ============================================
+
+const HISTORY_STORAGE_KEY = 'moosh_history';
+const MAX_HISTORY_LENGTH = 100;
+
+// Load history from localStorage
+const loadHistory = (): string[] => {
+    try {
+        const saved = localStorage.getItem(HISTORY_STORAGE_KEY);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) {
+                return parsed.slice(-MAX_HISTORY_LENGTH);
+            }
+        }
+    } catch {
+        // Ignore errors
+    }
+    return [];
+};
+
+// Save history to localStorage
+const saveHistory = (history: string[]) => {
+    try {
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history.slice(-MAX_HISTORY_LENGTH)));
+    } catch {
+        // Ignore errors (e.g., localStorage full)
+    }
+};
+
+// ============================================
 // Moo.sh COMPONENT
 // ============================================
 
 export default function Cownsole({ onClose }: CownsoleProps): React.ReactElement {
     const { state, dispatch } = useGame();
     
-    // Console state
+    // Console state - load history from localStorage on init
     const [input, setInput] = useState('');
     const [output, setOutput] = useState<OutputEntry[]>([]);
-    const [history, setHistory] = useState<string[]>([]);
+    const [history, setHistory] = useState<string[]>(loadHistory);
     const [historyIndex, setHistoryIndex] = useState(-1);
     const [isClosing, setIsClosing] = useState(false);
     
@@ -43,6 +75,11 @@ export default function Cownsole({ onClose }: CownsoleProps): React.ReactElement
     useEffect(() => {
         inputRef.current?.focus();
     }, []);
+    
+    // Save history to localStorage when it changes
+    useEffect(() => {
+        saveHistory(history);
+    }, [history]);
     
     // Auto-scroll to bottom when output changes
     useEffect(() => {

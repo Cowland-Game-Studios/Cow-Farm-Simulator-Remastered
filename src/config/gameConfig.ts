@@ -316,55 +316,55 @@ export const GAME_CONFIG: GameConfigType = {
     // Item definitions
     ITEMS: {
         milk: { 
-            name: 'Milk', 
+            name: 'milk', 
             icon: './images/crafting/products/milk.svg',
             category: 'resource',
             description: 'Fresh milk from your cows',
         },
         grass: { 
-            name: 'Grass', 
+            name: 'grass', 
             icon: './images/pasture/grass.svg',
             category: 'resource',
             description: 'Feed for hungry cows',
             buyPrice: 10, // Can buy grass with coins
         },
         cream: { 
-            name: 'Cream', 
+            name: 'cream', 
             icon: './images/crafting/products/cream.svg',
             category: 'product',
             description: 'Rich cream made from milk',
             sellPrice: 25,
         },
         butter: { 
-            name: 'Butter', 
+            name: 'butter', 
             icon: './images/crafting/products/butter.svg',
             category: 'product',
             description: 'Smooth butter churned from milk',
             sellPrice: 30,
         },
         cheese: { 
-            name: 'Cheese', 
+            name: 'cheese', 
             icon: './images/crafting/products/cheese.svg',
             category: 'product',
             description: 'Aged cheese with rich flavor',
             sellPrice: 50,
         },
         yogurt: { 
-            name: 'Yogurt', 
+            name: 'yogurt', 
             icon: './images/crafting/products/yogurt.svg',
             category: 'product',
             description: 'Creamy cultured yogurt',
             sellPrice: 35,
         },
         iceCream: { 
-            name: 'Ice Cream', 
+            name: 'ice cream', 
             icon: './images/crafting/products/ice cream.svg',
             category: 'product',
             description: 'Delicious frozen treat',
             sellPrice: 75,
         },
         cheesecake: { 
-            name: 'Cheesecake', 
+            name: 'cheesecake', 
             icon: './images/crafting/products/cheesecake.svg',
             category: 'product',
             description: 'Decadent cheesecake dessert',

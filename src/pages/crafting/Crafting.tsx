@@ -69,8 +69,7 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
     const [craftingPhase, setCraftingPhase] = useState<string>('idle');
     const [craftingRecipe, setCraftingRecipe] = useState<Recipe | null>(null);
     const [craftingIngredientIds, setCraftingIngredientIds] = useState<number[]>([]);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [outputPosition, setOutputPosition] = useState({ x: 0, y: 0 });
+    const [craftingCenter, setCraftingCenter] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
     const [outputTargetPosition, setOutputTargetPosition] = useState<{ x: number; y: number } | null>(null);
     
     // Timed crafting state
@@ -371,11 +370,14 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
         if (!canCraftFromBoard && !canCraftFromInventory) return;
         
         if (canCraftFromBoard) {
-            // Identify ingredients to use
+            // Identify ingredients to use (skip ones already being crafted)
             const usedIndices: number[] = [];
             const tempCounts: Record<string, number> = {};
             
             ingredientsPlaced.forEach((ing, idx) => {
+                // Skip ingredients that are already being crafted
+                if (craftingIngredientIds.includes(idx)) return;
+                
                 const needed = recipe.inputs.find(input => input.item === ing.name);
                 if (needed) {
                     const usedSoFar = tempCounts[ing.name] || 0;
@@ -386,9 +388,14 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
                 }
             });
             
+            // Calculate center point of ingredients being crafted
+            const craftingIngs = ingredientsPlaced.filter((_, idx) => usedIndices.includes(idx));
+            const centerX = craftingIngs.reduce((sum, ing) => sum + ing.x, 0) / craftingIngs.length;
+            const centerY = craftingIngs.reduce((sum, ing) => sum + ing.y, 0) / craftingIngs.length;
+            
             setCraftingRecipe(recipe);
             setCraftingIngredientIds(usedIndices);
-            setOutputPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+            setCraftingCenter({ x: centerX, y: centerY });
             setOutputTargetPosition(getSidebarItemPosition(recipe.outputs[0].item));
             setCraftingPhase('converging');
             
@@ -413,8 +420,8 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
                     ).map(ing => ({
                         name: ing.name,
                         image: ing.image,
-                        x: window.innerWidth / 2,
-                        y: window.innerHeight / 2,
+                        x: centerX,
+                        y: centerY,
                     }));
                     
                     setBoardCraft({
@@ -461,7 +468,7 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
         } else {
             spawnIngredientsOnBoard(recipe);
         }
-    }, [canCraft, boardIngredientCounts, ingredientsPlaced, addItem, spawnIngredientsOnBoard, craftingPhase, timedCrafting, setBoardCraft]);
+    }, [canCraft, boardIngredientCounts, ingredientsPlaced, craftingIngredientIds, addItem, spawnIngredientsOnBoard, craftingPhase, timedCrafting, setBoardCraft]);
 
     // ============================================
     // INGREDIENT DROP HANDLER
@@ -564,8 +571,10 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
                     ingredient={ingredient}
                     isBeingCrafted={craftingIngredientIds.includes(index)}
                     craftingPhase={craftingPhase}
+                    craftingCenter={craftingCenter}
                     timedCrafting={timedCrafting}
                     isClosing={isClosing}
+                    isEntering={!animationComplete}
                     onClick={handlePlacedIngredientClick}
                 />
             ))}
@@ -581,6 +590,7 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
             <CraftingOutput
                 recipe={craftingRecipe}
                 craftingPhase={craftingPhase}
+                craftingCenter={craftingCenter}
                 outputTargetPosition={outputTargetPosition}
             />
             

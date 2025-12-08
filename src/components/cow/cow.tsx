@@ -43,6 +43,7 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
     const moveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const pulseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const pickupPositionRef = useRef<Position | null>(null);
+    const breedCheckThrottleRef = useRef<number>(0); // Timestamp of last breed target check
 
     // ---- DOM-based collision detection (for breeding only) ----
     const isTouchingCow = useCallback((otherCowId: string, maxDistance: number = COW_CONFIG.TOUCH_DISTANCE_THRESHOLD): boolean => {
@@ -151,6 +152,7 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
     }, [cowImpulse, cowId, clearCowImpulse]);
 
     // ---- Check if this cow is a breed target (another full cow is being dragged near) ----
+    // Throttled to 60ms (~16fps) to reduce DOM query overhead during rapid mouse movements
     useEffect(() => {
         if (!cow || !draggingCow.cowId || !draggingCow.position) {
             setIsBreedTarget(false);
@@ -175,6 +177,13 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
             setIsBreedTarget(false);
             return;
         }
+
+        // Throttle DOM queries to ~60ms intervals (reduces layout thrashing)
+        const now = Date.now();
+        if (now - breedCheckThrottleRef.current < 60) {
+            return; // Skip this update, keeping previous isBreedTarget state
+        }
+        breedCheckThrottleRef.current = now;
 
         // Check distance using DOM
         const myRect = document.getElementById(cowId)?.getBoundingClientRect();

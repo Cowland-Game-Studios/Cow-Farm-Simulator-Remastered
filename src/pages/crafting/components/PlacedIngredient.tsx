@@ -31,8 +31,10 @@ interface PlacedIngredientProps {
     ingredient: PlacedIngredientData;
     isBeingCrafted: boolean;
     craftingPhase: string;
+    craftingCenter: { x: number; y: number };
     timedCrafting: TimedCraftingData | null;
     isClosing: boolean;
+    isEntering: boolean;
     onClick?: (e: MouseEvent, ingredient: PlacedIngredientData) => void;
 }
 
@@ -40,12 +42,15 @@ export default function PlacedIngredient({
     ingredient,
     isBeingCrafted,
     craftingPhase,
+    craftingCenter,
     timedCrafting,
     isClosing,
+    isEntering,
     onClick,
 }: PlacedIngredientProps): React.ReactElement {
-    const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2;
+    // Use the center of ingredients being crafted, not screen center
+    const centerX = craftingCenter.x;
+    const centerY = craftingCenter.y;
     const isSpawning = ingredient.spawnPhase === 'starting' || ingredient.spawnPhase === 'animating';
     
     // Calculate position based on crafting phase and spawn state
@@ -96,10 +101,17 @@ export default function PlacedIngredient({
         }
     };
 
+    // Determine animation class
+    const getAnimationClass = () => {
+        if (isClosing) return styles.placedIngredientClosing;
+        if (isEntering && !isSpawning && !isBeingCrafted) return styles.placedIngredientEntering;
+        return '';
+    };
+
     return (
         <button
             type="button"
-            className={`${isClosing ? styles.placedIngredientClosing : ''} ${isTimedSpinning ? styles.continuousSpin : ''}`}
+            className={`${getAnimationClass()} ${isTimedSpinning ? styles.continuousSpin : ''}`}
             style={{
                 position: "absolute",
                 left: displayX,

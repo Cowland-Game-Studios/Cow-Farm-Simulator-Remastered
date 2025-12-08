@@ -32,6 +32,8 @@ export const supabase: null = null;
 interface SaveData {
     cows: GameState['cows'];
     resources: GameState['resources'];
+    inventory: GameState['inventory'];
+    craftingQueue: GameState['craftingQueue'];
     playTime: number;
     savedAt?: number;
     version?: number;
@@ -55,9 +57,11 @@ const { LOCAL_STORAGE_KEY, SAVE_VERSION } = GAME_CONFIG.SAVE;
  */
 function saveToLocalStorage(state: GameState): SaveResult {
     try {
-        const saveData = {
+        const saveData: SaveData = {
             cows: state.cows,
             resources: state.resources,
+            inventory: state.inventory,
+            craftingQueue: state.craftingQueue,
             playTime: state.playTime,
             savedAt: Date.now(),
             version: SAVE_VERSION,
@@ -85,6 +89,17 @@ function loadFromLocalStorage(): SaveData | null {
         return {
             cows: data.cows || [],
             resources: data.resources || { coins: 10000, stars: 0 },
+            inventory: data.inventory || {
+                milk: 0,
+                grass: 10,
+                cream: 0,
+                butter: 0,
+                cheese: 0,
+                yogurt: 0,
+                iceCream: 0,
+                cheesecake: 0,
+            },
+            craftingQueue: data.craftingQueue || [],
             playTime: data.playTime || 0,
         };
     } catch (error) {

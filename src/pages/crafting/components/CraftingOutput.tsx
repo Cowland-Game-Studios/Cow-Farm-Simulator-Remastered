@@ -11,12 +11,14 @@ import { Recipe } from '../../../engine/types';
 interface CraftingOutputProps {
     recipe: Recipe | null;
     craftingPhase: string;
+    craftingCenter: { x: number; y: number };
     outputTargetPosition: { x: number; y: number } | null;
 }
 
 export default function CraftingOutput({
     recipe,
     craftingPhase,
+    craftingCenter,
     outputTargetPosition,
 }: CraftingOutputProps): React.ReactElement | null {
     if (!recipe || (craftingPhase !== 'output' && craftingPhase !== 'flyout')) {
@@ -32,10 +34,10 @@ export default function CraftingOutput({
                 position: 'absolute',
                 left: isFlyout && outputTargetPosition 
                     ? outputTargetPosition.x 
-                    : window.innerWidth / 2,
+                    : craftingCenter.x,
                 top: isFlyout && outputTargetPosition 
                     ? outputTargetPosition.y 
-                    : window.innerHeight / 2,
+                    : craftingCenter.y,
                 transform: 'translate(-50%, -50%)',
                 zIndex: 20,
                 opacity: isFlyout ? 0 : 1,

@@ -1,0 +1,16 @@
+# Project Rules
+
+## After Every Code Change
+
+After completing code changes, always run the following checks to verify the code compiles and passes linting:
+
+```bash
+npm run build
+```
+
+This will run TypeScript compilation and catch any type errors or build issues.
+
+If the project has separate lint/tsc commands, also run:
+- `npm run lint` (if available)
+- `npx tsc --noEmit` (for type checking without emitting files)
+
