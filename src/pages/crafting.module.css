@@ -65,11 +65,14 @@
 @keyframes listItemPopIn {
     0% {
         opacity: 0;
-        transform: translateX(-30px) scale(0.8);
+        transform: translateX(-40px) scale(0.7);
     }
-    70% {
+    50% {
         opacity: 1;
-        transform: translateX(5px) scale(1.05);
+        transform: translateX(8px) scale(1.12);
+    }
+    75% {
+        transform: translateX(-3px) scale(0.98);
     }
     100% {
         opacity: 1;
@@ -91,11 +94,14 @@
 @keyframes listItemPopInRight {
     0% {
         opacity: 0;
-        transform: translateX(30px) scale(0.8);
+        transform: translateX(40px) scale(0.7);
     }
-    70% {
+    50% {
         opacity: 1;
-        transform: translateX(-5px) scale(1.05);
+        transform: translateX(-8px) scale(1.12);
+    }
+    75% {
+        transform: translateX(3px) scale(0.98);
     }
     100% {
         opacity: 1;
@@ -279,9 +285,38 @@
     transform: translate(50%, -50%);
 }
 
-.recipeItem {
+/* Staggered entrance animation for right sidebar items */
+.rightSidebar .list > * {
     opacity: 0;
     animation: listItemPopInRight 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.rightSidebar .list > *:nth-child(1) { animation-delay: 0.15s; }
+.rightSidebar .list > *:nth-child(2) { animation-delay: 0.2s; }
+.rightSidebar .list > *:nth-child(3) { animation-delay: 0.25s; }
+.rightSidebar .list > *:nth-child(4) { animation-delay: 0.3s; }
+.rightSidebar .list > *:nth-child(5) { animation-delay: 0.35s; }
+.rightSidebar .list > *:nth-child(6) { animation-delay: 0.4s; }
+.rightSidebar .list > *:nth-child(7) { animation-delay: 0.45s; }
+.rightSidebar .list > *:nth-child(8) { animation-delay: 0.5s; }
+
+/* Staggered exit animation for right sidebar items */
+.rightSidebar.closing .list > * {
+    animation: listItemPopOutRight 0.2s ease-in forwards;
+    opacity: 1;
+}
+
+.rightSidebar.closing .list > *:nth-child(1) { animation-delay: 0.08s; }
+.rightSidebar.closing .list > *:nth-child(2) { animation-delay: 0.06s; }
+.rightSidebar.closing .list > *:nth-child(3) { animation-delay: 0.04s; }
+.rightSidebar.closing .list > *:nth-child(4) { animation-delay: 0.02s; }
+.rightSidebar.closing .list > *:nth-child(5) { animation-delay: 0s; }
+.rightSidebar.closing .list > *:nth-child(6) { animation-delay: 0s; }
+.rightSidebar.closing .list > *:nth-child(7) { animation-delay: 0s; }
+.rightSidebar.closing .list > *:nth-child(8) { animation-delay: 0s; }
+
+.recipeItem {
+    opacity: 0; /* Start invisible to prevent jitter before animation */
 }
 
 .recipeItemAnimated {
@@ -307,28 +342,9 @@
     animation: recipePulse 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.recipeItem1 { animation-delay: 0.2s; }
-.recipeItem2 { animation-delay: 0.25s; }
-.recipeItem3 { animation-delay: 0.3s; }
-.recipeItem4 { animation-delay: 0.35s; }
-.recipeItem5 { animation-delay: 0.4s; }
-.recipeItem6 { animation-delay: 0.45s; }
-.recipeItem7 { animation-delay: 0.5s; }
-.recipeItem8 { animation-delay: 0.55s; }
-
 .recipeItemClosing {
-    animation: listItemPopOutRight 0.2s ease-in forwards;
-    opacity: 1;
+    /* Exit animation handled by parent .rightSidebar.closing selector */
 }
-
-.recipeItemClosing1 { animation-delay: 0.08s; }
-.recipeItemClosing2 { animation-delay: 0.06s; }
-.recipeItemClosing3 { animation-delay: 0.04s; }
-.recipeItemClosing4 { animation-delay: 0.02s; }
-.recipeItemClosing5 { animation-delay: 0s; }
-.recipeItemClosing6 { animation-delay: 0s; }
-.recipeItemClosing7 { animation-delay: 0s; }
-.recipeItemClosing8 { animation-delay: 0s; }
 
 .craftingInstructions {
     position: absolute;
@@ -356,6 +372,11 @@
     flex-direction: column;
     gap: 15px;
     overflow: visible;
+}
+
+/* All list items start invisible to prevent jitter before stagger animation */
+.list > * {
+    opacity: 0;
 }
 
 /* Animated list for recipes - smooth reordering */
@@ -455,6 +476,7 @@
 
 /* Hover animations for sidebar items */
 .ingredientItem {
+    opacity: 0; /* Start invisible to prevent jitter before animation */
     transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 

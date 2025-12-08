@@ -27,6 +27,33 @@ const CURSOR_CONFIG = {
     ],
 };
 
+/**
+ * Detect if the device is mobile/tablet
+ * Uses multiple detection methods for reliability
+ */
+function detectIsMobile() {
+    // 1. Check user agent for mobile devices
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|CriOS/i;
+    const isMobileUA = mobileRegex.test(userAgent);
+    
+    // 2. Check for coarse pointer (touch-only devices)
+    const hasCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+    const hasFinePointer = window.matchMedia('(pointer: fine)').matches;
+    
+    // 3. Check if hover is not supported (touch devices)
+    const noHover = window.matchMedia('(hover: none)').matches;
+    
+    // 4. Check for touch capability without mouse
+    const isTouchOnly = hasCoarsePointer && !hasFinePointer;
+    
+    // Device is mobile if:
+    // - User agent indicates mobile, OR
+    // - Has coarse pointer only (no fine pointer), OR  
+    // - Hover is not supported
+    return isMobileUA || isTouchOnly || noHover;
+}
+
 // Get the effective border radius of an element
 function getBorderRadius(element) {
     const computed = window.getComputedStyle(element);
@@ -156,8 +183,8 @@ export default function BlobCursor({ mousePosition, isDragging = false }) {
         isHovering: false,
     });
     
-    // Track if using touch input (hide cursor on touch devices)
-    const [isTouch, setIsTouch] = useState(false);
+    // Detect mobile device once on mount
+    const [isMobile, setIsMobile] = useState(() => detectIsMobile());
     
     const animationRef = useRef(null);
     const positionRef = useRef({ x: mousePosition.x, y: mousePosition.y });
@@ -169,43 +196,14 @@ export default function BlobCursor({ mousePosition, isDragging = false }) {
         return current + (target - current) * speed;
     }, []);
     
-    // Detect touch vs mouse input
+    // Re-check on resize (in case of device rotation or connecting external display)
     useEffect(() => {
-        const handleTouchStart = () => {
-            setIsTouch(true);
+        const handleResize = () => {
+            setIsMobile(detectIsMobile());
         };
         
-        const handleMouseMove = (e) => {
-            // Only show cursor if it's a real mouse movement (not touch-generated)
-            // Touch events often trigger mousemove too, but with no movement
-            if (e.movementX !== 0 || e.movementY !== 0) {
-                setIsTouch(false);
-            }
-        };
-        
-        const handleMouseDown = () => {
-            // Mouse click indicates mouse usage
-            setIsTouch(false);
-        };
-        
-        window.addEventListener('touchstart', handleTouchStart, { passive: true });
-        window.addEventListener('mousemove', handleMouseMove, { passive: true });
-        window.addEventListener('mousedown', handleMouseDown, { passive: true });
-        
-        // Check initial state - if device has touch capability and no mouse
-        const hasTouchScreen = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        const hasMousePointer = window.matchMedia('(pointer: fine)').matches;
-        
-        // Start hidden on touch-only devices
-        if (hasTouchScreen && !hasMousePointer) {
-            setIsTouch(true);
-        }
-        
-        return () => {
-            window.removeEventListener('touchstart', handleTouchStart);
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('mousedown', handleMouseDown);
-        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     useEffect(() => {
@@ -271,8 +269,8 @@ export default function BlobCursor({ mousePosition, isDragging = false }) {
         };
     }, [mousePosition, lerp]);
 
-    // Hide cursor completely on touch devices
-    if (isTouch) {
+    // Hide cursor completely on mobile devices
+    if (isMobile) {
         return null;
     }
 

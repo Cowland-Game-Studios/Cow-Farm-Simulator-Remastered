@@ -36,6 +36,35 @@ export const averageColors = (c1, c2) => ({
 });
 
 /**
+ * Generate a random vibrant color
+ */
+export const randomColor = () => {
+    // Generate vibrant colors by using high saturation
+    const hue = Math.random() * 360;
+    const saturation = 70 + Math.random() * 30; // 70-100%
+    const lightness = 45 + Math.random() * 20;  // 45-65%
+    
+    // Convert HSL to RGB
+    const c = (1 - Math.abs(2 * lightness / 100 - 1)) * saturation / 100;
+    const x = c * (1 - Math.abs((hue / 60) % 2 - 1));
+    const m = lightness / 100 - c / 2;
+    
+    let r, g, b;
+    if (hue < 60) { r = c; g = x; b = 0; }
+    else if (hue < 120) { r = x; g = c; b = 0; }
+    else if (hue < 180) { r = 0; g = c; b = x; }
+    else if (hue < 240) { r = 0; g = x; b = c; }
+    else if (hue < 300) { r = x; g = 0; b = c; }
+    else { r = c; g = 0; b = x; }
+    
+    return createColor(
+        Math.round((r + m) * 255),
+        Math.round((g + m) * 255),
+        Math.round((b + m) * 255)
+    );
+};
+
+/**
  * Create a new cow object
  */
 export const createCow = (color, position = null) => ({
@@ -67,28 +96,19 @@ export const createInitialState = () => ({
     cows: [
         {
             id: uuidv4(),
-            color: createColor(255, 0, 0),
+            color: randomColor(),
             state: 'full',
             fullness: 1,
-            position: { x: 200, y: 300 },
+            position: { x: 300, y: 300 },
             lastBredAt: 0,
             createdAt: Date.now(),
         },
         {
             id: uuidv4(),
-            color: createColor(255, 230, 0),
+            color: randomColor(),
             state: 'full',
             fullness: 1,
-            position: { x: 400, y: 300 },
-            lastBredAt: 0,
-            createdAt: Date.now(),
-        },
-        {
-            id: uuidv4(),
-            color: createColor(0, 0, 255),
-            state: 'full',
-            fullness: 1,
-            position: { x: 600, y: 300 },
+            position: { x: 500, y: 300 },
             lastBredAt: 0,
             createdAt: Date.now(),
         },

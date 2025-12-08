@@ -22,8 +22,14 @@ import { actions } from './gameState';
 export function useGameLoop(state, dispatch) {
     const animationRef = useRef(null);
     const lastTimeRef = useRef(performance.now());
+    const pausedRef = useRef(state.ui.paused);
     
     const MAX_DELTA = 100; // Cap delta to prevent spiral of death
+
+    // Keep pausedRef in sync with state
+    useEffect(() => {
+        pausedRef.current = state.ui.paused;
+    }, [state.ui.paused]);
 
     const gameLoop = useCallback((currentTime) => {
         // Calculate delta time
@@ -33,15 +39,15 @@ export function useGameLoop(state, dispatch) {
         // Cap delta to prevent large jumps (e.g., tab was inactive)
         delta = Math.min(delta, MAX_DELTA);
 
-        // Don't update if paused
-        if (!state.ui.paused) {
+        // Don't update if paused - use ref to avoid stale closure
+        if (!pausedRef.current) {
             // Dispatch tick for milk production, etc.
             dispatch(actions.tick(delta));
         }
 
         // Schedule next frame
         animationRef.current = requestAnimationFrame(gameLoop);
-    }, [state.ui.paused, dispatch]);
+    }, [dispatch]);
 
     useEffect(() => {
         // Start the loop
