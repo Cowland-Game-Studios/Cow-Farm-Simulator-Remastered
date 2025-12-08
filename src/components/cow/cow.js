@@ -1,204 +1,243 @@
 import styles from "./cow.module.css";
-import Draggable from "../draggable/draggable";
-import { useContext, useEffect, useState } from "react";
+import DraggableSwinging from "../draggableSwinging/draggableSwinging";
+import { useContext, useEffect, useState, useRef, useCallback } from "react";
 import PastureStateContext from "../../contexts/PastureStateContext";
 import { v4 as uuidv4 } from 'uuid';
 import { CowSVG } from "./CowSVG";
 import CowListContext, { opacity } from "../../contexts/CowListContext";
 
-export default function Cow({id = uuidv4(), initialState = "hungry", initialColor = "cyan", initialFullness = 0.1}) {
+// Game constants
+const COW_CONFIG = {
+    MILK_PRODUCTION_TIME_MS: 30000,      // Time to fully produce milk
+    FULLNESS_POLL_INTERVAL_MS: 1000,     // How often to update fullness
+    TOUCH_CHECK_INTERVAL_MS: 100,        // How often to check for bucket touch
+    TOUCH_DISTANCE_THRESHOLD: 50,        // Pixels for collision detection
+    MOVE_MAX_DISTANCE: 100,              // Max random movement distance
+    MOVE_DISTANCE_FULL_MULTIPLIER: 0.25, // Movement reduction when full
+    MOVE_INTERVAL_MAX_MS: 10000,         // Max time between random moves
+    INITIAL_FULLNESS_HUNGRY: 0.1,        // Fullness when hungry
+    INITIAL_FULLNESS_PRODUCING: 0.25,    // Fullness when starting production
+    SCALE_FULL: 1.1,                     // Scale when cow is full
+    SCALE_HUNGRY: 0.8,                   // Scale when cow is hungry
+    SCALE_NORMAL: 1,                     // Normal scale
+};
 
-    const colorPollingFrequency = 1000
+export default function Cow({ id = uuidv4(), initialState = "hungry", initialColor = "cyan", initialFullness = 0.1 }) {
 
-    const [cowID, setCowID] = useState(id);
-    const {isMilking, isFeeding} = useContext(PastureStateContext);
-    const {cowList, setCowList} = useContext(CowListContext);
+    const cowID = id;  // No need for state since ID doesn't change
+    const { isMilking, isFeeding } = useContext(PastureStateContext);
+    const { cowList, setCowList } = useContext(CowListContext);
 
-    const [color, setColor] = useState(initialColor);
+    const color = initialColor;  // Color only changes through breeding (new cow created)
 
-    const [cowState, setCowState] = useState(initialState)
+    const [cowState, setCowState] = useState(initialState);
     const [fullness, setFullness] = useState(initialFullness);
 
-    const [cowOffset, setCowOffset] = useState({x: 0, y: 0});
+    const [cowOffset, setCowOffset] = useState({ x: 0, y: 0 });
     const [cowFlipHorizontal, setCowFlipHorizontal] = useState(false);
 
+    // Ref to track timeout for random movement cleanup
+    const moveTimeoutRef = useRef(null);
+
+    // Milk production effect
     useEffect(() => {
-        if (cowState != "producing milk") {
-            return
+        if (cowState !== "producing milk") {
+            return;
         }
 
-        const pollColor = () => {
-            setFullness(fullness => fullness + 1 / (30 * 1000 / colorPollingFrequency))
-        }
+        const pollFullness = () => {
+            setFullness(prevFullness => 
+                prevFullness + 1 / (COW_CONFIG.MILK_PRODUCTION_TIME_MS / COW_CONFIG.FULLNESS_POLL_INTERVAL_MS)
+            );
+        };
 
-        const interval = setInterval(pollColor, colorPollingFrequency)
-        pollColor()
+        const interval = setInterval(pollFullness, COW_CONFIG.FULLNESS_POLL_INTERVAL_MS);
+        pollFullness();
 
-        return () => clearInterval(interval)
-    }, [cowState])
+        return () => clearInterval(interval);
+    }, [cowState]);
 
+    // Check if cow is full
     useEffect(() => {
         if (fullness >= 1) {
-            setCowState("full")
+            setCowState("full");
         }
-    }, [fullness])
+    }, [fullness]);
 
-    const isTouching = (bucketID, maxDistance = 50) => {
+    // Collision detection helper
+    const isTouching = useCallback((targetID, maxDistance = COW_CONFIG.TOUCH_DISTANCE_THRESHOLD) => {
         const cowRect = document.getElementById(cowID)?.getBoundingClientRect();
-        const bucketRect = document.getElementById(bucketID)?.getBoundingClientRect();
+        const targetRect = document.getElementById(targetID)?.getBoundingClientRect();
 
-        if (!cowRect || !bucketRect) {
+        if (!cowRect || !targetRect) {
             return false;
         }
 
         const cowCenter = {
             x: cowRect.x + cowRect.width / 2,
             y: cowRect.y + cowRect.height / 2,
-        }
+        };
 
-        const bucketCenter = {
-            x: bucketRect.x + bucketRect.width / 2,
-            y: bucketRect.y + bucketRect.height / 2,
-        }
+        const targetCenter = {
+            x: targetRect.x + targetRect.width / 2,
+            y: targetRect.y + targetRect.height / 2,
+        };
 
         const distance = Math.sqrt(
-            Math.pow(cowCenter.x - bucketCenter.x, 2) + Math.pow(cowCenter.y - bucketCenter.y, 2)
+            Math.pow(cowCenter.x - targetCenter.x, 2) + Math.pow(cowCenter.y - targetCenter.y, 2)
         );
 
         return distance < maxDistance;
-    }
+    }, [cowID]);
 
-
+    // Milking and feeding interaction effect
     useEffect(() => {
-
-        if (cowState == "producing milk") {
-            return
+        if (cowState === "producing milk") {
+            return;
         }
 
-        if (isMilking || isFeeding) {
-            const a = setInterval(() => {
-                    if (isTouching("bucket")) {
-                        if (isMilking && cowState === "full") {
-                            setCowState("hungry");
-                            setFullness(0.1);
-
-                            clearInterval(a);
-                            return
-                        }
-                        else if (isFeeding && cowState === "hungry") {
-                            setCowState("producing milk");
-                            setFullness(0.25);
-
-                            clearInterval(a);
-                            return
-                        }
-                    }
-            }, 100);
+        if (!isMilking && !isFeeding) {
+            return;
         }
-    }, [isMilking, isFeeding, cowState]);
 
-    useState(() => {
+        const intervalId = setInterval(() => {
+            if (isTouching("bucket")) {
+                if (isMilking && cowState === "full") {
+                    setCowState("hungry");
+                    setFullness(COW_CONFIG.INITIAL_FULLNESS_HUNGRY);
+                    clearInterval(intervalId);
+                } else if (isFeeding && cowState === "hungry") {
+                    setCowState("producing milk");
+                    setFullness(COW_CONFIG.INITIAL_FULLNESS_PRODUCING);
+                    clearInterval(intervalId);
+                }
+            }
+        }, COW_CONFIG.TOUCH_CHECK_INTERVAL_MS);
+
+        return () => clearInterval(intervalId);
+    }, [isMilking, isFeeding, cowState, isTouching]);
+
+    // Random movement effect (fixed from useState misuse)
+    useEffect(() => {
         const moveRandomly = () => {
+            const moveDistance = COW_CONFIG.MOVE_MAX_DISTANCE * 
+                (cowState !== "full" ? 1 : COW_CONFIG.MOVE_DISTANCE_FULL_MULTIPLIER);
 
-            const cowMoveMaxDistance = 100 * (cowState != "full" ? 1 : 0.25);
+            if (cowState !== "hungry") {
+                const randomX = Math.random() * moveDistance - moveDistance / 2;
+                const randomY = Math.random() * moveDistance - moveDistance / 2;
 
-            if (cowState != "hungry") {
-                const randomX = Math.random() * cowMoveMaxDistance - cowMoveMaxDistance / 2;
-                const randomY = Math.random() * cowMoveMaxDistance - cowMoveMaxDistance / 2;
-
-                setCowOffset({x: randomX, y: randomY})
-                setCowFlipHorizontal(randomX > 0)
+                setCowOffset({ x: randomX, y: randomY });
+                setCowFlipHorizontal(randomX > 0);
             }
 
-            setTimeout(() => {
-                moveRandomly()
-            }, Math.random() * 10000);
-        }
+            moveTimeoutRef.current = setTimeout(
+                moveRandomly,
+                Math.random() * COW_CONFIG.MOVE_INTERVAL_MAX_MS
+            );
+        };
 
-        moveRandomly()
-    }, [])
+        moveRandomly();
 
-    //
-    //breeding
-    //
+        return () => {
+            if (moveTimeoutRef.current) {
+                clearTimeout(moveTimeoutRef.current);
+            }
+        };
+    }, [cowState]);
+
+    // Breeding logic
     const canBreed = () => {
         return cowState === "full";
-    }
+    };
 
     const ifTouchingBreed = () => {
-
-        //average 2 string rgba() colors
+        // Average two RGBA color strings
         const averageTwoRGB = (rgb1, rgb2) => {
             const rgb1Array = rgb1.substring(5, rgb1.length - 1).split(",");
             const rgb2Array = rgb2.substring(5, rgb2.length - 1).split(",");
 
             const averageArray = rgb1Array.map((value, index) => {
                 return (parseInt(value) + parseInt(rgb2Array[index])) / 2;
-            }
-            );
+            });
 
             return `rgba(${averageArray[0]}, ${averageArray[1]}, ${averageArray[2]}, ${opacity})`;
-        }
+        };
 
         for (const cow of cowList) {
-            if (cow.id == cowID) {
+            if (cow.id === cowID) {
                 continue;
             }
 
-            if (isTouching(cow.id)) { //somehow check other cow fullness
+            if (isTouching(cow.id)) {
                 const newCow = {
                     id: uuidv4(),
                     color: averageTwoRGB(cow.color, color),
                     state: "hungry"
-                }
+                };
 
                 setCowState("hungry");
-                setFullness(0.1);
-    
-                setCowList(cowList => [...cowList, newCow]);
+                setFullness(COW_CONFIG.INITIAL_FULLNESS_HUNGRY);
+
+                setCowList(prevCowList => [...prevCowList, newCow]);
             }
         }
-    }
+    };
 
     const onDrop = () => {
         if (canBreed()) {
             ifTouchingBreed();
         }
-    }
+    };
+
+    // Calculate scale based on cow state
+    const getCowScale = () => {
+        if (cowState === "full") return COW_CONFIG.SCALE_FULL;
+        if (cowState === "hungry") return COW_CONFIG.SCALE_HUNGRY;
+        return COW_CONFIG.SCALE_NORMAL;
+    };
 
     return (
-        <div
-            // style={{
-            //     transform: `scaleX(${cowFlipHorizontal ? -1 : 1})`,
-            //     transition: "all 0.25s ease-in-out",
-            // }}
-        >
+        <div>
             <div
                 style={{
                     transform: `translate(${cowOffset.x}px, ${cowOffset.y}px)`,
                     transition: "all 1s ease-in-out",
                 }}
             >
-                <Draggable onDrop={onDrop} id={cowID} trackRotationSettings={{rotates: true, sensitivity: 1, displacement: 90}}>
+                <DraggableSwinging onDrop={onDrop} id={cowID} ropeLength={35} gravity={0.6} damping={0.97}>
                     <div style={{
                         position: "absolute",
                         top: -5,
                         left: 50,
                         transition: "all 1s ease-in-out",
                     }}>
-                        {isMilking && cowState === "full" && <img src="./images/cows/thinkMilk.svg" draggable={false} className={styles.bucket}/>}  
-                        {isFeeding && cowState === "hungry" && <img src="./images/cows/thinkFood.svg" draggable={false} className={styles.bucket}/>}  
+                        {isMilking && cowState === "full" && (
+                            <img src="./images/cows/thinkMilk.svg" draggable={false} className={styles.bucket} alt="Thinking about milk" />
+                        )}
+                        {isFeeding && cowState === "hungry" && (
+                            <img src="./images/cows/thinkFood.svg" draggable={false} className={styles.bucket} alt="Thinking about food" />
+                        )}
                     </div>
 
                     <div
                         style={{
-                            transform: `scaleX(${cowFlipHorizontal ? -1 : 1}) scale(${cowState == "full" ? 1.1 : cowState == "hungry" ? 0.8 : 1})`,
+                            transform: `scaleX(${cowFlipHorizontal ? -1 : 1}) scale(${getCowScale()})`,
                             transition: "all 0.25s ease-in-out",
                         }}
                     >
-                        <CowSVG color={color} fullness={fullness} colorPollingFrequency={colorPollingFrequency}/>
+                        {cowState === "hungry" ? (
+                            <img 
+                                src="./images/cows/cowMilked.svg" 
+                                alt="Milked cow" 
+                                draggable={false}
+                                style={{ width: 100, height: 100 }}
+                            />
+                        ) : (
+                            <CowSVG color={color} fullness={fullness} colorPollingFrequency={COW_CONFIG.FULLNESS_POLL_INTERVAL_MS} />
+                        )}
                     </div>
-                </Draggable>
+                </DraggableSwinging>
             </div>
         </div>
     );

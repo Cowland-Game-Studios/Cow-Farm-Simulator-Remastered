@@ -1,18 +1,28 @@
 import styles from "./button.module.css";
 
-export default function Button({text, image, onClick, keepOriginalCursor = false, ...props}) {
+export default function Button({ text, image, onClick, keepOriginalCursor = false, ...props }) {
     return (
-        <a onClick={onClick ? onClick : () => {}} {...props}>
+        <button 
+            type="button"
+            onClick={onClick ? onClick : () => {}} 
+            className={styles.buttonWrapper}
+            {...props}
+        >
             <div className={styles.buttonContainer} style={{
                 cursor: !keepOriginalCursor ? "pointer" : "default"
             }}>
-                {
-                    image && <img draggable={false} className={styles.buttonImage} src={image} />
-                }
+                {image && (
+                    <img 
+                        draggable={false} 
+                        className={styles.buttonImage} 
+                        src={image} 
+                        alt={text || "Button icon"} 
+                    />
+                )}
                 <p className={styles.buttonText}>
                     {text}
                 </p>
             </div>
-        </a>
+        </button>
     );
 }

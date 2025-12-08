@@ -3,7 +3,7 @@ import Dock from "../components/dock/dock";
 import Button from "../components/button/button";
 import Cow from "../components/cow/cow";
 import { useEffect, useState } from "react";
-import Draggable from "../components/draggable/draggable";
+import DraggableSwinging from "../components/draggableSwinging/draggableSwinging";
 import QuestMenu from "../components/questMenu/questMenu";
 import PastureStateContext from "../contexts/PastureStateContext";
 import CowListContext, { defaultCowList } from "../contexts/CowListContext";
@@ -18,14 +18,13 @@ export default function Pasture() {
     const [cowList, setCowList] = useState(defaultCowList);
 
     useEffect(() => {
-        const ridAllMouseEvents = () => {
+        const handleMouseUp = () => {
             setIsMilking(false);
             setIsFeeding(false);
-        }
+        };
 
-        window.addEventListener("mouseup", () => {
-            ridAllMouseEvents();
-        })
+        window.addEventListener("mouseup", handleMouseUp);
+        return () => window.removeEventListener("mouseup", handleMouseUp);
     }, []);
 
     return (
@@ -40,18 +39,18 @@ export default function Pasture() {
 
                     <div className={styles.UI}>
 
-                        {isMilking && <Draggable id="bucket" initialDragging trackRotationSettings={{rotates: false}}>
+                        {isMilking && <DraggableSwinging id="bucket" initialDragging ropeLength={30} gravity={0.4} damping={0.96}>
                             <div>
-                                <img draggable={false} src="./images/pasture/bucket.svg" />
+                                <img draggable={false} src="./images/pasture/bucket.svg" alt="Milk bucket" />
                             </div>
-                        </Draggable>}
+                        </DraggableSwinging>}
 
-                        {isFeeding && <Draggable id="bucket" initialDragging trackRotationSettings={{rotates: false}}>
+                        {isFeeding && <DraggableSwinging id="bucket" initialDragging ropeLength={25} gravity={0.3} damping={0.95}>
                         <div>
-                                <img draggable={false} src="./images/pasture/grass.svg" />
+                                <img draggable={false} src="./images/pasture/grass.svg" alt="Cow feed" />
                                 <p style={{position: "absolute", left: 30, top: 35}}>3x</p>
                             </div>
-                        </Draggable>}
+                        </DraggableSwinging>}
 
                         {true && <QuestMenu />}
 

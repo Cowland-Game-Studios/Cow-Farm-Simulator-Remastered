@@ -1,26 +1,32 @@
 import styles from "./questMenu.module.css";
 
-const quests = [
+// Quest data - will eventually come from game state/database
+const QUESTS = [
     {
-        name: "Breed 3 cows",
+        id: "breeder",
+        name: "breeder",
+        description: "breed cows",
         progress: 1,
         goal: 3,
+    },
+    {
+        id: "cheesy",
+        name: "cheesy",
+        description: "obtain cheese",
+        progress: 0,
+        goal: 1,
     }
-]
+];
 
-export default function QuestMenu ({...props}) {
+export default function QuestMenu({ ...props }) {
     return (
         <div className={styles.questMenu} {...props}>
-            {/* <div className={styles.questMenuContainer}> */}
-                <div className={styles.questItem}>
-                    <h3>breeder</h3>
-                    <p>- breed cows (1/3) </p>
+            {QUESTS.map(quest => (
+                <div key={quest.id} className={styles.questItem}>
+                    <h3>{quest.name}</h3>
+                    <p>- {quest.description} ({quest.progress}/{quest.goal})</p>
                 </div>
-                <div className={styles.questItem}>
-                    <h3>cheesy</h3>
-                    <p>- obtain cheese</p>
-                </div>
-            {/* </div> */}
+            ))}
         </div>
     );
 }
