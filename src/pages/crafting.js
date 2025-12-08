@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import PropTypes from 'prop-types';
 import Button from "../components/button/button";
 import styles from "./crafting.module.css";
@@ -6,6 +6,10 @@ import DraggableSwinging from "../components/draggableSwinging/draggableSwinging
 import ParticleRenderer from "../components/particles/ParticleRenderer";
 import { particleSystem } from "../engine/particleSystem";
 import { GAME_CONFIG } from "../config/gameConfig";
+
+// Swipe-to-close configuration
+const SWIPE_THRESHOLD = 100; // pixels to swipe up before closing
+const SWIPE_RESISTANCE = 0.5; // resistance when swiping down (opposite direction)
 
 // Product definitions
 const PRODUCTS = [
@@ -100,12 +104,98 @@ export default function Crafting({ onClose = () => {} }) {
     const clickTimeoutRef = useRef(null);
     const lastTapTimeRef = useRef({}); // Track last tap time per ingredient for double-tap detection
 
+    // Swipe-to-close state
+    const [swipeOffset, setSwipeOffset] = useState(0);
+    const [isSwiping, setIsSwiping] = useState(false);
+    const [animationComplete, setAnimationComplete] = useState(false);
+    const swipeStartRef = useRef(null);
+
+    // Mark animation as complete after entrance animation finishes
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setAnimationComplete(true);
+        }, 600); // Match benchSlideIn animation duration
+        return () => clearTimeout(timer);
+    }, []);
+
     const handleClose = () => {
         setIsClosing(true);
         setTimeout(() => {
             onClose();
         }, GAME_CONFIG.UI.ANIMATION_DURATION_MS);
     };
+
+    // Swipe handlers for the bench
+    const handleSwipeStart = useCallback((e) => {
+        // Get the Y position from touch or mouse
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        swipeStartRef.current = clientY;
+        setIsSwiping(true);
+    }, []);
+
+    const handleSwipeMove = useCallback((e) => {
+        if (!isSwiping || swipeStartRef.current === null) return;
+        
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        let delta = clientY - swipeStartRef.current; // Positive when swiping DOWN
+        
+        // Apply resistance when swiping up (negative delta - opposite direction)
+        if (delta < 0) {
+            delta *= SWIPE_RESISTANCE;
+        }
+        
+        setSwipeOffset(delta);
+    }, [isSwiping]);
+
+    const handleSwipeEnd = useCallback(() => {
+        if (!isSwiping) return;
+        
+        setIsSwiping(false);
+        swipeStartRef.current = null;
+        
+        // If swiped DOWN past threshold, close the menu
+        if (swipeOffset >= SWIPE_THRESHOLD) {
+            handleClose();
+        }
+        
+        // Reset offset (will animate back via CSS transition)
+        setSwipeOffset(0);
+    }, [isSwiping, swipeOffset]);
+
+    // Add global mouse/touch move and end listeners when swiping
+    useEffect(() => {
+        if (isSwiping) {
+            const handleGlobalMove = (e) => handleSwipeMove(e);
+            const handleGlobalEnd = () => handleSwipeEnd();
+
+            window.addEventListener('mousemove', handleGlobalMove);
+            window.addEventListener('mouseup', handleGlobalEnd);
+            window.addEventListener('touchmove', handleGlobalMove);
+            window.addEventListener('touchend', handleGlobalEnd);
+
+            return () => {
+                window.removeEventListener('mousemove', handleGlobalMove);
+                window.removeEventListener('mouseup', handleGlobalEnd);
+                window.removeEventListener('touchmove', handleGlobalMove);
+                window.removeEventListener('touchend', handleGlobalEnd);
+            };
+        }
+    }, [isSwiping, handleSwipeMove, handleSwipeEnd]);
+
+    // Scroll down to close
+    useEffect(() => {
+        if (isClosing) return; // Don't handle scroll if already closing
+        
+        const handleWheel = (e) => {
+            // deltaY > 0 means scrolling down
+            if (e.deltaY > 0) {
+                handleClose();
+            }
+        };
+
+        window.addEventListener('wheel', handleWheel, { passive: true });
+        return () => window.removeEventListener('wheel', handleWheel);
+    }, [isClosing]);
 
     const handleIngredientDrop = ({ x, y }) => {
         const ingredientName = selectedIngredient.name;
@@ -176,7 +266,6 @@ export default function Crafting({ onClose = () => {} }) {
     return (
         <div 
             className={`${styles.craftingBlurBackground} ${isClosing ? styles.closing : ''}`}
-            onClick={handleClose}
         >
             {/* Currently dragged ingredient */}
             {selectedIngredient && (
@@ -225,9 +314,16 @@ export default function Crafting({ onClose = () => {} }) {
             {/* Crafting bench - full center area */}
             {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
             <div 
-                className={`${styles.benchTop} ${isClosing ? styles.closing : ''}`} 
+                className={`${styles.benchTop} ${isClosing ? styles.closing : ''} ${animationComplete ? styles.animationDone : ''}`} 
                 id="craftingBench"
                 onClick={stopPropagation}
+                onMouseDown={animationComplete ? handleSwipeStart : undefined}
+                onTouchStart={animationComplete ? handleSwipeStart : undefined}
+                style={animationComplete ? {
+                    transform: `translate(-50%, -50%) translateY(${swipeOffset}px)`,
+                    transition: isSwiping ? 'none' : 'transform 0.3s ease-out',
+                    cursor: isSwiping ? 'grabbing' : 'grab'
+                } : undefined}
             >
                 <img
                     draggable={false}
@@ -281,7 +377,7 @@ export default function Crafting({ onClose = () => {} }) {
 
             {/* Close hint */}
             <p className={`${styles.closeHint} ${isClosing ? styles.closing : ''}`}>
-                click anywhere to close
+                scroll or swipe down to close
             </p>
         </div>
     );

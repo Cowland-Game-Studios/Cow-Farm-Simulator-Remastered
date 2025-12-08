@@ -45,3 +45,8 @@ p {
 
     user-select: none;
 }
+
+.xp {
+    color: rgba(0, 0, 0, 0.50);
+    font-weight: 400;
+}

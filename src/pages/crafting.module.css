@@ -24,11 +24,11 @@
 @keyframes benchSlideIn {
     0% {
         opacity: 0;
-        transform: translate(-50%, -50%) translateY(250px) scale(0.8);
+        transform: translate(-50%, -50%) translateY(-250px) scale(0.8);
     }
     70% {
         opacity: 1;
-        transform: translate(-50%, -50%) translateY(-15px) scale(1.02);
+        transform: translate(-50%, -50%) translateY(15px) scale(1.02);
     }
     100% {
         opacity: 1;
@@ -43,7 +43,7 @@
     }
     to {
         opacity: 0;
-        transform: translate(-50%, -50%) translateY(200px) scale(0.9);
+        transform: translate(-50%, -50%) translateY(-200px) scale(0.9);
     }
 }
 
@@ -222,6 +222,11 @@
     background: rgba(0, 0, 0, 0.05);
 
     animation: benchSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.benchTop.animationDone {
+    animation: none;
+    transform: translate(-50%, -50%);
 }
 
 .benchTop.closing {

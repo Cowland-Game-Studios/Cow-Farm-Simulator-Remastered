@@ -315,10 +315,10 @@ export default function Cow({ cowId }) {
                         transition: "all 1s ease-in-out",
                     }}>
                         {state.tools.milking && cowState === 'full' && (
-                            <img src="./images/cows/thinkMilk.svg" draggable={false} className={styles.bucket} alt="Thinking about milk" />
+                            <img src="./images/cows/thinkMilk.svg" draggable={false} className={styles.bucket} style={{ marginTop: -45 }} alt="Thinking about milk" />
                         )}
                         {state.tools.feeding && cowState === 'hungry' && (
-                            <img src="./images/cows/thinkFood.svg" draggable={false} className={styles.bucket} alt="Thinking about food" />
+                            <img src="./images/cows/thinkFood.svg" draggable={false} className={styles.bucket} style={{ marginTop: -5}} alt="Thinking about food" />
                         )}
                     </div>
 

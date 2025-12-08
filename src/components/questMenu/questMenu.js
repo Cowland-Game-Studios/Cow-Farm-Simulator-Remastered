@@ -8,6 +8,7 @@ const QUESTS = [
         description: "breed cows",
         progress: 1,
         goal: 3,
+        xp: 100,
     },
     {
         id: "cheesy",
@@ -15,6 +16,7 @@ const QUESTS = [
         description: "obtain cheese",
         progress: 0,
         goal: 1,
+        xp: 50,
     }
 ];
 
@@ -23,7 +25,7 @@ export default function QuestMenu({ ...props }) {
         <div className={styles.questMenu} {...props}>
             {QUESTS.map(quest => (
                 <div key={quest.id} className={styles.questItem}>
-                    <h3>{quest.name}</h3>
+                    <h3>{quest.name} <span className={styles.xp}>{quest.xp}xp</span></h3>
                     <p>- {quest.description} ({quest.progress}/{quest.goal})</p>
                 </div>
             ))}

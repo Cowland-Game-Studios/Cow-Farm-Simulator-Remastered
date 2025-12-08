@@ -17,7 +17,7 @@ import StatsDisplay from "../components/statsDisplay";
 import ParticleRenderer from "../components/particles/ParticleRenderer";
 import Crafting from "./crafting";
 import { useGame, useMousePosition, particleSystem } from "../engine";
-import { useEffect, useCallback, useMemo } from "react";
+import { useEffect, useCallback, useMemo, useState } from "react";
 import { GAME_CONFIG } from "../config/gameConfig";
 
 export default function Pasture() {
@@ -26,17 +26,33 @@ export default function Pasture() {
         cows,
         tools,
         resources,
-        ui,
         startMilking,
         startFeeding,
         updateToolPosition,
-        openCrafting,
-        closeCrafting,
         milkCow,
         feedCow,
     } = useGame();
     
     const mousePosition = useMousePosition();
+    
+    // ---- Crafting menu state ----
+    const [showCrafting, setShowCrafting] = useState(false);
+
+    // ---- Open crafting on scroll up ----
+    useEffect(() => {
+        const handleWheel = (e) => {
+            // Scroll up (negative deltaY) opens crafting
+            if (e.deltaY < -50 && !showCrafting) {
+                setShowCrafting(true);
+            }
+        };
+
+        window.addEventListener('wheel', handleWheel);
+
+        return () => {
+            window.removeEventListener('wheel', handleWheel);
+        };
+    }, [showCrafting]);
 
     // ---- Get cow IDs for collision detection ----
     const fullCowIds = useMemo(() => 
@@ -79,10 +95,13 @@ export default function Pasture() {
     // ---- Render ----
     return (
         <>
-            {ui.crafting && <Crafting onClose={closeCrafting} />}
-
             {/* Particle effects layer */}
             <ParticleRenderer />
+
+            {/* Crafting menu popup */}
+            {showCrafting && (
+                <Crafting onClose={() => setShowCrafting(false)} />
+            )}
 
             <div className={styles.pasture}>
                 {/* Render all cows */}
@@ -151,15 +170,6 @@ ${'||='.repeat(Math.ceil(window.innerWidth / 10))}`
                             image="./images/buttons/grassIcon.svg" 
                             hidden={tools.feeding}
                             onMouseDown={startFeeding}
-                        />
-                        <Button 
-                            text="make" 
-                            image="./images/buttons/milkIcon.svg" 
-                            onMouseDown={openCrafting}
-                        />
-                        <Button 
-                            text="shop" 
-                            image="./images/buttons/shopIcon.svg"
                         />
                     </Dock>
                 </div>
