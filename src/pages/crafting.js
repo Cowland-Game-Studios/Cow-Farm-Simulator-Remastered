@@ -137,7 +137,7 @@ export default function Crafting({ onClose = () => {} }) {
     const [timedCrafting, setTimedCrafting] = useState(null); // { startedAt, duration, recipe, ingredientIds }
     const [timedCraftingRemaining, setTimedCraftingRemaining] = useState(0); // Remaining seconds for display
     
-    // Removing ingredient animation state
+    // Removing ingredient animation state (cosmetic only - inventory already updated)
     const [removingIngredients, setRemovingIngredients] = useState([]); // [{ingredient, targetX, targetY, phase}]
     
     // Refs to track current state for cleanup
@@ -145,6 +145,7 @@ export default function Crafting({ onClose = () => {} }) {
     const ingredientsPlacedRef = useRef([]);
     const timedCraftingRef = useRef(null);
     const craftingIngredientIdsRef = useRef([]);
+    const componentMountedRef = useRef(true);
     
     // Keep refs in sync
     useEffect(() => {
@@ -163,15 +164,28 @@ export default function Crafting({ onClose = () => {} }) {
         craftingIngredientIdsRef.current = craftingIngredientIds;
     }, [craftingIngredientIds]);
     
+    // Mark component as mounted
+    useEffect(() => {
+        componentMountedRef.current = true;
+        return () => {
+            componentMountedRef.current = false;
+        };
+    }, []);
+    
     // Return all board items to inventory when menu closes (except those being crafted)
+    // Note: Removal animations commit inventory IMMEDIATELY, so no special handling needed
     useEffect(() => {
         return () => {
             // Return held ingredient
             if (selectedIngredientRef.current) {
                 addItem(selectedIngredientRef.current.name, 1);
             }
-            // Return all placed ingredients EXCEPT those being crafted in timed crafting
-            const craftingIds = timedCraftingRef.current ? craftingIngredientIdsRef.current : [];
+            
+            // Return all placed ingredients EXCEPT those being crafted
+            // - Timed crafting: ingredients persisted in global state, will complete when reopened
+            // - Instant crafting: output already added to inventory, don't return inputs
+            const craftingIds = craftingIngredientIdsRef.current;
+            
             ingredientsPlacedRef.current.forEach((ing, idx) => {
                 if (!craftingIds.includes(idx)) {
                     addItem(ing.name, 1);
@@ -217,50 +231,71 @@ export default function Crafting({ onClose = () => {} }) {
     }, []); // Only run on mount
     
     // Timer update for timed crafting (runs every 100ms for smooth display)
+    const timedCraftingCompletedRef = useRef(false);
+    
     useEffect(() => {
-        if (!timedCrafting) return;
+        if (!timedCrafting) {
+            timedCraftingCompletedRef.current = false;
+            return;
+        }
         
         const updateTimer = () => {
             const elapsed = Date.now() - timedCrafting.startedAt;
             const remaining = Math.max(0, timedCrafting.duration - elapsed);
             setTimedCraftingRemaining(remaining);
             
-            // Check if crafting is complete
-            if (remaining <= 0) {
-                // Trigger the output animation
-                setCraftingPhase('output');
-                const output = timedCrafting.recipe.outputs[0];
-                particleSystem.spawnCraftingPlaceParticle(
-                    window.innerWidth / 2,
-                    window.innerHeight / 2 - 40,
-                    `+${output.qty} ${ITEMS[output.item]?.name || output.item}`
+            // Check if crafting is complete (only trigger once)
+            if (remaining <= 0 && !timedCraftingCompletedRef.current) {
+                timedCraftingCompletedRef.current = true;
+                
+                // IMMEDIATELY commit inventory changes (animations are cosmetic)
+                // Remove used ingredients from board
+                setIngredientsPlaced(prev => 
+                    prev.filter((_, idx) => !timedCrafting.ingredientIds.includes(idx))
                 );
                 
-                // Phase 4: Flyout to sidebar
+                // Add output to inventory
+                for (const out of timedCrafting.recipe.outputs) {
+                    addItem(out.item, out.qty);
+                }
+                
+                // Clear global state immediately (no more persistence needed)
+                clearBoardCraft();
+                
+                // Clear local timed crafting state
+                setTimedCrafting(null);
+                
+                // Trigger the output animation (cosmetic only)
+                setCraftingPhase('output');
+                
+                // Phase 4: Flyout to sidebar (cosmetic only)
                 setTimeout(() => {
+                    if (!componentMountedRef.current) return;
                     setCraftingPhase('flyout');
                 }, 400);
                 
-                // Phase 5: Complete
+                // Phase 5: Reset animation state and spawn particle at sidebar (cosmetic only)
+                const recipeForParticle = timedCrafting.recipe;
                 setTimeout(() => {
-                    // Remove used ingredients from board
-                    setIngredientsPlaced(prev => 
-                        prev.filter((_, idx) => !timedCrafting.ingredientIds.includes(idx))
-                    );
-                    
-                    // Add output to inventory
-                    for (const out of timedCrafting.recipe.outputs) {
-                        addItem(out.item, out.qty);
+                    if (!componentMountedRef.current) return;
+                    // Spawn particle at the sidebar target position
+                    const output = recipeForParticle.outputs[0];
+                    const targetEl = document.querySelector(`[data-item-id="${output.item}"]`);
+                    let particleX = 100;
+                    let particleY = window.innerHeight / 2;
+                    if (targetEl) {
+                        const rect = targetEl.getBoundingClientRect();
+                        particleX = rect.left + rect.width / 2;
+                        particleY = rect.top + rect.height / 2 - 20;
                     }
-                    
-                    // Reset all crafting state
+                    particleSystem.spawnCraftingPlaceParticle(
+                        particleX,
+                        particleY,
+                        `+${output.qty} ${ITEMS[output.item]?.name || output.item}`
+                    );
                     setCraftingPhase('idle');
                     setCraftingRecipe(null);
                     setCraftingIngredientIds([]);
-                    setTimedCrafting(null);
-                    
-                    // Clear global state
-                    clearBoardCraft();
                 }, 1000);
             }
         };
@@ -281,11 +316,14 @@ export default function Crafting({ onClose = () => {} }) {
         return `${totalSeconds}s`;
     };
     
-    // Count ingredients on the crafting board
-    const boardIngredientCounts = useMemo(() => 
-        countIngredientsOnBoard(ingredientsPlaced),
-        [ingredientsPlaced]
-    );
+    // Count ingredients on the crafting board (excluding those currently being crafted)
+    const boardIngredientCounts = useMemo(() => {
+        // Filter out ingredients that are being crafted
+        const availableIngredients = ingredientsPlaced.filter((_, idx) => 
+            !craftingIngredientIds.includes(idx)
+        );
+        return countIngredientsOnBoard(availableIngredients);
+    }, [ingredientsPlaced, craftingIngredientIds]);
     
     // Track which recipes were previously craftable from board (for animation)
     const prevBoardCraftableRef = useRef(new Set());
@@ -518,37 +556,46 @@ export default function Crafting({ onClose = () => {} }) {
             
             // For instant recipes (time === 0), continue with quick animation
             if (!isTimedRecipe) {
-                // Phase 3: Output appears (after spinning)
+                // IMMEDIATELY commit inventory output (safety - ingredients stay on board for animation)
+                // Note: ingredients are tracked by craftingIngredientIds so cleanup won't return them
+                for (const output of recipe.outputs) {
+                    addItem(output.item, output.qty);
+                }
+                
+                // Phase 3: Output appears (after spinning) - cosmetic only
                 setTimeout(() => {
+                    if (!componentMountedRef.current) return;
                     setCraftingPhase('output');
-                    // Spawn particle for the new product
-                    const output = recipe.outputs[0];
-                    particleSystem.spawnCraftingPlaceParticle(
-                        window.innerWidth / 2,
-                        window.innerHeight / 2 - 40,
-                        `+${output.qty} ${ITEMS[output.item]?.name || output.item}`
-                    );
                 }, 1200);
                 
-                // Phase 4: Flyout to sidebar
+                // Phase 4: Flyout to sidebar - cosmetic only
                 setTimeout(() => {
+                    if (!componentMountedRef.current) return;
                     setCraftingPhase('flyout');
                 }, 1600);
                 
-                // Phase 5: Complete - add to inventory and cleanup
+                // Phase 5: Reset animation state, spawn particle at sidebar, remove ingredients
                 setTimeout(() => {
-                    // Remove used ingredients from board
-                    const remainingIngredients = ingredientsPlaced.filter((_, idx) => 
-                        !usedIngredientIndices.includes(idx)
-                    );
-                    setIngredientsPlaced(remainingIngredients);
-                    
-                    // Add output to inventory
-                    for (const output of recipe.outputs) {
-                        addItem(output.item, output.qty);
+                    if (!componentMountedRef.current) return;
+                    // Spawn particle at the sidebar target position
+                    const output = recipe.outputs[0];
+                    const targetEl = document.querySelector(`[data-item-id="${output.item}"]`);
+                    let particleX = 100;
+                    let particleY = window.innerHeight / 2;
+                    if (targetEl) {
+                        const rect = targetEl.getBoundingClientRect();
+                        particleX = rect.left + rect.width / 2;
+                        particleY = rect.top + rect.height / 2 - 20;
                     }
-                    
-                    // Reset animation state
+                    particleSystem.spawnCraftingPlaceParticle(
+                        particleX,
+                        particleY,
+                        `+${output.qty} ${ITEMS[output.item]?.name || output.item}`
+                    );
+                    // Now remove ingredients from board (animation complete)
+                    setIngredientsPlaced(prev => prev.filter((_, idx) => 
+                        !usedIngredientIndices.includes(idx)
+                    ));
                     setCraftingPhase('idle');
                     setCraftingRecipe(null);
                     setCraftingIngredientIds([]);
@@ -679,7 +726,15 @@ export default function Crafting({ onClose = () => {} }) {
 
     // Remove a placed ingredient with flyout animation back to sidebar
     const removePlacedIngredient = useCallback((ingredient) => {
-        // Find the target position in the left sidebar
+        // IMMEDIATELY commit inventory change (animation is cosmetic)
+        addItem(ingredient.name, 1);
+        
+        // Remove from placed ingredients immediately
+        setIngredientsPlaced(prev =>
+            prev.filter(ing => ing.x !== ingredient.x || ing.y !== ingredient.y)
+        );
+        
+        // Find the target position in the left sidebar for animation
         const targetElement = document.querySelector(`[data-item-id="${ingredient.name}"]`);
         let targetX = 100;
         let targetY = window.innerHeight / 2;
@@ -690,12 +745,7 @@ export default function Crafting({ onClose = () => {} }) {
             targetY = rect.top + rect.height / 2;
         }
         
-        // Remove from placed ingredients immediately
-        setIngredientsPlaced(prev =>
-            prev.filter(ing => ing.x !== ingredient.x || ing.y !== ingredient.y)
-        );
-        
-        // Add to removing animations - start at 'starting' phase
+        // Add to removing animations - start at 'starting' phase (cosmetic only)
         const removeId = `remove_${Date.now()}_${Math.random()}`;
         setRemovingIngredients(prev => [...prev, {
             id: removeId,
@@ -709,14 +759,21 @@ export default function Crafting({ onClose = () => {} }) {
         
         // Trigger flyout after a frame
         requestAnimationFrame(() => {
+            if (!componentMountedRef.current) return;
             setRemovingIngredients(prev => prev.map(r => 
                 r.id === removeId ? { ...r, phase: 'flyout' } : r
             ));
         });
         
-        // After animation, add to inventory and clean up
+        // After animation, spawn particle and clean up animation state (cosmetic only)
         setTimeout(() => {
-            addItem(ingredient.name, 1);
+            if (!componentMountedRef.current) return;
+            // Spawn +1 particle at the target position
+            particleSystem.spawnCraftingPlaceParticle(
+                targetX,
+                targetY - 20,
+                `+1 ${ITEMS[ingredient.name]?.name || ingredient.name}`
+            );
             setRemovingIngredients(prev => prev.filter(r => r.id !== removeId));
         }, 450);
     }, [addItem]);
