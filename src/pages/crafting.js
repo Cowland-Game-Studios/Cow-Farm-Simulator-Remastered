@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import PropTypes from 'prop-types';
 import Button from "../components/button/button";
 import styles from "./crafting.module.css";
-import Draggable from "../components/draggable/draggable";
+import DraggableSwinging from "../components/draggableSwinging/draggableSwinging";
+import ParticleRenderer from "../components/particles/ParticleRenderer";
+import { particleSystem } from "../engine/particleSystem";
 import { GAME_CONFIG } from "../config/gameConfig";
 
 // Product definitions
@@ -96,6 +98,8 @@ export default function Crafting({ onClose = () => {} }) {
     const [selectedIngredient, setSelectedIngredient] = useState(null);
     const [ingredientsPlaced, setIngredientsPlaced] = useState([]);
     const [isClosing, setIsClosing] = useState(false);
+    const clickTimeoutRef = useRef(null);
+    const DOUBLE_CLICK_DELAY = 250; // ms to wait for potential double-click
 
     const handleClose = () => {
         setIsClosing(true);
@@ -105,33 +109,69 @@ export default function Crafting({ onClose = () => {} }) {
     };
 
     const handleIngredientDrop = ({ x, y }) => {
+        const ingredientName = selectedIngredient.name;
+        
+        // Spawn "-1" particle using the particle system
+        particleSystem.spawnCraftingPlaceParticle(x, y, ingredientName);
+        
         setSelectedIngredient(null);
         setIngredientsPlaced([
             ...ingredientsPlaced,
-            { name: selectedIngredient.name, image: selectedIngredient.image, x, y }
+            { name: ingredientName, image: selectedIngredient.image, x, y }
         ]);
     };
 
     const handlePlacedIngredientClick = (ingredient) => {
-        // Remove this ingredient from placed list and make it selected
-        setIngredientsPlaced(
-            ingredientsPlaced.filter(ing => ing.x !== ingredient.x || ing.y !== ingredient.y)
-        );
-        setSelectedIngredient({ name: ingredient.name, image: ingredient.image });
+        // Clear any pending single-click action
+        if (clickTimeoutRef.current) {
+            clearTimeout(clickTimeoutRef.current);
+            clickTimeoutRef.current = null;
+        }
+        
+        // Delay single-click action to allow double-click detection
+        clickTimeoutRef.current = setTimeout(() => {
+            // Remove this ingredient from placed list and make it selected (drag it)
+            setIngredientsPlaced(prev => 
+                prev.filter(ing => ing.x !== ingredient.x || ing.y !== ingredient.y)
+            );
+            setSelectedIngredient({ name: ingredient.name, image: ingredient.image });
+            clickTimeoutRef.current = null;
+        }, DOUBLE_CLICK_DELAY);
     };
 
+    const handlePlacedIngredientDoubleClick = (ingredient) => {
+        // Cancel the pending single-click action
+        if (clickTimeoutRef.current) {
+            clearTimeout(clickTimeoutRef.current);
+            clickTimeoutRef.current = null;
+        }
+        
+        // Remove this ingredient from the table entirely (return to inventory)
+        setIngredientsPlaced(prev =>
+            prev.filter(ing => ing.x !== ingredient.x || ing.y !== ingredient.y)
+        );
+    };
+
+    // Stop propagation to prevent closing when interacting with UI elements
+    const stopPropagation = (e) => e.stopPropagation();
+
     return (
-        <div className={`${styles.craftingBlurBackground} ${isClosing ? styles.closing : ''}`}>
+        <div 
+            className={`${styles.craftingBlurBackground} ${isClosing ? styles.closing : ''}`}
+            onClick={handleClose}
+        >
             {/* Currently dragged ingredient */}
             {selectedIngredient && (
-                <Draggable
+                <DraggableSwinging
                     id="ingredient"
                     initialDragging
                     onDrop={handleIngredientDrop}
-                    trackRotationSettings={{ rotates: false }}
+                    ropeLength={10}
+                    throwable={false}
+                    canGoOffScreen={true}
                 >
                     <img draggable={false} src={selectedIngredient.image} alt={selectedIngredient.name} />
-                </Draggable>
+                </DraggableSwinging>
             )}
 
             {/* Placed ingredients on the crafting area */}
@@ -148,15 +188,29 @@ export default function Crafting({ onClose = () => {} }) {
                         background: "none",
                         border: "none",
                         padding: 0,
-                        cursor: "grab"
+                        cursor: "grab",
+                        userSelect: "none",
+                        WebkitUserSelect: "none"
                     }}
-                    onMouseDown={() => handlePlacedIngredientClick(ingredient)}
+                    onClick={stopPropagation}
+                    onMouseDown={(e) => {
+                        stopPropagation(e);
+                        handlePlacedIngredientClick(ingredient);
+                    }}
+                    onDoubleClick={(e) => {
+                        stopPropagation(e);
+                        handlePlacedIngredientDoubleClick(ingredient);
+                    }}
                 >
                     <img draggable={false} src={ingredient.image} alt={ingredient.name} />
                 </button>
             ))}
 
-            <div className={styles.spreadEvenlyContainer}>
+            {/* Particle system renderer for "-1" indicators */}
+            <ParticleRenderer />
+
+            {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+            <div className={styles.spreadEvenlyContainer} onClick={stopPropagation}>
                 {/* Product selection panel */}
                 <div className={`${styles.standardedizedList} ${styles.leftSidebar} ${isClosing ? styles.closing : ''}`}>
                     <div style={{ marginLeft: "50%" }}>
@@ -166,7 +220,8 @@ export default function Crafting({ onClose = () => {} }) {
                                     key={product.name}
                                     text="x100"
                                     image={product.image}
-                                    onMouseDown={() => {
+                                    onMouseDown={(e) => {
+                                        e.stopPropagation();
                                         setSelectedIngredient({ name: product.name, image: product.image });
                                     }}
                                 />
@@ -203,27 +258,10 @@ export default function Crafting({ onClose = () => {} }) {
                 </div>
             </div>
 
-            {/* Action buttons */}
-            <div className={`${styles.buttonContainers} ${isClosing ? styles.closing : ''}`}>
-                <div
-                    className={styles.casualButton}
-                    onClick={() => setIngredientsPlaced([])}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => e.key === 'Enter' && setIngredientsPlaced([])}
-                >
-                    <p className={styles.casualButtonText}>clear</p>
-                </div>
-                <div
-                    className={styles.casualButton}
-                    onClick={handleClose}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => e.key === 'Enter' && handleClose()}
-                >
-                    <p className={styles.casualButtonText} style={{ color: "red" }}>cancel & close</p>
-                </div>
-            </div>
+            {/* Close hint */}
+            <p className={`${styles.closeHint} ${isClosing ? styles.closing : ''}`}>
+                click anywhere to close
+            </p>
         </div>
     );
 }

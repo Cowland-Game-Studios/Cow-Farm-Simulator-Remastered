@@ -159,6 +159,24 @@ class ParticleSystem {
     }
 
     /**
+     * Spawn a "-1 {ingredient}" crafting placement particle
+     */
+    spawnCraftingPlaceParticle(x, y, ingredientName) {
+        return this.spawn({
+            text: `-1 ${ingredientName}`,
+            x,
+            y,
+            vx: (Math.random() - 0.5) * 1.5,
+            vy: -3,
+            gravity: 0.08,
+            color: '#e74c3c',
+            fontSize: 16,
+            lifetime: 1200,
+            fadeDelay: 400,
+        });
+    }
+
+    /**
      * Spawn multiple particles in an explosion pattern
      * @param {Object} options - Explosion options
      * @returns {string[]} Array of particle IDs
