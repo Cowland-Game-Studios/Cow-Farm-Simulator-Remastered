@@ -242,7 +242,7 @@ export default function Crafting({ onClose = () => {} }) {
         };
     }, []);
 
-    // Spawn ingredients from inventory onto the crafting board
+    // Spawn ingredients from inventory onto the crafting board with lerp animation
     const spawnIngredientsOnBoard = useCallback((recipe) => {
         const newIngredients = [];
         
@@ -251,26 +251,66 @@ export default function Crafting({ onClose = () => {} }) {
                 // Check if we have enough in inventory
                 if ((inventory[input.item] || 0) <= 0) continue;
                 
-                const pos = getRandomBenchPosition();
+                const targetPos = getRandomBenchPosition();
                 const image = getProductImage(input.item);
+                
+                // Find the source position (sidebar item)
+                const sourceElement = document.querySelector(`[data-item-id="${input.item}"]`);
+                let sourcePos = { x: 100, y: window.innerHeight / 2 }; // Default fallback
+                if (sourceElement) {
+                    const rect = sourceElement.getBoundingClientRect();
+                    sourcePos = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+                }
                 
                 // Deduct from inventory
                 removeItem(input.item, 1);
                 
-                // Add to board
+                // Add to board with spawn animation data
+                // Phase 1: Start at source position
                 newIngredients.push({
                     name: input.item,
                     image,
-                    x: pos.x,
-                    y: pos.y,
+                    x: targetPos.x,
+                    y: targetPos.y,
+                    // Animation: start at source, will lerp to target
+                    currentX: sourcePos.x,
+                    currentY: sourcePos.y,
+                    spawnPhase: 'starting', // 'starting' -> 'animating' -> 'done'
+                    spawnId: Date.now() + Math.random(), // Unique ID for this spawn
                 });
-                
-                // Spawn particle
-                particleSystem.spawnCraftingPlaceParticle(pos.x, pos.y, `-1 ${ITEMS[input.item]?.name || input.item}`);
             }
         }
         
+        // Add ingredients at their spawn position
         setIngredientsPlaced(prev => [...prev, ...newIngredients]);
+        
+        // Phase 2: Start animation to target (after first render)
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                setIngredientsPlaced(prev => 
+                    prev.map(ing => {
+                        if (ing.spawnPhase === 'starting') {
+                            return { ...ing, currentX: ing.x, currentY: ing.y, spawnPhase: 'animating' };
+                        }
+                        return ing;
+                    })
+                );
+            });
+        });
+        
+        // Phase 3: Animation complete, spawn particles
+        setTimeout(() => {
+            setIngredientsPlaced(prev => 
+                prev.map(ing => {
+                    if (ing.spawnPhase === 'animating') {
+                        // Spawn particle at final position
+                        particleSystem.spawnCraftingPlaceParticle(ing.x, ing.y, `-1 ${ITEMS[ing.name]?.name || ing.name}`);
+                        return { ...ing, spawnPhase: 'done', currentX: undefined, currentY: undefined };
+                    }
+                    return ing;
+                })
+            );
+        }, 500); // Match the CSS transition duration
     }, [inventory, removeItem, getRandomBenchPosition]);
 
     // Handle crafting a recipe
@@ -326,6 +366,13 @@ export default function Crafting({ onClose = () => {} }) {
             // Phase 3: Output appears (after spinning)
             setTimeout(() => {
                 setCraftingPhase('output');
+                // Spawn particle for the new product
+                const output = recipe.outputs[0];
+                particleSystem.spawnCraftingPlaceParticle(
+                    window.innerWidth / 2,
+                    window.innerHeight / 2 - 40,
+                    `+${output.qty} ${ITEMS[output.item]?.name || output.item}`
+                );
             }, 1200);
             
             // Phase 4: Flyout to sidebar
@@ -554,15 +601,28 @@ export default function Crafting({ onClose = () => {} }) {
                 const isBeingCrafted = craftingIngredientIds.includes(index);
                 const centerX = window.innerWidth / 2;
                 const centerY = window.innerHeight / 2;
+                const isSpawning = ingredient.spawnPhase === 'starting' || ingredient.spawnPhase === 'animating';
                 
-                // Calculate position based on crafting phase
-                let displayX = ingredient.x;
-                let displayY = ingredient.y;
+                // Calculate position based on crafting phase and spawn state
+                let displayX = ingredient.currentX !== undefined ? ingredient.currentX : ingredient.x;
+                let displayY = ingredient.currentY !== undefined ? ingredient.currentY : ingredient.y;
                 let scale = 1;
                 let opacity = 1;
                 let rotation = 0;
+                let shouldTransition = ingredient.spawnPhase === 'animating';
+                
+                // Spawn animation: fly in from sidebar
+                if (ingredient.spawnPhase === 'starting') {
+                    scale = 1;
+                    opacity = 0.8;
+                }
+                if (ingredient.spawnPhase === 'animating') {
+                    scale = 1;
+                    opacity = 1;
+                }
                 
                 if (isBeingCrafted) {
+                    shouldTransition = true;
                     if (craftingPhase === 'converging' || craftingPhase === 'spinning' || craftingPhase === 'output' || craftingPhase === 'flyout') {
                         displayX = centerX;
                         displayY = centerY;
@@ -579,7 +639,7 @@ export default function Crafting({ onClose = () => {} }) {
                 
                 return (
                     <button
-                        key={`${ingredient.name}-${index}`}
+                        key={ingredient.spawnId || `${ingredient.name}-${index}`}
                         type="button"
                         className={isClosing ? styles.placedIngredientClosing : ''}
                         style={{
@@ -587,19 +647,19 @@ export default function Crafting({ onClose = () => {} }) {
                             left: displayX,
                             top: displayY,
                             transform: `translate(-50%, -50%) scale(${scale}) rotate(${rotation}deg)`,
-                            zIndex: isBeingCrafted ? 10 : 2,
+                            zIndex: isBeingCrafted || isSpawning ? 10 : 2,
                             background: "none",
                             border: "none",
                             padding: 0,
-                            cursor: isBeingCrafted ? "default" : "grab",
+                            cursor: isBeingCrafted || isSpawning ? "default" : "grab",
                             userSelect: "none",
                             WebkitUserSelect: "none",
                             touchAction: "none",
                             opacity,
-                            transition: craftingPhase !== 'idle' && isBeingCrafted
-                                ? 'left 0.4s ease-in-out, top 0.4s ease-in-out, transform 0.8s ease-in-out, opacity 0.3s ease-out'
+                            transition: shouldTransition || isBeingCrafted
+                                ? 'left 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), top 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.8s ease-in-out, opacity 0.3s ease-out'
                                 : 'none',
-                            pointerEvents: isBeingCrafted ? 'none' : 'auto',
+                            pointerEvents: isBeingCrafted || isSpawning ? 'none' : 'auto',
                         }}
                         onClick={stopPropagation}
                         onMouseDown={(e) => !isBeingCrafted && handlePlacedIngredientPointerDown(e, ingredient)}
@@ -631,15 +691,6 @@ export default function Crafting({ onClose = () => {} }) {
                             alt={craftingRecipe.outputs[0].item}
                             style={{ width: 50, height: 50 }}
                         />
-                        <p style={{ 
-                            textAlign: 'center', 
-                            margin: 0, 
-                            fontWeight: 'bold',
-                            color: '#2a5d2a',
-                            textShadow: '0 0 10px white'
-                        }}>
-                            +{craftingRecipe.outputs[0].qty}
-                        </p>
                     </div>
                 </div>
             )}
