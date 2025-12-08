@@ -22,35 +22,95 @@
 }
 
 @keyframes benchSlideIn {
-    from {
+    0% {
         opacity: 0;
-        transform: translateY(100px);
+        transform: translateY(250px) scale(0.8);
     }
-    to {
+    70% {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(-15px) scale(1.02);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
     }
 }
 
 @keyframes benchSlideOut {
     from {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
     }
     to {
         opacity: 0;
-        transform: translateY(100px);
+        transform: translateY(200px) scale(0.9);
     }
 }
 
 @keyframes leftSidebarIn {
-    from {
+    0% {
         opacity: 0;
-        transform: translateX(-50px);
+        transform: translateX(-80px) translateY(20px);
+    }
+    70% {
+        opacity: 1;
+        transform: translateX(8px) translateY(-3px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0) translateY(0);
+    }
+}
+
+@keyframes listItemPopIn {
+    0% {
+        opacity: 0;
+        transform: translateX(-30px) scale(0.8);
+    }
+    70% {
+        opacity: 1;
+        transform: translateX(5px) scale(1.05);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes listItemPopOut {
+    from {
+        opacity: 1;
+        transform: translateX(0) scale(1);
     }
     to {
+        opacity: 0;
+        transform: translateX(-20px) scale(0.9);
+    }
+}
+
+@keyframes listItemPopInRight {
+    0% {
+        opacity: 0;
+        transform: translateX(30px) scale(0.8);
+    }
+    70% {
         opacity: 1;
-        transform: translateX(0);
+        transform: translateX(-5px) scale(1.05);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes listItemPopOutRight {
+    from {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(20px) scale(0.9);
     }
 }
 
@@ -61,18 +121,22 @@
     }
     to {
         opacity: 0;
-        transform: translateX(-50px);
+        transform: translateX(-60px);
     }
 }
 
 @keyframes rightSidebarIn {
-    from {
+    0% {
         opacity: 0;
-        transform: translateX(50px);
+        transform: translateX(80px) translateY(20px);
     }
-    to {
+    70% {
         opacity: 1;
-        transform: translateX(0);
+        transform: translateX(-8px) translateY(-3px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0) translateY(0);
     }
 }
 
@@ -83,16 +147,20 @@
     }
     to {
         opacity: 0;
-        transform: translateX(50px);
+        transform: translateX(60px);
     }
 }
 
 @keyframes buttonsIn {
-    from {
+    0% {
         opacity: 0;
-        transform: translate(-50%, 30px);
+        transform: translate(-50%, 50px);
     }
-    to {
+    70% {
+        opacity: 1;
+        transform: translate(-50%, -55%);
+    }
+    100% {
         opacity: 1;
         transform: translate(-50%, -50%);
     }
@@ -105,7 +173,7 @@
     }
     to {
         opacity: 0;
-        transform: translate(-50%, 30px);
+        transform: translate(-50%, 40px);
     }
 }
 
@@ -147,7 +215,7 @@
 
     background: rgba(0, 0, 0, 0.05);
 
-    animation: benchSlideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    animation: benchSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 .benchTop.closing {
@@ -155,26 +223,68 @@
 }
 
 .leftSidebar {
-    animation: leftSidebarIn 0.4s ease-out forwards;
-    animation-delay: 0.1s;
-    opacity: 0;
+    /* Container doesn't animate - items animate individually */
 }
 
-.leftSidebar.closing {
-    animation: leftSidebarOut 0.25s ease-in forwards;
+.leftSidebar .list > * {
+    opacity: 0;
+    animation: listItemPopIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.leftSidebar .list > *:nth-child(1) { animation-delay: 0.1s; }
+.leftSidebar .list > *:nth-child(2) { animation-delay: 0.15s; }
+.leftSidebar .list > *:nth-child(3) { animation-delay: 0.2s; }
+.leftSidebar .list > *:nth-child(4) { animation-delay: 0.25s; }
+.leftSidebar .list > *:nth-child(5) { animation-delay: 0.3s; }
+.leftSidebar .list > *:nth-child(6) { animation-delay: 0.35s; }
+.leftSidebar .list > *:nth-child(7) { animation-delay: 0.4s; }
+.leftSidebar .list > *:nth-child(8) { animation-delay: 0.45s; }
+
+.leftSidebar.closing .list > * {
+    animation: listItemPopOut 0.2s ease-in forwards;
     opacity: 1;
 }
+
+.leftSidebar.closing .list > *:nth-child(1) { animation-delay: 0.08s; }
+.leftSidebar.closing .list > *:nth-child(2) { animation-delay: 0.06s; }
+.leftSidebar.closing .list > *:nth-child(3) { animation-delay: 0.04s; }
+.leftSidebar.closing .list > *:nth-child(4) { animation-delay: 0.02s; }
+.leftSidebar.closing .list > *:nth-child(5) { animation-delay: 0s; }
+.leftSidebar.closing .list > *:nth-child(6) { animation-delay: 0s; }
+.leftSidebar.closing .list > *:nth-child(7) { animation-delay: 0s; }
+.leftSidebar.closing .list > *:nth-child(8) { animation-delay: 0s; }
 
 .rightSidebar {
-    animation: rightSidebarIn 0.4s ease-out forwards;
-    animation-delay: 0.1s;
-    opacity: 0;
+    /* Container doesn't animate - items animate individually */
 }
 
-.rightSidebar.closing {
-    animation: rightSidebarOut 0.25s ease-in forwards;
+.recipeItem {
+    opacity: 0;
+    animation: listItemPopInRight 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.recipeItem1 { animation-delay: 0.2s; }
+.recipeItem2 { animation-delay: 0.25s; }
+.recipeItem3 { animation-delay: 0.3s; }
+.recipeItem4 { animation-delay: 0.35s; }
+.recipeItem5 { animation-delay: 0.4s; }
+.recipeItem6 { animation-delay: 0.45s; }
+.recipeItem7 { animation-delay: 0.5s; }
+.recipeItem8 { animation-delay: 0.55s; }
+
+.recipeItemClosing {
+    animation: listItemPopOutRight 0.2s ease-in forwards;
     opacity: 1;
 }
+
+.recipeItemClosing1 { animation-delay: 0.08s; }
+.recipeItemClosing2 { animation-delay: 0.06s; }
+.recipeItemClosing3 { animation-delay: 0.04s; }
+.recipeItemClosing4 { animation-delay: 0.02s; }
+.recipeItemClosing5 { animation-delay: 0s; }
+.recipeItemClosing6 { animation-delay: 0s; }
+.recipeItemClosing7 { animation-delay: 0s; }
+.recipeItemClosing8 { animation-delay: 0s; }
 
 .craftingInstructions {
     position: absolute;
@@ -192,6 +302,7 @@
 
 .standardedizedList {
     width: 100px;
+    overflow: visible;
 }
 
 .list {
@@ -200,6 +311,7 @@
     display: flex;
     flex-direction: column;
     gap: 15px;
+    overflow: visible;
 }
 
 .buttonContainers {
@@ -212,8 +324,8 @@
     flex-direction: row;
     gap: 15px;
 
-    animation: buttonsIn 0.4s ease-out forwards;
-    animation-delay: 0.15s;
+    animation: buttonsIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    animation-delay: 0.3s;
     opacity: 0;
 }
 

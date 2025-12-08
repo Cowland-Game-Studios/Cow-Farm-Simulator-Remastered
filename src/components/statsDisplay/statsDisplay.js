@@ -38,7 +38,7 @@ export default function StatsDisplay({ coins = 0, xp = 0, ...props }) {
             <div className={styles.statsContainer}>
                 {/* Money */}
                 <h3 className={styles.statTitle}>money</h3>
-                <p className={styles.statValue}>{coins.toLocaleString()}</p>
+                <p className={styles.statValue}>@{coins.toLocaleString()}</p>
 
                 {/* Level */}
                 <div className={styles.levelContainer}>

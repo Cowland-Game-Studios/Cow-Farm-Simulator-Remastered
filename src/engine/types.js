@@ -91,6 +91,10 @@ export const ActionTypes = {
     STOP_FEEDING: 'STOP_FEEDING',
     UPDATE_TOOL_POSITION: 'UPDATE_TOOL_POSITION',
 
+    // Cow dragging (for breeding hover)
+    SET_DRAGGING_COW: 'SET_DRAGGING_COW',
+    CLEAR_DRAGGING_COW: 'CLEAR_DRAGGING_COW',
+
     // Resource actions
     ADD_COINS: 'ADD_COINS',
     ADD_MILK: 'ADD_MILK',

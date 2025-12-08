@@ -154,6 +154,8 @@ export function GameProvider({ children }) {
         feedCow: (id) => dispatch(actions.feedCow(id)),
         breedCows: (id1, id2, pos) => dispatch(actions.breedCows(id1, id2, pos)),
         updateCowPosition: (id, pos) => dispatch(actions.updateCowPosition(id, pos)),
+        setDraggingCow: (id, pos) => dispatch(actions.setDraggingCow(id, pos)),
+        clearDraggingCow: () => dispatch(actions.clearDraggingCow()),
     }), []);
 
     // ---- Context Value ----
@@ -167,6 +169,7 @@ export function GameProvider({ children }) {
         resources: state.resources,
         tools: state.tools,
         ui: state.ui,
+        draggingCow: state.draggingCow,
         
         // Actions (pre-bound for convenience)
         ...actionCreators,

@@ -23,6 +23,7 @@ export default function DraggableSwinging({
     ropeLength = PHYSICS.DEFAULT_ROPE_LENGTH,
     gravity = PHYSICS.DEFAULT_GRAVITY,
     damping = PHYSICS.DEFAULT_DAMPING,
+    throwable = true,
     children,
     style,
     ...props
@@ -36,6 +37,8 @@ export default function DraggableSwinging({
     const lastMousePosRef = useRef({ x: 0, y: 0 });
     const spawnPositionRef = useRef(null);
     const collidedTargetsRef = useRef(new Set()); // Track collisions to avoid duplicates
+    const mousePositionRef = useRef({ x: 0, y: 0 }); // Ref for animation loop to read current mouse position
+    const throwVelocityRef = useRef({ x: 0, y: 0 }); // Track actual throw velocity from mouse movement
 
     const isControlled = isActive !== null;
 
@@ -108,8 +111,22 @@ export default function DraggableSwinging({
     const [objectPos, setObjectPos] = useState({ x: 0, y: 0 });
     const mousePosition = useMousePosition();
     const [dragging, setDragging] = useState(initialDragging);
+    const [flying, setFlying] = useState(false); // State for thrown objects mid-flight
+
+    // Keep mousePositionRef updated so animation loop can read current position
+    mousePositionRef.current = mousePosition;
     const [opacity, setOpacity] = useState(isControlled ? 0 : 1);
     const [visible, setVisible] = useState(!isControlled);
+    
+    // Threshold for considering object at rest (velocity magnitude)
+    const VELOCITY_THRESHOLD = 0.2;
+    // Friction applied during flight (1.0 = no friction at all!)
+    const FLIGHT_FRICTION = 1.0;
+    // Bounce factor when hitting edges (0 = no bounce, 1 = perfect bounce)
+    const BOUNCE_FACTOR = 0.85;
+    // Track spin from bounces for visual effect
+    const spinRef = useRef(0);
+    const bounceCountRef = useRef(0);
 
     // Store spawn position on mount and report to collision engine
     useEffect(() => {
@@ -165,9 +182,11 @@ export default function DraggableSwinging({
         setObjectPos(initialPos);
     }, []);
 
-    // Physics simulation loop
+    // Physics simulation loop - handles both dragging (with rope) and flying (thrown)
     useEffect(() => {
-        if (!dragging) {
+        const isAnimating = dragging || flying;
+        
+        if (!isAnimating) {
             if (animationRef.current) {
                 cancelAnimationFrame(animationRef.current);
             }
@@ -177,49 +196,136 @@ export default function DraggableSwinging({
         const simulate = () => {
             const velocity = velocityRef.current;
             const pos = objectPosRef.current;
-            const anchorX = mousePosition.x;
-            const anchorY = mousePosition.y;
 
-            // Apply gravity
-            velocity.y += gravity;
+            let newX, newY;
 
-            // Apply damping
-            velocity.x *= damping;
-            velocity.y *= damping;
+            if (dragging) {
+                // DRAGGING MODE: Apply rope physics
+                const anchorX = mousePositionRef.current.x;
+                const anchorY = mousePositionRef.current.y;
 
-            // Update position
-            let newX = pos.x + velocity.x;
-            let newY = pos.y + velocity.y;
+                // Apply gravity
+                velocity.y += gravity;
 
-            // Apply rope constraint - keep object at fixed distance from cursor
-            const dx = newX - anchorX;
-            const dy = newY - anchorY;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+                // Apply damping
+                velocity.x *= damping;
+                velocity.y *= damping;
 
-            if (distance > 0) {
-                // Normalize and scale to rope length
-                const normalizedX = dx / distance;
-                const normalizedY = dy / distance;
+                // Update position
+                newX = pos.x + velocity.x;
+                newY = pos.y + velocity.y;
+
+                // Apply rope constraint - keep object at fixed distance from cursor
+                const dx = newX - anchorX;
+                const dy = newY - anchorY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance > 0) {
+                    // Normalize and scale to rope length
+                    const normalizedX = dx / distance;
+                    const normalizedY = dy / distance;
+                    
+                    newX = anchorX + normalizedX * ropeLength;
+                    newY = anchorY + normalizedY * ropeLength;
+
+                    // Adjust velocity to be tangent to the rope (remove radial component)
+                    const radialVelComponent = (velocity.x * normalizedX + velocity.y * normalizedY);
+                    velocity.x -= radialVelComponent * normalizedX * 0.5;
+                    velocity.y -= radialVelComponent * normalizedY * 0.5;
+                }
+
+                // Add velocity from cursor movement (drag effect)
+                const mouseDx = mousePositionRef.current.x - lastMousePosRef.current.x;
+                const mouseDy = mousePositionRef.current.y - lastMousePosRef.current.y;
+                velocity.x += mouseDx * 0.3;
+                velocity.y += mouseDy * 0.3;
+
+                // Track throw velocity separately (smoothed mouse movement for throwing)
+                // This isn't affected by rope constraints, so it represents actual throw direction
+                throwVelocityRef.current = {
+                    x: throwVelocityRef.current.x * 0.7 + mouseDx * 0.8,
+                    y: throwVelocityRef.current.y * 0.7 + mouseDy * 0.8
+                };
+
+                lastMousePosRef.current = { x: mousePositionRef.current.x, y: mousePositionRef.current.y };
+            } else {
+                // FLYING MODE: No rope, just momentum with friction and gravity
+                // Make it FUN and BOUNCY! 🐄
                 
-                newX = anchorX + normalizedX * ropeLength;
-                newY = anchorY + normalizedY * ropeLength;
+                // No gravity during flight for testing
+                // velocity.y += gravity * 0.3;
 
-                // Adjust velocity to be tangent to the rope (remove radial component)
-                const radialVelComponent = (velocity.x * normalizedX + velocity.y * normalizedY);
-                velocity.x -= radialVelComponent * normalizedX * 0.5;
-                velocity.y -= radialVelComponent * normalizedY * 0.5;
+                // Apply very light flight friction (keeps them bouncing longer!)
+                velocity.x *= FLIGHT_FRICTION;
+                velocity.y *= FLIGHT_FRICTION;
+
+                // No spin decay for testing
+                // spinRef.current *= 0.98;
+
+                // Update position
+                newX = pos.x + velocity.x;
+                newY = pos.y + velocity.y;
+
+                // Bounce off screen edges with dramatic spin!
+                const minX = safeArea;
+                const maxX = window.innerWidth - safeArea;
+                const minY = safeArea;
+                const maxY = window.innerHeight - safeArea;
+
+                let bounced = false;
+
+                if (newX < minX) {
+                    newX = minX;
+                    velocity.x = -velocity.x * BOUNCE_FACTOR;
+                    // Add dramatic spin on wall bounce!
+                    spinRef.current += velocity.y * 0.5;
+                    bounced = true;
+                } else if (newX > maxX) {
+                    newX = maxX;
+                    velocity.x = -velocity.x * BOUNCE_FACTOR;
+                    spinRef.current -= velocity.y * 0.5;
+                    bounced = true;
+                }
+
+                if (newY < minY) {
+                    newY = minY;
+                    velocity.y = -velocity.y * BOUNCE_FACTOR;
+                    spinRef.current += velocity.x * 0.5;
+                    bounced = true;
+                } else if (newY > maxY) {
+                    newY = maxY;
+                    velocity.y = -velocity.y * BOUNCE_FACTOR;
+                    spinRef.current -= velocity.x * 0.5;
+                    bounced = true;
+                }
+
+                if (bounced) {
+                    bounceCountRef.current += 1;
+                }
+
+                // Check if velocity is low enough to settle
+                const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+                if (speed < VELOCITY_THRESHOLD) {
+                    // Come to rest
+                    isFlyingRef.current = false;
+                    setFlying(false);
+                    spinRef.current = 0;
+                    bounceCountRef.current = 0;
+                    const finalPos = getClosestSafePosition(newX, newY);
+                    setRestPosition(finalPos);
+                    velocityRef.current = { x: 0, y: 0 };
+                    
+                    if (onPositionChange) {
+                        onPositionChange(finalPos);
+                    }
+                    onDrop(finalPos);
+                    return; // Stop animation
+                }
             }
-
-            // Add velocity from cursor movement (drag effect)
-            const mouseDx = mousePosition.x - lastMousePosRef.current.x;
-            const mouseDy = mousePosition.y - lastMousePosRef.current.y;
-            velocity.x += mouseDx * 0.3;
-            velocity.y += mouseDy * 0.3;
 
             // Update refs
             objectPosRef.current = { x: newX, y: newY };
             velocityRef.current = velocity;
-            lastMousePosRef.current = { x: mousePosition.x, y: mousePosition.y };
 
             // Update state for render
             setObjectPos({ x: newX, y: newY });
@@ -235,12 +341,14 @@ export default function DraggableSwinging({
             animationRef.current = requestAnimationFrame(simulate);
         };
 
-        // Initialize last mouse position
-        lastMousePosRef.current = { x: mousePosition.x, y: mousePosition.y };
-        
-        // Initialize object position below cursor when starting drag
-        if (objectPosRef.current.x === 0 && objectPosRef.current.y === 0) {
-            objectPosRef.current = { x: mousePosition.x, y: mousePosition.y + ropeLength };
+        // Initialize last mouse position (for dragging mode)
+        if (dragging) {
+            lastMousePosRef.current = { x: mousePositionRef.current.x, y: mousePositionRef.current.y };
+            
+            // Initialize object position below cursor when starting drag
+            if (objectPosRef.current.x === 0 && objectPosRef.current.y === 0) {
+                objectPosRef.current = { x: mousePositionRef.current.x, y: mousePositionRef.current.y + ropeLength };
+            }
         }
 
         animationRef.current = requestAnimationFrame(simulate);
@@ -251,18 +359,44 @@ export default function DraggableSwinging({
             }
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dragging, gravity, damping, ropeLength, checkCollisions]);
+    }, [dragging, flying, gravity, damping, ropeLength, safeArea, checkCollisions, onDrop, onPositionChange]);
+
+    // Ref to track if we're transitioning to flying mode (avoids race condition with drop effect)
+    const isFlyingRef = useRef(false);
 
     // Handle mouse/touch up (only for non-controlled mode)
     useEffect(() => {
         if (isControlled) return;
 
         const up = () => {
+            if (!dragging) return;
+            
+            // Check velocity to decide if we should fly or settle
+            if (throwable) {
+                // Use throw velocity (from mouse movement) not rope-constrained velocity
+                const throwVel = throwVelocityRef.current;
+                const speed = Math.sqrt(throwVel.x * throwVel.x + throwVel.y * throwVel.y);
+                
+                // Always fly after release! No threshold needed - just YEET 🐄
+                velocityRef.current = { 
+                    x: throwVel.x * 2.5,  // Big amplify for satisfying throw feel
+                    y: throwVel.y * 2.5 
+                };
+                // Set ref immediately to prevent drop effect from settling
+                isFlyingRef.current = true;
+                setDragging(false);
+                setFlying(true);
+                return;
+            }
+            // If not throwable or speed is low, the drop effect will handle settling
+            isFlyingRef.current = false;
             setDragging(false);
+            // Reset throw velocity
+            throwVelocityRef.current = { x: 0, y: 0 };
         };
 
         const resize = () => {
-            if (!dragging && isPositionBad(restPosition.x, restPosition.y)) {
+            if (!dragging && !flying && isPositionBad(restPosition.x, restPosition.y)) {
                 setRestPosition(getClosestSafePosition(restPosition.x, restPosition.y));
             }
         };
@@ -276,12 +410,14 @@ export default function DraggableSwinging({
             window.removeEventListener("touchend", up);
             window.removeEventListener("resize", resize);
         };
-    }, [dragging, restPosition, isControlled]);
+    }, [dragging, flying, restPosition, isControlled, throwable]);
 
-    // Handle drop (only for non-controlled mode)
+    // Handle drop (only for non-controlled mode, and only if not flying)
     useEffect(() => {
         if (isControlled) return;
         if (dragging) return;
+        if (flying) return; // Flying mode handles its own settling
+        if (isFlyingRef.current) return; // Also check ref to handle race condition
 
         const dropX = objectPosRef.current.x || mousePosition.x;
         const dropY = objectPosRef.current.y || mousePosition.y;
@@ -306,10 +442,27 @@ export default function DraggableSwinging({
         }
 
         onDrop(finalPos);
-    }, [dragging, isControlled]);
+    }, [dragging, flying, isControlled]);
 
-    // Calculate rotation based on rope angle
+    // Calculate rotation based on rope angle (when dragging) or velocity/spin (when flying)
     const getRotation = () => {
+        if (flying) {
+            // DRAMATIC spin during flight! 
+            const velocity = velocityRef.current;
+            const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+            
+            // Base rotation from velocity direction
+            let rotation = 0;
+            if (speed > 1) {
+                const velocityAngle = Math.atan2(velocity.x, -velocity.y) * (180 / Math.PI);
+                rotation = velocityAngle * 0.5;
+            }
+            
+            // Add accumulated spin from bounces (this is the fun part!)
+            rotation += spinRef.current;
+            
+            return rotation;
+        }
         if (!dragging) return 0;
         
         const dx = objectPos.x - mousePosition.x;
@@ -320,8 +473,18 @@ export default function DraggableSwinging({
         return -angle;
     };
 
-    const displayX = dragging ? objectPos.x : restPosition.x;
-    const displayY = dragging ? objectPos.y : restPosition.y;
+    // Calculate scale based on speed (faster = bigger for drama!)
+    const getFlyingScale = () => {
+        if (!flying) return 1;
+        const velocity = velocityRef.current;
+        const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+        // Scale from 1.2 to 1.5 based on speed
+        return 1.2 + Math.min(speed / 30, 0.3);
+    };
+
+    const isAnimating = dragging || flying;
+    const displayX = isAnimating ? objectPos.x : restPosition.x;
+    const displayY = isAnimating ? objectPos.y : restPosition.y;
 
     return (
         <div
@@ -331,6 +494,12 @@ export default function DraggableSwinging({
             onMouseDown={() => {
                 if (disabled) return;
                 if (isControlled && !isActive) return;
+                // Stop flying if currently in flight
+                isFlyingRef.current = false;
+                setFlying(false);
+                // Reset spin and bounce effects
+                spinRef.current = 0;
+                bounceCountRef.current = 0;
                 // Initialize swing position below cursor
                 objectPosRef.current = { 
                     x: mousePosition.x, 
@@ -338,18 +507,26 @@ export default function DraggableSwinging({
                 };
                 setObjectPos(objectPosRef.current);
                 velocityRef.current = { x: 0, y: 0 };
+                throwVelocityRef.current = { x: 0, y: 0 };
                 setDragging(true);
                 onPickup();
             }}
             onTouchStart={() => {
                 if (disabled) return;
                 if (isControlled && !isActive) return;
+                // Stop flying if currently in flight
+                isFlyingRef.current = false;
+                setFlying(false);
+                // Reset spin and bounce effects
+                spinRef.current = 0;
+                bounceCountRef.current = 0;
                 objectPosRef.current = { 
                     x: mousePosition.x, 
                     y: mousePosition.y + ropeLength 
                 };
                 setObjectPos(objectPosRef.current);
                 velocityRef.current = { x: 0, y: 0 };
+                throwVelocityRef.current = { x: 0, y: 0 };
                 setDragging(true);
                 onPickup();
             }}
@@ -358,17 +535,17 @@ export default function DraggableSwinging({
                 transform: `
                     translate(-50%, -50%)
                     translate(${displayX + offset.x}px, ${displayY + offset.y}px)
-                    scale(${dragging ? 1.15 : 1})
+                    scale(${flying ? getFlyingScale() : (dragging ? 1.15 : 1)})
                     rotate(${getRotation()}deg)
                 `,
                 transformOrigin: "center",
-                transition: dragging 
+                transition: isAnimating 
                     ? "opacity 0.1s ease-out" 
                     : "transform 0.4s ease-out, opacity 0.3s ease-out",
                 opacity: opacity,
                 visibility: visible ? "visible" : "hidden",
-                zIndex: dragging ? 1000 : 0,
-                cursor: disabled ? "default" : (dragging ? "grabbing" : "grab"),
+                zIndex: isAnimating ? 1000 : 0,
+                cursor: disabled ? "default" : (dragging ? "grabbing" : (flying ? "default" : "grab")),
                 pointerEvents: (isControlled && !isActive) ? "none" : "auto",
                 ...style
             }}
@@ -419,6 +596,8 @@ DraggableSwinging.propTypes = {
     gravity: PropTypes.number,
     /** Damping factor for physics simulation */
     damping: PropTypes.number,
+    /** Whether the object can be thrown (continues flying with momentum on release) */
+    throwable: PropTypes.bool,
     /** Child elements to render */
     children: PropTypes.node,
     /** Custom inline styles */
@@ -443,6 +622,7 @@ DraggableSwinging.defaultProps = {
     ropeLength: PHYSICS.DEFAULT_ROPE_LENGTH,
     gravity: PHYSICS.DEFAULT_GRAVITY,
     damping: PHYSICS.DEFAULT_DAMPING,
+    throwable: true,
     children: null,
     style: {},
 };

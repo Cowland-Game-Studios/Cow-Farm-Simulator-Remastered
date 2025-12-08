@@ -107,6 +107,12 @@ export const createInitialState = () => ({
         toolPosition: null,
     },
 
+    // Dragging state (for breeding hover indicator)
+    draggingCow: {
+        cowId: null,
+        position: null,
+    },
+
     ui: {
         crafting: false,
         paused: false,
@@ -274,6 +280,23 @@ export function gameReducer(state, action) {
             };
         }
 
+        // ---- COW DRAGGING (for breeding hover) ----
+
+        case ActionTypes.SET_DRAGGING_COW: {
+            const { cowId, position } = action.payload;
+            return {
+                ...state,
+                draggingCow: { cowId, position },
+            };
+        }
+
+        case ActionTypes.CLEAR_DRAGGING_COW: {
+            return {
+                ...state,
+                draggingCow: { cowId: null, position: null },
+            };
+        }
+
         // ---- RESOURCE ACTIONS ----
 
         case ActionTypes.ADD_COINS: {
@@ -410,6 +433,13 @@ export const actions = {
         type: ActionTypes.UPDATE_TOOL_POSITION, 
         payload: { position } 
     }),
+
+    // Cow dragging (for breeding hover)
+    setDraggingCow: (cowId, position) => ({
+        type: ActionTypes.SET_DRAGGING_COW,
+        payload: { cowId, position },
+    }),
+    clearDraggingCow: () => ({ type: ActionTypes.CLEAR_DRAGGING_COW }),
 
     // Resources
     addCoins: (amount) => ({ type: ActionTypes.ADD_COINS, payload: { amount } }),

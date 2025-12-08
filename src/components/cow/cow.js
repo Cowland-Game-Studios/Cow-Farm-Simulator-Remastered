@@ -23,13 +23,32 @@ const COW_CONFIG = GAME_CONFIG.COW;
 
 export default function Cow({ cowId }) {
     // ---- Get cow data from central state ----
-    const { state, breedCows, updateCowPosition } = useGame();
+    const { state, breedCows, updateCowPosition, setDraggingCow, clearDraggingCow, draggingCow } = useGame();
     const cow = state.cows.find(c => c.id === cowId);
     
     // ---- Local visual state (not saved) ----
     const [cowOffset, setCowOffset] = useState({ x: 0, y: 0 });
     const [cowFlipHorizontal, setCowFlipHorizontal] = useState(false);
+    const [isPulsing, setIsPulsing] = useState(false);
+    const [isBreedTarget, setIsBreedTarget] = useState(false);
     const moveTimeoutRef = useRef(null);
+    const pulseTimeoutRef = useRef(null);
+    const mooSoundRef = useRef(null);
+    const pickupPositionRef = useRef(null);
+    const wasDraggedRef = useRef(false);
+
+    // ---- Easter egg: Moo sound on click (only if not dragged) ----
+    const playMoo = useCallback(() => {
+        // Only play if the cow wasn't dragged
+        if (wasDraggedRef.current) return;
+        
+        if (!mooSoundRef.current) {
+            mooSoundRef.current = new Audio('./sounds/cow/moo.wav');
+        }
+        // Reset and play (allows rapid clicks)
+        mooSoundRef.current.currentTime = 0;
+        mooSoundRef.current.play().catch(() => {}); // Ignore autoplay errors
+    }, []);
 
     // ---- DOM-based collision detection (for breeding only) ----
     const isTouchingCow = useCallback((otherCowId, maxDistance = COW_CONFIG.TOUCH_DISTANCE_THRESHOLD) => {
@@ -69,6 +88,7 @@ export default function Cow({ cowId }) {
 
         // Hungry cows stay still
         if (cowState === 'hungry') {
+            setCowOffset({ x: 0, y: 0 });
             return;
         }
 
@@ -95,12 +115,132 @@ export default function Cow({ cowId }) {
         };
     }, [cowState]); // Only re-run when cow state actually changes
 
+    // ---- "Ready to milk" pulse animation (only when full) ----
+    useEffect(() => {
+        if (cowState !== 'full') {
+            setIsPulsing(false);
+            return;
+        }
+
+        const triggerPulse = () => {
+            setIsPulsing(true);
+            // Remove class after animation completes (600ms)
+            setTimeout(() => setIsPulsing(false), 600);
+            
+            // Schedule next pulse (random 3-6 seconds)
+            pulseTimeoutRef.current = setTimeout(
+                triggerPulse,
+                3000 + Math.random() * 3000
+            );
+        };
+
+        // Start first pulse after a short delay
+        pulseTimeoutRef.current = setTimeout(triggerPulse, 1000 + Math.random() * 2000);
+
+        return () => {
+            if (pulseTimeoutRef.current) {
+                clearTimeout(pulseTimeoutRef.current);
+            }
+        };
+    }, [cowState]);
+
+    // ---- Check if this cow is a breed target (another full cow is being dragged near) ----
+    useEffect(() => {
+        if (!cow || !draggingCow.cowId || !draggingCow.position) {
+            setIsBreedTarget(false);
+            return;
+        }
+
+        // Don't show for self
+        if (draggingCow.cowId === cowId) {
+            setIsBreedTarget(false);
+            return;
+        }
+
+        // Only full cows can be breed targets
+        if (cow.state !== 'full') {
+            setIsBreedTarget(false);
+            return;
+        }
+
+        // Check if the dragging cow is also full
+        const draggingCowData = state.cows.find(c => c.id === draggingCow.cowId);
+        if (!draggingCowData || draggingCowData.state !== 'full') {
+            setIsBreedTarget(false);
+            return;
+        }
+
+        // Check distance using DOM
+        const myRect = document.getElementById(cowId)?.getBoundingClientRect();
+        if (!myRect) {
+            setIsBreedTarget(false);
+            return;
+        }
+
+        const myCenter = {
+            x: myRect.x + myRect.width / 2,
+            y: myRect.y + myRect.height / 2,
+        };
+
+        const distance = Math.sqrt(
+            Math.pow(draggingCow.position.x - myCenter.x, 2) +
+            Math.pow(draggingCow.position.y - myCenter.y, 2)
+        );
+
+        // Show hover effect when within breeding threshold
+        setIsBreedTarget(distance < COW_CONFIG.TOUCH_DISTANCE_THRESHOLD * 1.5);
+    }, [cow, cowId, draggingCow, state.cows]);
+
+    // ---- Handle pickup (track starting position) ----
+    const onPickup = useCallback(() => {
+        const cowRect = document.getElementById(cowId)?.getBoundingClientRect();
+        if (cowRect) {
+            pickupPositionRef.current = {
+                x: cowRect.x + cowRect.width / 2,
+                y: cowRect.y + cowRect.height / 2,
+            };
+        }
+        wasDraggedRef.current = false;
+    }, [cowId]);
+
+    // ---- Handle position change during drag (for breeding hover) ----
+    const onPositionChange = useCallback((position) => {
+        if (!cow) return;
+        
+        // Check if moved significantly (indicates a drag, not a click)
+        if (pickupPositionRef.current) {
+            const distance = Math.sqrt(
+                Math.pow(position.x - pickupPositionRef.current.x, 2) +
+                Math.pow(position.y - pickupPositionRef.current.y, 2)
+            );
+            if (distance > 10) {
+                wasDraggedRef.current = true;
+            }
+        }
+        
+        // Only report dragging for full cows (breeding candidates)
+        if (cow.state === 'full') {
+            setDraggingCow(cowId, position);
+        }
+    }, [cow, cowId, setDraggingCow]);
+
     // ---- Handle drop (breeding check) ----
     const onDrop = useCallback((dropPosition) => {
         if (!cow) return;
         
+        // Clear dragging state
+        clearDraggingCow();
+        
         // Update position in state
         updateCowPosition(cowId, dropPosition);
+
+        // Play moo if it was a click (not a drag)
+        if (!wasDraggedRef.current) {
+            playMoo();
+        }
+        
+        // Reset for next interaction
+        pickupPositionRef.current = null;
 
         // Only full cows can breed
         if (cow.state !== 'full') return;
@@ -131,7 +271,7 @@ export default function Cow({ cowId }) {
                 }
             }
         }
-    }, [cowId, cow, state.cows, breedCows, updateCowPosition, isTouchingCow]);
+    }, [cowId, cow, state.cows, breedCows, updateCowPosition, isTouchingCow, clearDraggingCow, playMoo]);
 
     // ---- Early return AFTER all hooks ----
     if (!cow) return null;
@@ -157,7 +297,9 @@ export default function Cow({ cowId }) {
                 }}
             >
                 <DraggableSwinging 
+                    onPickup={onPickup}
                     onDrop={onDrop}
+                    onPositionChange={onPositionChange}
                     id={cowId} 
                     ropeLength={GAME_CONFIG.PHYSICS.COW_ROPE_LENGTH} 
                     gravity={GAME_CONFIG.PHYSICS.COW_GRAVITY} 
@@ -180,7 +322,9 @@ export default function Cow({ cowId }) {
                     </div>
 
                     {/* Cow sprite */}
-                    <div className={styles.cowContainer}>
+                    <div 
+                        className={`${styles.cowContainer} ${isPulsing ? styles.readyPulse : ''} ${isBreedTarget ? styles.breedTarget : ''}`}
+                    >
                         <div
                             style={{
                                 transform: `scaleX(${cowFlipHorizontal ? -1 : 1}) scale(${getCowScale()})`,

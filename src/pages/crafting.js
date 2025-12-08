@@ -189,11 +189,15 @@ export default function Crafting({ onClose = () => {} }) {
                 <div className={`${styles.standardedizedList} ${styles.rightSidebar} ${isClosing ? styles.closing : ''}`}>
                     <div className={styles.list}>
                         {CRAFTING_RECIPES.map((recipe, index) => (
-                            <CraftingItem
+                            <div 
                                 key={recipe.id}
-                                recipe={recipe}
-                                enabled={index === 0}
-                            />
+                                className={`${styles.recipeItem} ${styles[`recipeItem${index + 1}`] || ''} ${isClosing ? `${styles.recipeItemClosing} ${styles[`recipeItemClosing${index + 1}`] || ''}` : ''}`}
+                            >
+                                <CraftingItem
+                                    recipe={recipe}
+                                    enabled={index === 0}
+                                />
+                            </div>
                         ))}
                     </div>
                 </div>
