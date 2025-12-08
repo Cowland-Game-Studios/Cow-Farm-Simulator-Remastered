@@ -29,17 +29,27 @@ export default function DraggableSwinging({
                (y < safeArea || y > window.innerHeight - safeArea);
     };
 
-    const getValidLocation = () => {
+    // Clamp position to the closest safe spot within bounds
+    const getClosestSafePosition = (x, y) => {
+        const minX = safeArea;
+        const maxX = window.innerWidth - safeArea;
+        const minY = safeArea;
+        const maxY = window.innerHeight - safeArea;
+
+        return {
+            x: Math.max(minX, Math.min(maxX, x)),
+            y: Math.max(minY, Math.min(maxY, y))
+        };
+    };
+
+    // Get a random valid starting location
+    const getRandomValidLocation = () => {
         const x = Math.random() * (window.innerWidth - safeArea * 2) + safeArea;
         const y = Math.random() * (window.innerHeight - safeArea * 2) + safeArea;
-
-        if (isPositionBad(x, y)) {
-            return getValidLocation();
-        }
         return { x, y };
     };
 
-    const [restPosition, setRestPosition] = useState(getValidLocation);
+    const [restPosition, setRestPosition] = useState(getRandomValidLocation);
     const [objectPos, setObjectPos] = useState({ x: 0, y: 0 });
     const { mousePosition } = useContext(MousePositionContext);
     const [dragging, setDragging] = useState(initialDragging);
@@ -139,7 +149,7 @@ export default function DraggableSwinging({
 
         const resize = () => {
             if (!dragging && isPositionBad(restPosition.x, restPosition.y)) {
-                setRestPosition(getValidLocation());
+                setRestPosition(getClosestSafePosition(restPosition.x, restPosition.y));
             }
         };
 
@@ -162,7 +172,7 @@ export default function DraggableSwinging({
         const dropY = objectPosRef.current.y || mousePosition.y;
 
         if (isPositionBad(dropX, dropY)) {
-            const newPos = getValidLocation();
+            const newPos = getClosestSafePosition(dropX, dropY);
             setRestPosition(newPos);
             objectPosRef.current = { x: newPos.x, y: newPos.y + ropeLength };
             setObjectPos(objectPosRef.current);

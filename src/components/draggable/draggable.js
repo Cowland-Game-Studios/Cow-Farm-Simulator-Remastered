@@ -21,18 +21,27 @@ export default function Draggable({
                (y < safeArea || y > window.innerHeight - safeArea);
     };
 
-    const getValidLocation = () => {
+    // Clamp position to the closest safe spot within bounds
+    const getClosestSafePosition = (x, y) => {
+        const minX = safeArea;
+        const maxX = window.innerWidth - safeArea;
+        const minY = safeArea;
+        const maxY = window.innerHeight - safeArea;
+
+        return {
+            x: Math.max(minX, Math.min(maxX, x)),
+            y: Math.max(minY, Math.min(maxY, y))
+        };
+    };
+
+    // Get a random valid starting location
+    const getRandomValidLocation = () => {
         const x = Math.random() * (window.innerWidth - safeArea * 2) + safeArea;
         const y = Math.random() * (window.innerHeight - safeArea * 2) + safeArea;
-
-        if (isPositionBad(x, y)) {
-            return getValidLocation();
-        }
-
         return { x, y };
     };
 
-    const [position, setPosition] = useState(getValidLocation);
+    const [position, setPosition] = useState(getRandomValidLocation);
     const { mousePosition } = useContext(MousePositionContext);
     const [dragging, setDragging] = useState(initialDragging);
 
@@ -43,7 +52,7 @@ export default function Draggable({
 
         const handleResize = () => {
             if (isPositionBad(position.x, position.y)) {
-                setPosition(getValidLocation());
+                setPosition(getClosestSafePosition(position.x, position.y));
             }
         };
 
@@ -62,7 +71,7 @@ export default function Draggable({
         if (dragging) return;
 
         if (isPositionBad(mousePosition.x, mousePosition.y)) {
-            setPosition(getValidLocation());
+            setPosition(getClosestSafePosition(mousePosition.x, mousePosition.y));
         } else {
             setPosition({ x: mousePosition.x, y: mousePosition.y });
         }
