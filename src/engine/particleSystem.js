@@ -162,11 +162,11 @@ class ParticleSystem {
     }
 
     /**
-     * Spawn a "-1 {ingredient}" crafting placement particle
+     * Spawn a crafting particle (e.g., "-1 Cream", "+1 Butter")
      */
-    spawnCraftingPlaceParticle(x, y, ingredientName) {
+    spawnCraftingPlaceParticle(x, y, text) {
         return this.spawn({
-            text: `-1 ${ingredientName}`,
+            text,
             x,
             y,
             vx: (Math.random() - 0.5) * PARTICLES.CRAFTING_VX_RANGE,

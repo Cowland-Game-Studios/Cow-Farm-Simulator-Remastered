@@ -6,12 +6,15 @@ export function CowSVG({ color = "white", fullness = 1, pollInterval = 1000 }) {
     const clipHeight = 100 - (fullness * (0.7 - 0.27) * 100 + 27);
 
     return (
-        <>
+        <div style={{ position: 'relative', width: 100, height: 100 }}>
             {/* White overlay that clips based on fullness - shows unfilled portion */}
             <div className={styles.moveForever} style={{
                 height: clipHeight + "%",
                 overflow: "hidden",
                 position: "absolute",
+                top: 0,
+                left: 0,
+                width: '100%',
                 transition: `all ${pollInterval / 1000}s ease-in-out`,
             }}>
                 <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -39,7 +42,7 @@ export function CowSVG({ color = "white", fullness = 1, pollInterval = 1000 }) {
                 <path d="M43.125 44.2542L45.2514 55.5847L41.7292 76.5945C41.557 77.9597 40.4417 78.9917 39.107 79.0195L38.6806 79.0278C36.8292 79.0667 35.4889 77.2264 36.0528 75.407C37.2 71.707 37.4167 65.725 35.7181 61.6417C33.7764 56.9778 34.6723 54.7542 34.6723 54.7542" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M25.9083 43.7569C32.5139 45.9139 32.8458 40.3431 32.8458 40.3431V39.9847C29.6319 36.1514 26.6569 38.9056 26.6569 38.9056" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-        </>
+        </div>
     );
 }
 

@@ -170,19 +170,33 @@ export default function DraggableSwinging({
             };
             setObjectPos(objectPosRef.current);
             setRestPosition({ x: mousePosition.x, y: mousePosition.y });
+            
+            // Reset all velocity/tracking refs for clean start
             velocityRef.current = { x: 0, y: 0 };
+            lastMousePosRef.current = { x: mousePosition.x, y: mousePosition.y };
+            throwVelocityRef.current = { x: 0, y: 0 };
         } else {
-            // Becoming inactive - fade out and return to spawn
+            // Becoming inactive - fade out and reset position
             setOpacity(0);
-            if (spawnPositionRef.current) {
-                setRestPosition(spawnPositionRef.current);
-            }
+            setDragging(false);
+            
+            // Reset all position refs to spawn position to prevent flicker on next activation
+            const spawnPos = spawnPositionRef.current || { x: 0, y: 0 };
+            objectPosRef.current = { x: spawnPos.x, y: spawnPos.y + ropeLength };
+            setObjectPos(objectPosRef.current);
+            setRestPosition(spawnPos);
+            
+            // Reset velocity and tracking refs
+            velocityRef.current = { x: 0, y: 0 };
+            lastMousePosRef.current = { x: 0, y: 0 };
+            throwVelocityRef.current = { x: 0, y: 0 };
+            
             // Clear collision tracking when tool becomes inactive
             collidedTargetsRef.current.clear();
+            
             // Hide after animation completes
             const hideTimeout = setTimeout(() => {
                 setVisible(false);
-                setDragging(false);
             }, UI.HIDE_TIMEOUT_MS);
             return () => clearTimeout(hideTimeout);
         }

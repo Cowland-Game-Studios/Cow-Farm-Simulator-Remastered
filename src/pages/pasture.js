@@ -18,7 +18,7 @@ import ParticleRenderer from "../components/particles/ParticleRenderer";
 import Crafting from "./crafting";
 import Cownsole from "../components/cownsole/cownsole";
 import { useGame, useMousePosition, useInventory, particleSystem } from "../engine";
-import { useEffect, useCallback, useMemo, useState } from "react";
+import { useEffect, useCallback, useMemo, useState, useRef } from "react";
 import { GAME_CONFIG } from "../config/gameConfig";
 
 export default function Pasture() {
@@ -47,11 +47,16 @@ export default function Pasture() {
     // ---- Moo.sh (dev console) state ----
     const [showCownsole, setShowCownsole] = useState(false);
 
+    // ---- Swipe/scroll state for opening crafting ----
+    const swipeStartY = useRef(null);
+    const SWIPE_UP_THRESHOLD = 80;
+
     // ---- Open crafting on scroll up ----
     useEffect(() => {
         const handleWheel = (e) => {
             // Scroll up (negative deltaY) opens crafting
-            if (e.deltaY < -50 && !showCrafting && !showCownsole) {
+            // Only if not dragging tools
+            if (e.deltaY < -50 && !showCrafting && !showCownsole && !tools.milking && !tools.feeding) {
                 setShowCrafting(true);
             }
         };
@@ -61,7 +66,63 @@ export default function Pasture() {
         return () => {
             window.removeEventListener('wheel', handleWheel);
         };
-    }, [showCrafting, showCownsole]);
+    }, [showCrafting, showCownsole, tools.milking, tools.feeding]);
+    
+    // ---- Open crafting on swipe up (mobile) ----
+    useEffect(() => {
+        const handleTouchStart = (e) => {
+            // Don't start swipe if crafting/cownsole open or tools active
+            if (showCrafting || showCownsole || tools.milking || tools.feeding) return;
+            
+            // Only start swipe on background elements (pasture itself)
+            const target = e.target;
+            const isBackground = target.classList.contains(styles.pasture) || 
+                                 target.closest(`.${styles.pasture}`) === target.closest(`.${styles.UI}`)?.parentElement;
+            
+            // Don't trigger on UI elements, cows, or draggables
+            if (target.closest('button') || 
+                target.closest('[draggable]') || 
+                target.closest('.cowContainer') ||
+                target.closest('#bucket') ||
+                target.closest('#feed')) {
+                return;
+            }
+            
+            swipeStartY.current = e.touches[0].clientY;
+        };
+        
+        const handleTouchMove = (e) => {
+            if (swipeStartY.current === null) return;
+            if (showCrafting || showCownsole || tools.milking || tools.feeding) {
+                swipeStartY.current = null;
+                return;
+            }
+        };
+        
+        const handleTouchEnd = (e) => {
+            if (swipeStartY.current === null) return;
+            
+            const endY = e.changedTouches[0].clientY;
+            const deltaY = endY - swipeStartY.current; // Positive = swipe down
+            
+            // Swipe DOWN opens crafting (pulling down the menu from above)
+            if (deltaY > SWIPE_UP_THRESHOLD && !showCrafting && !showCownsole && !tools.milking && !tools.feeding) {
+                setShowCrafting(true);
+            }
+            
+            swipeStartY.current = null;
+        };
+        
+        window.addEventListener('touchstart', handleTouchStart, { passive: true });
+        window.addEventListener('touchmove', handleTouchMove, { passive: true });
+        window.addEventListener('touchend', handleTouchEnd, { passive: true });
+        
+        return () => {
+            window.removeEventListener('touchstart', handleTouchStart);
+            window.removeEventListener('touchmove', handleTouchMove);
+            window.removeEventListener('touchend', handleTouchEnd);
+        };
+    }, [showCrafting, showCownsole, tools.milking, tools.feeding]);
 
     // ---- Open Moo.sh on "/" key press ----
     useEffect(() => {
