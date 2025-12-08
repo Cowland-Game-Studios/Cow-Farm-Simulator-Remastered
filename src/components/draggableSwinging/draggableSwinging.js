@@ -1,19 +1,30 @@
-import { useContext, useEffect, useRef, useState } from "react";
-import MousePositionContext from "../../contexts/MousePositionContext";
+import { useEffect, useRef, useState, useCallback } from "react";
+import PropTypes from 'prop-types';
+import { useMousePosition } from "../../engine";
+import { GAME_CONFIG } from "../../config/gameConfig";
+
+const { PHYSICS } = GAME_CONFIG;
 
 export default function DraggableSwinging({
+    id,
     onPickup = () => {},
     onDrop = () => {},
+    onPositionChange = null,
+    onCollide = null,
+    collisionTargets = [],
+    collisionThreshold = PHYSICS.DEFAULT_COLLISION_THRESHOLD,
     canGoOffScreen = false,
-    safeArea = 25,
+    safeArea = PHYSICS.DEFAULT_SAFE_AREA,
     initialDragging = false,
     initialPosition = null,
-    isActive = null,  // null = always visible, true/false = controlled visibility
-    disabled = false, // Prevents dragging when true
+    isActive = null,
+    disabled = false,
     offset = { x: 0, y: 0 },
-    ropeLength = 80,
-    gravity = 0.5,
-    damping = 0.98,
+    ropeLength = PHYSICS.DEFAULT_ROPE_LENGTH,
+    gravity = PHYSICS.DEFAULT_GRAVITY,
+    damping = PHYSICS.DEFAULT_DAMPING,
+    children,
+    style,
     ...props
 }) {
     const draggableRef = useRef(null);
@@ -24,8 +35,38 @@ export default function DraggableSwinging({
     const objectPosRef = useRef({ x: 0, y: 0 });
     const lastMousePosRef = useRef({ x: 0, y: 0 });
     const spawnPositionRef = useRef(null);
+    const collidedTargetsRef = useRef(new Set()); // Track collisions to avoid duplicates
 
     const isControlled = isActive !== null;
+
+    // Check collision with target elements using DOM
+    const checkCollisions = useCallback((position) => {
+        if (!onCollide || !collisionTargets || collisionTargets.length === 0) return;
+
+        for (const targetId of collisionTargets) {
+            // Skip already-collided targets
+            if (collidedTargetsRef.current.has(targetId)) continue;
+
+            const targetElement = document.getElementById(targetId);
+            if (!targetElement) continue;
+
+            const targetRect = targetElement.getBoundingClientRect();
+            const targetCenter = {
+                x: targetRect.x + targetRect.width / 2,
+                y: targetRect.y + targetRect.height / 2,
+            };
+
+            const distance = Math.sqrt(
+                Math.pow(position.x - targetCenter.x, 2) +
+                Math.pow(position.y - targetCenter.y, 2)
+            );
+
+            if (distance < collisionThreshold) {
+                collidedTargetsRef.current.add(targetId);
+                onCollide(targetId, position);
+            }
+        }
+    }, [onCollide, collisionTargets, collisionThreshold]);
 
     const isPositionBad = (x, y) => {
         if (canGoOffScreen) {
@@ -65,15 +106,22 @@ export default function DraggableSwinging({
 
     const [restPosition, setRestPosition] = useState(getInitialPosition);
     const [objectPos, setObjectPos] = useState({ x: 0, y: 0 });
-    const { mousePosition } = useContext(MousePositionContext);
+    const mousePosition = useMousePosition();
     const [dragging, setDragging] = useState(initialDragging);
     const [opacity, setOpacity] = useState(isControlled ? 0 : 1);
     const [visible, setVisible] = useState(!isControlled);
 
-    // Store spawn position on mount
+    // Store spawn position on mount and report to collision engine
     useEffect(() => {
-        spawnPositionRef.current = getInitialPosition();
-    }, []);
+        const initialPos = getInitialPosition();
+        spawnPositionRef.current = initialPos;
+        
+        // Report initial position to collision engine
+        if (onPositionChange) {
+            onPositionChange(initialPos);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [onPositionChange]);
 
     // Handle controlled visibility (isActive prop)
     useEffect(() => {
@@ -99,6 +147,8 @@ export default function DraggableSwinging({
             if (spawnPositionRef.current) {
                 setRestPosition(spawnPositionRef.current);
             }
+            // Clear collision tracking when tool becomes inactive
+            collidedTargetsRef.current.clear();
             // Hide after animation completes
             const hideTimeout = setTimeout(() => {
                 setVisible(false);
@@ -174,6 +224,14 @@ export default function DraggableSwinging({
             // Update state for render
             setObjectPos({ x: newX, y: newY });
 
+            // Notify collision engine of position change
+            if (onPositionChange) {
+                onPositionChange({ x: newX, y: newY });
+            }
+
+            // Check for collisions with targets
+            checkCollisions({ x: newX, y: newY });
+
             animationRef.current = requestAnimationFrame(simulate);
         };
 
@@ -192,7 +250,8 @@ export default function DraggableSwinging({
                 cancelAnimationFrame(animationRef.current);
             }
         };
-    }, [dragging, mousePosition, gravity, damping, ropeLength]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dragging, gravity, damping, ropeLength, checkCollisions]);
 
     // Handle mouse/touch up (only for non-controlled mode)
     useEffect(() => {
@@ -227,19 +286,26 @@ export default function DraggableSwinging({
         const dropX = objectPosRef.current.x || mousePosition.x;
         const dropY = objectPosRef.current.y || mousePosition.y;
 
+        let finalPos;
         if (isPositionBad(dropX, dropY)) {
-            const newPos = getClosestSafePosition(dropX, dropY);
-            setRestPosition(newPos);
-            objectPosRef.current = { x: newPos.x, y: newPos.y + ropeLength };
+            finalPos = getClosestSafePosition(dropX, dropY);
+            setRestPosition(finalPos);
+            objectPosRef.current = { x: finalPos.x, y: finalPos.y + ropeLength };
             setObjectPos(objectPosRef.current);
         } else {
-            setRestPosition({ x: dropX, y: dropY });
+            finalPos = { x: dropX, y: dropY };
+            setRestPosition(finalPos);
         }
 
         // Reset velocity on drop
         velocityRef.current = { x: 0, y: 0 };
 
-        onDrop({ x: dropX, y: dropY });
+        // Report final position to collision engine
+        if (onPositionChange) {
+            onPositionChange(finalPos);
+        }
+
+        onDrop(finalPos);
     }, [dragging, isControlled]);
 
     // Calculate rotation based on rope angle
@@ -260,6 +326,7 @@ export default function DraggableSwinging({
     return (
         <div
             {...props}
+            id={id}
             ref={draggableRef}
             onMouseDown={() => {
                 if (disabled) return;
@@ -303,10 +370,79 @@ export default function DraggableSwinging({
                 zIndex: dragging ? 1000 : 0,
                 cursor: disabled ? "default" : (dragging ? "grabbing" : "grab"),
                 pointerEvents: (isControlled && !isActive) ? "none" : "auto",
-                ...props.style
+                ...style
             }}
         >
-            {props.children}
+            {children}
         </div>
     );
 }
+
+DraggableSwinging.propTypes = {
+    /** DOM id for collision detection */
+    id: PropTypes.string,
+    /** Callback when element is picked up */
+    onPickup: PropTypes.func,
+    /** Callback when element is dropped, receives position */
+    onDrop: PropTypes.func,
+    /** Callback during drag with current position (for collision engine) */
+    onPositionChange: PropTypes.func,
+    /** Callback when colliding with a target: (targetId, position) => void */
+    onCollide: PropTypes.func,
+    /** Array of element IDs to check collision against */
+    collisionTargets: PropTypes.arrayOf(PropTypes.string),
+    /** Distance threshold for collision detection */
+    collisionThreshold: PropTypes.number,
+    /** Allow element to go off screen */
+    canGoOffScreen: PropTypes.bool,
+    /** Safe area margin from screen edges */
+    safeArea: PropTypes.number,
+    /** Start in dragging state */
+    initialDragging: PropTypes.bool,
+    /** Initial position { x, y } */
+    initialPosition: PropTypes.shape({
+        x: PropTypes.number,
+        y: PropTypes.number,
+    }),
+    /** Controlled visibility: null = always visible, true/false = controlled */
+    isActive: PropTypes.bool,
+    /** Prevents dragging when true */
+    disabled: PropTypes.bool,
+    /** Offset from cursor position */
+    offset: PropTypes.shape({
+        x: PropTypes.number,
+        y: PropTypes.number,
+    }),
+    /** Length of the rope for swinging physics */
+    ropeLength: PropTypes.number,
+    /** Gravity strength for physics simulation */
+    gravity: PropTypes.number,
+    /** Damping factor for physics simulation */
+    damping: PropTypes.number,
+    /** Child elements to render */
+    children: PropTypes.node,
+    /** Custom inline styles */
+    style: PropTypes.object,
+};
+
+DraggableSwinging.defaultProps = {
+    id: undefined,
+    onPickup: () => {},
+    onDrop: () => {},
+    onPositionChange: null,
+    onCollide: null,
+    collisionTargets: [],
+    collisionThreshold: PHYSICS.DEFAULT_COLLISION_THRESHOLD,
+    canGoOffScreen: false,
+    safeArea: PHYSICS.DEFAULT_SAFE_AREA,
+    initialDragging: false,
+    initialPosition: null,
+    isActive: null,
+    disabled: false,
+    offset: { x: 0, y: 0 },
+    ropeLength: PHYSICS.DEFAULT_ROPE_LENGTH,
+    gravity: PHYSICS.DEFAULT_GRAVITY,
+    damping: PHYSICS.DEFAULT_DAMPING,
+    children: null,
+    style: {},
+};

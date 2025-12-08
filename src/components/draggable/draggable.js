@@ -1,14 +1,21 @@
-import { useContext, useEffect, useRef, useState } from "react";
-import MousePositionContext from "../../contexts/MousePositionContext";
+import { useEffect, useRef, useState } from "react";
+import PropTypes from 'prop-types';
+import { useMousePosition } from "../../engine";
+import { GAME_CONFIG } from "../../config/gameConfig";
+
+const { PHYSICS } = GAME_CONFIG;
 
 export default function Draggable({
+    id,
     onPickup = () => {},
     onDrop = () => {},
     canGoOffScreen = false,
-    safeArea = 25,
+    safeArea = PHYSICS.DEFAULT_SAFE_AREA,
     initialDragging = false,
     offset = { x: 0, y: 0 },
     trackRotationSettings = { rotates: true, sensitivity: 1, displacement: 0 },
+    children,
+    style,
     ...props
 }) {
     const draggableRef = useRef(null);
@@ -42,7 +49,7 @@ export default function Draggable({
     };
 
     const [position, setPosition] = useState(getRandomValidLocation);
-    const { mousePosition } = useContext(MousePositionContext);
+    const mousePosition = useMousePosition();
     const [dragging, setDragging] = useState(initialDragging);
 
     useEffect(() => {
@@ -82,6 +89,7 @@ export default function Draggable({
     return (
         <div
             {...props}
+            id={id}
             ref={draggableRef}
             onMouseDown={() => {
                 setDragging(true);
@@ -102,10 +110,53 @@ export default function Draggable({
                 transformOrigin: "center",
                 transition: "transform 0.1s ease-out",
                 zIndex: dragging ? 1000 : 0,
-                ...props.style
+                ...style
             }}
         >
-            {props.children}
+            {children}
         </div>
     );
 }
+
+Draggable.propTypes = {
+    /** DOM id for the draggable element */
+    id: PropTypes.string,
+    /** Callback when element is picked up */
+    onPickup: PropTypes.func,
+    /** Callback when element is dropped, receives position */
+    onDrop: PropTypes.func,
+    /** Allow element to go off screen */
+    canGoOffScreen: PropTypes.bool,
+    /** Safe area margin from screen edges */
+    safeArea: PropTypes.number,
+    /** Start in dragging state */
+    initialDragging: PropTypes.bool,
+    /** Offset from cursor position */
+    offset: PropTypes.shape({
+        x: PropTypes.number,
+        y: PropTypes.number,
+    }),
+    /** Rotation tracking settings */
+    trackRotationSettings: PropTypes.shape({
+        rotates: PropTypes.bool,
+        sensitivity: PropTypes.number,
+        displacement: PropTypes.number,
+    }),
+    /** Child elements to render */
+    children: PropTypes.node,
+    /** Custom inline styles */
+    style: PropTypes.object,
+};
+
+Draggable.defaultProps = {
+    id: undefined,
+    onPickup: () => {},
+    onDrop: () => {},
+    canGoOffScreen: false,
+    safeArea: PHYSICS.DEFAULT_SAFE_AREA,
+    initialDragging: false,
+    offset: { x: 0, y: 0 },
+    trackRotationSettings: { rotates: true, sensitivity: 1, displacement: 0 },
+    children: null,
+    style: {},
+};

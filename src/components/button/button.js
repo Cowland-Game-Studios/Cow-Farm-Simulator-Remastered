@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import styles from "./button.module.css";
 
 export default function Button({ text, image, onClick, keepOriginalCursor = false, hidden = false, ...props }) {
@@ -26,3 +27,27 @@ export default function Button({ text, image, onClick, keepOriginalCursor = fals
         </button>
     );
 }
+
+Button.propTypes = {
+    /** Button text label */
+    text: PropTypes.string,
+    /** Image source URL */
+    image: PropTypes.string,
+    /** Click handler */
+    onClick: PropTypes.func,
+    /** Keep default cursor instead of pointer */
+    keepOriginalCursor: PropTypes.bool,
+    /** Hide the button */
+    hidden: PropTypes.bool,
+    /** Mouse down handler */
+    onMouseDown: PropTypes.func,
+};
+
+Button.defaultProps = {
+    text: '',
+    image: null,
+    onClick: null,
+    keepOriginalCursor: false,
+    hidden: false,
+    onMouseDown: null,
+};

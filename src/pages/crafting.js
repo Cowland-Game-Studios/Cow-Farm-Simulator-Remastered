@@ -1,7 +1,9 @@
 import { useState } from "react";
+import PropTypes from 'prop-types';
 import Button from "../components/button/button";
 import styles from "./crafting.module.css";
 import Draggable from "../components/draggable/draggable";
+import { GAME_CONFIG } from "../config/gameConfig";
 
 // Product definitions
 const PRODUCTS = [
@@ -69,9 +71,38 @@ function CraftingItem({ recipe, enabled = false }) {
     );
 }
 
+CraftingItem.propTypes = {
+    recipe: PropTypes.shape({
+        id: PropTypes.string,
+        time: PropTypes.number,
+        inputs: PropTypes.arrayOf(PropTypes.shape({
+            name: PropTypes.string,
+            amount: PropTypes.number,
+        })),
+        outputs: PropTypes.arrayOf(PropTypes.shape({
+            name: PropTypes.string,
+            amount: PropTypes.number,
+        })),
+    }),
+    enabled: PropTypes.bool,
+};
+
+CraftingItem.defaultProps = {
+    recipe: null,
+    enabled: false,
+};
+
 export default function Crafting({ onClose = () => {} }) {
     const [selectedIngredient, setSelectedIngredient] = useState(null);
     const [ingredientsPlaced, setIngredientsPlaced] = useState([]);
+    const [isClosing, setIsClosing] = useState(false);
+
+    const handleClose = () => {
+        setIsClosing(true);
+        setTimeout(() => {
+            onClose();
+        }, GAME_CONFIG.UI.ANIMATION_DURATION_MS);
+    };
 
     const handleIngredientDrop = ({ x, y }) => {
         setSelectedIngredient(null);
@@ -90,7 +121,7 @@ export default function Crafting({ onClose = () => {} }) {
     };
 
     return (
-        <div className={styles.craftingBlurBackground}>
+        <div className={`${styles.craftingBlurBackground} ${isClosing ? styles.closing : ''}`}>
             {/* Currently dragged ingredient */}
             {selectedIngredient && (
                 <Draggable
@@ -127,7 +158,7 @@ export default function Crafting({ onClose = () => {} }) {
 
             <div className={styles.spreadEvenlyContainer}>
                 {/* Product selection panel */}
-                <div className={styles.standardedizedList}>
+                <div className={`${styles.standardedizedList} ${styles.leftSidebar} ${isClosing ? styles.closing : ''}`}>
                     <div style={{ marginLeft: "50%" }}>
                         <div className={styles.list}>
                             {PRODUCTS.map(product => (
@@ -145,7 +176,7 @@ export default function Crafting({ onClose = () => {} }) {
                 </div>
 
                 {/* Crafting bench */}
-                <div className={styles.benchTop} id="craftingBench">
+                <div className={`${styles.benchTop} ${isClosing ? styles.closing : ''}`} id="craftingBench">
                     <img
                         draggable={false}
                         className={styles.craftingInstructions}
@@ -155,7 +186,7 @@ export default function Crafting({ onClose = () => {} }) {
                 </div>
 
                 {/* Recipe list */}
-                <div className={styles.standardedizedList}>
+                <div className={`${styles.standardedizedList} ${styles.rightSidebar} ${isClosing ? styles.closing : ''}`}>
                     <div className={styles.list}>
                         {CRAFTING_RECIPES.map((recipe, index) => (
                             <CraftingItem
@@ -169,7 +200,7 @@ export default function Crafting({ onClose = () => {} }) {
             </div>
 
             {/* Action buttons */}
-            <div className={styles.buttonContainers}>
+            <div className={`${styles.buttonContainers} ${isClosing ? styles.closing : ''}`}>
                 <div
                     className={styles.casualButton}
                     onClick={() => setIngredientsPlaced([])}
@@ -181,10 +212,10 @@ export default function Crafting({ onClose = () => {} }) {
                 </div>
                 <div
                     className={styles.casualButton}
-                    onClick={onClose}
+                    onClick={handleClose}
                     role="button"
                     tabIndex={0}
-                    onKeyDown={(e) => e.key === 'Enter' && onClose()}
+                    onKeyDown={(e) => e.key === 'Enter' && handleClose()}
                 >
                     <p className={styles.casualButtonText} style={{ color: "red" }}>cancel & close</p>
                 </div>
@@ -192,3 +223,12 @@ export default function Crafting({ onClose = () => {} }) {
         </div>
     );
 }
+
+Crafting.propTypes = {
+    /** Callback when crafting menu is closed */
+    onClose: PropTypes.func,
+};
+
+Crafting.defaultProps = {
+    onClose: () => {},
+};

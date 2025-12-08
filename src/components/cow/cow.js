@@ -1,142 +1,78 @@
+/**
+ * Cow Component
+ * 
+ * Uses the centralized game engine:
+ * - Gets state from GameProvider context
+ * - Tool collisions handled by DraggableSwinging in pasture.js
+ * - DOM-based collision for breeding only (on drop)
+ */
+
+import PropTypes from 'prop-types';
 import styles from "./cow.module.css";
 import DraggableSwinging from "../draggableSwinging/draggableSwinging";
-import { useContext, useEffect, useState, useRef, useCallback, useMemo } from "react";
-import PastureStateContext from "../../contexts/PastureStateContext";
-import { v4 as uuidv4 } from 'uuid';
+import { useEffect, useState, useRef, useCallback } from "react";
 import { CowSVG, CowMilkedSVG, CowToMilkSVG } from "./CowSVG";
-import CowListContext from "../../contexts/CowListContext";
-import { GAME_CONFIG, averageColors } from "../../config/gameConfig";
+import { 
+    useGame, 
+    colorToString,
+    particleSystem,
+} from "../../engine";
+import { GAME_CONFIG } from "../../config/gameConfig";
 
-// Alias for cleaner code
 const COW_CONFIG = GAME_CONFIG.COW;
 
-export default function Cow({ id = uuidv4(), initialState = "hungry", initialColor = "cyan", initialFullness = 0.1, initialPosition = null }) {
-
-    const cowID = id;  // No need for state since ID doesn't change
-    const { isMilking, isFeeding } = useContext(PastureStateContext);
-    const { cowList, setCowList } = useContext(CowListContext);
-
-    const color = initialColor;  // Color only changes through breeding (new cow created)
-
-    const [cowState, setCowState] = useState(initialState);
-    const [fullness, setFullness] = useState(initialFullness);
-
+export default function Cow({ cowId }) {
+    // ---- Get cow data from central state ----
+    const { state, breedCows, updateCowPosition } = useGame();
+    const cow = state.cows.find(c => c.id === cowId);
+    
+    // ---- Local visual state (not saved) ----
     const [cowOffset, setCowOffset] = useState({ x: 0, y: 0 });
     const [cowFlipHorizontal, setCowFlipHorizontal] = useState(false);
-
-    // Ref to track timeout for random movement cleanup
     const moveTimeoutRef = useRef(null);
-    
-    // Ref to track last breeding time for cooldown
-    const lastBredAtRef = useRef(0);
 
-    // Sync local state to cowList context when state/fullness changes
-    useEffect(() => {
-        setCowList(prevList => 
-            prevList.map(cow => 
-                cow.id === cowID 
-                    ? { ...cow, state: cowState, fullness: fullness }
-                    : cow
-            )
+    // ---- DOM-based collision detection (for breeding only) ----
+    const isTouchingCow = useCallback((otherCowId, maxDistance = COW_CONFIG.TOUCH_DISTANCE_THRESHOLD) => {
+        const cowRect = document.getElementById(cowId)?.getBoundingClientRect();
+        const targetRect = document.getElementById(otherCowId)?.getBoundingClientRect();
+
+        if (!cowRect || !targetRect) return false;
+
+        const cowCenter = {
+            x: cowRect.x + cowRect.width / 2,
+            y: cowRect.y + cowRect.height / 2,
+        };
+
+        const targetCenter = {
+            x: targetRect.x + targetRect.width / 2,
+            y: targetRect.y + targetRect.height / 2,
+        };
+
+        const distance = Math.sqrt(
+            Math.pow(cowCenter.x - targetCenter.x, 2) + 
+            Math.pow(cowCenter.y - targetCenter.y, 2)
         );
-    }, [cowState, fullness, cowID, setCowList]);
 
-    // Milk production effect
+        return distance < maxDistance;
+    }, [cowId]);
+
+    // ---- Random movement (only when producing) ----
+    const cowState = cow?.state;
     useEffect(() => {
-        if (cowState !== "producing milk") {
-            return;
-        }
-
-        const pollFullness = () => {
-            setFullness(prevFullness => 
-                prevFullness + 1 / (COW_CONFIG.MILK_PRODUCTION_TIME_MS / COW_CONFIG.FULLNESS_POLL_INTERVAL_MS)
-            );
-        };
-
-        const interval = setInterval(pollFullness, COW_CONFIG.FULLNESS_POLL_INTERVAL_MS);
-        pollFullness();
-
-        return () => clearInterval(interval);
-    }, [cowState]);
-
-    // Check if cow is full
-    useEffect(() => {
-        if (fullness >= 1) {
-            setCowState("full");
-        }
-    }, [fullness]);
-
-    // Memoized collision detection helper - stable reference since cowID never changes
-    const isTouching = useMemo(() => {
-        return (targetID, maxDistance = COW_CONFIG.TOUCH_DISTANCE_THRESHOLD) => {
-            const cowRect = document.getElementById(cowID)?.getBoundingClientRect();
-            const targetRect = document.getElementById(targetID)?.getBoundingClientRect();
-
-            if (!cowRect || !targetRect) {
-                return false;
-            }
-
-            const cowCenter = {
-                x: cowRect.x + cowRect.width / 2,
-                y: cowRect.y + cowRect.height / 2,
-            };
-
-            const targetCenter = {
-                x: targetRect.x + targetRect.width / 2,
-                y: targetRect.y + targetRect.height / 2,
-            };
-
-            const distance = Math.sqrt(
-                Math.pow(cowCenter.x - targetCenter.x, 2) + Math.pow(cowCenter.y - targetCenter.y, 2)
-            );
-
-            return distance < maxDistance;
-        };
-    }, [cowID]);
-
-    // Milking and feeding interaction effect
-    useEffect(() => {
-        if (cowState === "producing milk") {
-            return;
-        }
-
-        if (!isMilking && !isFeeding) {
-            return;
-        }
-
-        const intervalId = setInterval(() => {
-            // Check for bucket (milking) or feed (feeding) based on current action
-            const targetId = isMilking ? "bucket" : "feed";
-            
-            if (isTouching(targetId)) {
-                if (isMilking && cowState === "full") {
-                    setCowState("hungry");
-                    setFullness(COW_CONFIG.INITIAL_FULLNESS_HUNGRY);
-                    clearInterval(intervalId);
-                } else if (isFeeding && cowState === "hungry") {
-                    setCowState("producing milk");
-                    setFullness(COW_CONFIG.INITIAL_FULLNESS_PRODUCING);
-                    clearInterval(intervalId);
-                }
-            }
-        }, COW_CONFIG.TOUCH_CHECK_INTERVAL_MS);
-
-        return () => clearInterval(intervalId);
-    }, [isMilking, isFeeding, cowState, isTouching]);
-
-    // Random movement effect - only when producing milk (not hungry, not full)
-    useEffect(() => {
-        // Full cows stay still (ready to be milked/bred)
-        if (cowState === "full") {
+        if (!cowState) return;
+        
+        // Full cows stay still
+        if (cowState === 'full') {
             setCowOffset({ x: 0, y: 0 });
             return;
         }
 
         // Hungry cows stay still
-        if (cowState === "hungry") {
+        if (cowState === 'hungry') {
             return;
         }
 
+        // Only producing cows wander
         const moveRandomly = () => {
             const randomX = Math.random() * COW_CONFIG.MOVE_MAX_DISTANCE - COW_CONFIG.MOVE_MAX_DISTANCE / 2;
             const randomY = Math.random() * COW_CONFIG.MOVE_MAX_DISTANCE - COW_CONFIG.MOVE_MAX_DISTANCE / 2;
@@ -157,81 +93,61 @@ export default function Cow({ id = uuidv4(), initialState = "hungry", initialCol
                 clearTimeout(moveTimeoutRef.current);
             }
         };
-    }, [cowState]);
+    }, [cowState]); // Only re-run when cow state actually changes
 
-    // Breeding logic with cooldown
-    const canBreed = () => {
-        if (cowState !== "full") return false;
+    // ---- Handle drop (breeding check) ----
+    const onDrop = useCallback((dropPosition) => {
+        if (!cow) return;
         
-        // Check breeding cooldown
+        // Update position in state
+        updateCowPosition(cowId, dropPosition);
+
+        // Only full cows can breed
+        if (cow.state !== 'full') return;
+
+        // Check cooldown
         const now = Date.now();
-        if (now - lastBredAtRef.current < COW_CONFIG.BREEDING_COOLDOWN_MS) {
-            return false;
-        }
-        return true;
-    };
+        if (now - cow.lastBredAt < COW_CONFIG.BREEDING_COOLDOWN_MS) return;
 
-    const ifTouchingBreed = () => {
-        // Get midpoint between two cows
-        const getMidpoint = (id1, id2) => {
-            const rect1 = document.getElementById(id1)?.getBoundingClientRect();
-            const rect2 = document.getElementById(id2)?.getBoundingClientRect();
-
-            if (!rect1 || !rect2) return null;
-
-            const center1 = { x: rect1.x + rect1.width / 2, y: rect1.y + rect1.height / 2 };
-            const center2 = { x: rect2.x + rect2.width / 2, y: rect2.y + rect2.height / 2 };
-
-            return {
-                x: (center1.x + center2.x) / 2,
-                y: (center1.y + center2.y) / 2
-            };
-        };
-
-        // Only breed with first touching cow (prevents multiple births)
-        for (const cow of cowList) {
-            if (cow.id === cowID) {
-                continue;
-            }
-
-            if (isTouching(cow.id)) {
-                const spawnPosition = getMidpoint(cowID, cow.id);
-
-                const newCow = {
-                    id: uuidv4(),
-                    color: averageColors(cow.color, color),
-                    state: "hungry",
-                    fullness: COW_CONFIG.INITIAL_FULLNESS_HUNGRY,
-                    initialPosition: spawnPosition
-                };
-
-                // Set cooldown timestamp
-                lastBredAtRef.current = Date.now();
-
-                setCowState("hungry");
-                setFullness(COW_CONFIG.INITIAL_FULLNESS_HUNGRY);
-
-                setCowList(prevCowList => [...prevCowList, newCow]);
+        // Check for collisions with other full cows using DOM
+        for (const otherCow of state.cows) {
+            if (otherCow.id === cowId) continue;
+            if (otherCow.state !== 'full') continue;
+            
+            if (isTouchingCow(otherCow.id)) {
+                // Get midpoint for spawn position
+                const cowRect = document.getElementById(cowId)?.getBoundingClientRect();
+                const otherRect = document.getElementById(otherCow.id)?.getBoundingClientRect();
                 
-                // Only breed once per drop
-                return;
+                if (cowRect && otherRect) {
+                    const spawnPosition = {
+                        x: (cowRect.x + cowRect.width/2 + otherRect.x + otherRect.width/2) / 2,
+                        y: (cowRect.y + cowRect.height/2 + otherRect.y + otherRect.height/2) / 2,
+                    };
+                    breedCows(cowId, otherCow.id, spawnPosition);
+                    // Spawn "+1 cow" particle at breed location
+                    particleSystem.spawnBreedParticle(spawnPosition.x, spawnPosition.y - 30);
+                    return; // Only breed once
+                }
             }
         }
-    };
+    }, [cowId, cow, state.cows, breedCows, updateCowPosition, isTouchingCow]);
 
-    const onDrop = () => {
-        if (canBreed()) {
-            ifTouchingBreed();
-        }
-    };
+    // ---- Early return AFTER all hooks ----
+    if (!cow) return null;
 
-    // Calculate scale based on cow state
+    // ---- Derived values ----
+    const { color, fullness, position } = cow;
+    const colorString = colorToString(color);
+
+    // ---- Calculate scale based on state ----
     const getCowScale = () => {
-        if (cowState === "full") return COW_CONFIG.SCALE_FULL;
-        if (cowState === "hungry") return COW_CONFIG.SCALE_HUNGRY;
+        if (cowState === 'full') return COW_CONFIG.SCALE_FULL;
+        if (cowState === 'hungry') return COW_CONFIG.SCALE_HUNGRY;
         return COW_CONFIG.SCALE_NORMAL;
     };
 
+    // ---- Render ----
     return (
         <div>
             <div
@@ -240,21 +156,30 @@ export default function Cow({ id = uuidv4(), initialState = "hungry", initialCol
                     transition: "all 1s ease-in-out",
                 }}
             >
-                <DraggableSwinging onDrop={onDrop} id={cowID} ropeLength={35} gravity={0.6} damping={0.97} initialPosition={initialPosition}>
+                <DraggableSwinging 
+                    onDrop={onDrop}
+                    id={cowId} 
+                    ropeLength={GAME_CONFIG.PHYSICS.COW_ROPE_LENGTH} 
+                    gravity={GAME_CONFIG.PHYSICS.COW_GRAVITY} 
+                    damping={GAME_CONFIG.PHYSICS.COW_DAMPING} 
+                    initialPosition={position}
+                >
+                    {/* Thought bubble */}
                     <div style={{
                         position: "absolute",
                         top: -5,
                         left: 50,
                         transition: "all 1s ease-in-out",
                     }}>
-                        {isMilking && cowState === "full" && (
+                        {state.tools.milking && cowState === 'full' && (
                             <img src="./images/cows/thinkMilk.svg" draggable={false} className={styles.bucket} alt="Thinking about milk" />
                         )}
-                        {isFeeding && cowState === "hungry" && (
+                        {state.tools.feeding && cowState === 'hungry' && (
                             <img src="./images/cows/thinkFood.svg" draggable={false} className={styles.bucket} alt="Thinking about food" />
                         )}
                     </div>
 
+                    {/* Cow sprite */}
                     <div className={styles.cowContainer}>
                         <div
                             style={{
@@ -262,14 +187,14 @@ export default function Cow({ id = uuidv4(), initialState = "hungry", initialCol
                                 transition: "all 0.25s ease-in-out",
                             }}
                         >
-                            {cowState === "hungry" && (
-                                <CowMilkedSVG color={color} />
+                            {cowState === 'hungry' && (
+                                <CowMilkedSVG color={colorString} />
                             )}
-                            {cowState === "producing milk" && (
-                                <CowSVG color={color} fullness={fullness} pollInterval={COW_CONFIG.FULLNESS_POLL_INTERVAL_MS} />
+                            {cowState === 'producing' && (
+                                <CowSVG color={colorString} fullness={fullness} pollInterval={COW_CONFIG.FULLNESS_POLL_INTERVAL_MS} />
                             )}
-                            {cowState === "full" && (
-                                <CowToMilkSVG color={color} />
+                            {cowState === 'full' && (
+                                <CowToMilkSVG color={colorString} />
                             )}
                         </div>
                     </div>
@@ -278,3 +203,8 @@ export default function Cow({ id = uuidv4(), initialState = "hungry", initialCol
         </div>
     );
 }
+
+Cow.propTypes = {
+    /** Unique identifier for the cow (UUID) */
+    cowId: PropTypes.string.isRequired,
+};

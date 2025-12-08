@@ -35,29 +35,28 @@ export const GAME_CONFIG = {
         FEED_ROPE_LENGTH: 25,
         FEED_GRAVITY: 0.3,
         FEED_DAMPING: 0.95,
+        DEFAULT_COLLISION_THRESHOLD: 100,    // Default collision distance for tools
+        DEFAULT_SAFE_AREA: 25,               // Safe area margin from screen edges
+        DEFAULT_ROPE_LENGTH: 80,             // Default rope length for draggables
+        DEFAULT_GRAVITY: 0.5,                // Default gravity for draggables
+        DEFAULT_DAMPING: 0.98,               // Default damping for draggables
+    },
+
+    // UI settings
+    UI: {
+        ANIMATION_DURATION_MS: 300,          // Standard animation duration
+        FADE_OUT_DURATION_MS: 400,           // Fade out animation duration
+        AUTO_SAVE_INTERVAL_MS: 30000,        // Auto-save interval (30 seconds)
+        MIN_SAVE_INTERVAL_MS: 10000,         // Minimum time between saves
+    },
+
+    // Save/Load settings
+    SAVE: {
+        LOCAL_STORAGE_KEY: 'cow_farm_save',  // localStorage key for saves
+        SAVE_VERSION: 1,                      // Current save format version
     },
 };
 
-// Helper to create RGBA color string
-export const createCowColor = (r, g, b) => {
-    return `rgba(${r}, ${g}, ${b}, ${GAME_CONFIG.VISUAL.COW_COLOR_OPACITY})`;
-};
-
-// Helper to average two RGBA colors
-export const averageColors = (rgba1, rgba2) => {
-    const parse = (rgba) => {
-        const match = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-        if (!match) return { r: 0, g: 0, b: 0 };
-        return { r: parseInt(match[1]), g: parseInt(match[2]), b: parseInt(match[3]) };
-    };
-
-    const c1 = parse(rgba1);
-    const c2 = parse(rgba2);
-
-    return createCowColor(
-        Math.round((c1.r + c2.r) / 2),
-        Math.round((c1.g + c2.g) / 2),
-        Math.round((c1.b + c2.b) / 2)
-    );
-};
+// Note: Color utilities are in gameState.js using structured color objects
+// Use createColor, colorToString, and averageColors from '../engine/gameState'
 

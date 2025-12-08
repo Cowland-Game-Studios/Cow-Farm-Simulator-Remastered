@@ -1,34 +1,38 @@
+/**
+ * App - Main Application
+ * 
+ * Uses the centralized game engine with:
+ * - GameProvider for state management
+ * - Collision engine for interactions
+ * - Single game loop
+ * - Supabase-ready persistence
+ * - Error boundary for graceful error handling
+ */
+
+import { GameProvider, useMousePosition } from "./engine";
 import Pasture from "./pages/pasture";
-import MousePositionContext from "./contexts/MousePositionContext";
-import { useEffect, useState } from "react";
 import BlobCursor from "./components/cursor/BlobCursor";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 import "./App.css";
-import { loadSave } from "./save/saveFunctions";
+
+// Cursor wrapper that gets mouse from context
+function CursorWrapper() {
+    const mousePosition = useMousePosition();
+    return <BlobCursor mousePosition={mousePosition} />;
+}
 
 function App() {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-
-  // Update mouse position every tick
-  useEffect(() => {
-    const updateMousePosition = (ev) => {
-      setMousePosition({ x: ev.clientX, y: ev.clientY });
-    };
-    window.addEventListener("mousemove", updateMousePosition);
-
-    loadSave();
-
-    return () => window.removeEventListener("mousemove", updateMousePosition);
-  }, []);
-
-  return (
-    <main className="canvas">
-      <BlobCursor mousePosition={mousePosition} />
-      <MousePositionContext.Provider value={{ mousePosition: mousePosition }}>
-        <Pasture />
-      </MousePositionContext.Provider>
-    </main>
-  );
+    return (
+        <ErrorBoundary>
+        <GameProvider>
+            <main className="canvas">
+                <CursorWrapper />
+                <Pasture />
+            </main>
+        </GameProvider>
+        </ErrorBoundary>
+    );
 }
 
 export default App;
