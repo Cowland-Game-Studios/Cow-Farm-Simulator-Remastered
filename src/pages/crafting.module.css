@@ -24,26 +24,26 @@
 @keyframes benchSlideIn {
     0% {
         opacity: 0;
-        transform: translateY(250px) scale(0.8);
+        transform: translate(-50%, -50%) translateY(250px) scale(0.8);
     }
     70% {
         opacity: 1;
-        transform: translateY(-15px) scale(1.02);
+        transform: translate(-50%, -50%) translateY(-15px) scale(1.02);
     }
     100% {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translate(-50%, -50%) translateY(0) scale(1);
     }
 }
 
 @keyframes benchSlideOut {
     from {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translate(-50%, -50%) translateY(0) scale(1);
     }
     to {
         opacity: 0;
-        transform: translateY(200px) scale(0.9);
+        transform: translate(-50%, -50%) translateY(200px) scale(0.9);
     }
 }
 
@@ -208,10 +208,14 @@
 
 .benchTop {
     position: absolute;
-    left: 150px;
-    right: 150px;
-    top: 50px;
-    bottom: 50px;
+    /* Center the square crafting table */
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    
+    /* Square 1:1 aspect ratio, sized to fit height with padding */
+    width: min(70vh, 50vw);
+    height: min(70vh, 50vw);
 
     border-radius: 50px;
 
@@ -226,9 +230,11 @@
 
 .leftSidebar {
     position: absolute;
-    left: 50px;
+    /* Position evenly between left wall and crafting table */
+    /* Table starts at 50% - half of table width, so sidebar goes in middle of that space */
+    left: calc((50% - min(35vh, 25vw)) / 2);
     top: 50%;
-    transform: translateY(-50%);
+    transform: translate(-50%, -50%);
 }
 
 .leftSidebar .list > * {
@@ -261,9 +267,11 @@
 
 .rightSidebar {
     position: absolute;
-    right: 50px;
+    /* Position evenly between crafting table and right wall */
+    /* Table ends at 50% + half of table width, sidebar goes in middle of remaining space */
+    right: calc((50% - min(35vh, 25vw)) / 2);
     top: 50%;
-    transform: translateY(-50%);
+    transform: translate(50%, -50%);
 }
 
 .recipeItem {
@@ -302,8 +310,9 @@
 
     transform: translate(-50%, -50%);
 
-    width: 8vw;
-    height: 8vw;
+    /* Size relative to parent container (20% of table) */
+    width: 30%;
+    object-fit: contain;
 
     opacity: 25%;
 }
