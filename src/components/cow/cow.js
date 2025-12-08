@@ -124,18 +124,19 @@ export default function Cow({ cowId }) {
 
         const triggerPulse = () => {
             setIsPulsing(true);
-            // Remove class after animation completes (600ms)
-            setTimeout(() => setIsPulsing(false), 600);
+            // Remove class after animation completes
+            setTimeout(() => setIsPulsing(false), COW_CONFIG.PULSE_DURATION_MS);
             
-            // Schedule next pulse (random 3-6 seconds)
-            pulseTimeoutRef.current = setTimeout(
-                triggerPulse,
-                3000 + Math.random() * 3000
-            );
+            // Schedule next pulse (random interval)
+            const pulseInterval = COW_CONFIG.PULSE_MIN_INTERVAL_MS + 
+                Math.random() * (COW_CONFIG.PULSE_MAX_INTERVAL_MS - COW_CONFIG.PULSE_MIN_INTERVAL_MS);
+            pulseTimeoutRef.current = setTimeout(triggerPulse, pulseInterval);
         };
 
         // Start first pulse after a short delay
-        pulseTimeoutRef.current = setTimeout(triggerPulse, 1000 + Math.random() * 2000);
+        const initialDelay = COW_CONFIG.PULSE_INITIAL_DELAY_MIN_MS + 
+            Math.random() * (COW_CONFIG.PULSE_INITIAL_DELAY_MAX_MS - COW_CONFIG.PULSE_INITIAL_DELAY_MIN_MS);
+        pulseTimeoutRef.current = setTimeout(triggerPulse, initialDelay);
 
         return () => {
             if (pulseTimeoutRef.current) {
@@ -213,7 +214,7 @@ export default function Cow({ cowId }) {
                 Math.pow(position.x - pickupPositionRef.current.x, 2) +
                 Math.pow(position.y - pickupPositionRef.current.y, 2)
             );
-            if (distance > 10) {
+            if (distance > COW_CONFIG.DRAG_THRESHOLD) {
                 wasDraggedRef.current = true;
             }
         }

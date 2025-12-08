@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import styles from "./button.module.css";
 
-export default function Button({ text, image, onClick, onMouseDown, keepOriginalCursor = false, hidden = false, ...props }) {
+export default function Button({ text = '', image = null, onClick = null, onMouseDown = null, keepOriginalCursor = false, hidden = false, ...props }) {
     // Handle both mouse and touch for mobile support
     const handlePointerDown = (e) => {
         if (onMouseDown) {
@@ -50,13 +50,4 @@ Button.propTypes = {
     hidden: PropTypes.bool,
     /** Mouse down handler */
     onMouseDown: PropTypes.func,
-};
-
-Button.defaultProps = {
-    text: '',
-    image: null,
-    onClick: null,
-    keepOriginalCursor: false,
-    hidden: false,
-    onMouseDown: null,
 };

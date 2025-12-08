@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { useMousePosition } from "../../engine";
 import { GAME_CONFIG } from "../../config/gameConfig";
 
-const { PHYSICS } = GAME_CONFIG;
+const { PHYSICS, UI } = GAME_CONFIG;
 
 export default function DraggableSwinging({
     id,
@@ -15,7 +15,7 @@ export default function DraggableSwinging({
     collisionThreshold = PHYSICS.DEFAULT_COLLISION_THRESHOLD,
     canGoOffScreen = false,
     safeArea = PHYSICS.DEFAULT_SAFE_AREA,
-    bottomSafeArea = 200, // Safe area at bottom - up to tip of fence
+    bottomSafeArea = PHYSICS.DEFAULT_BOTTOM_SAFE_AREA,
     initialDragging = false,
     initialPosition = null,
     isActive = null,
@@ -25,8 +25,8 @@ export default function DraggableSwinging({
     gravity = PHYSICS.DEFAULT_GRAVITY,
     damping = PHYSICS.DEFAULT_DAMPING,
     throwable = true,
-    children,
-    style,
+    children = null,
+    style = {},
     ...props
 }) {
     const draggableRef = useRef(null);
@@ -123,12 +123,6 @@ export default function DraggableSwinging({
     const [opacity, setOpacity] = useState(isControlled ? 0 : 1);
     const [visible, setVisible] = useState(!isControlled);
     
-    // Threshold for considering object at rest (velocity magnitude)
-    const VELOCITY_THRESHOLD = 3;
-    // Friction applied during flight (lower = more friction, faster slowdown)
-    const FLIGHT_FRICTION = 0.985;
-    // Bounce factor when hitting edges (0 = no bounce, 1 = perfect bounce)
-    const BOUNCE_FACTOR = 0.85;
     // Track spin from bounces for visual effect
     const spinRef = useRef(0);
     const bounceCountRef = useRef(0);
@@ -175,7 +169,7 @@ export default function DraggableSwinging({
             const hideTimeout = setTimeout(() => {
                 setVisible(false);
                 setDragging(false);
-            }, 400);
+            }, UI.HIDE_TIMEOUT_MS);
             return () => clearTimeout(hideTimeout);
         }
     }, [isActive, isControlled]);
@@ -235,21 +229,21 @@ export default function DraggableSwinging({
 
                     // Adjust velocity to be tangent to the rope (remove radial component)
                     const radialVelComponent = (velocity.x * normalizedX + velocity.y * normalizedY);
-                    velocity.x -= radialVelComponent * normalizedX * 0.5;
-                    velocity.y -= radialVelComponent * normalizedY * 0.5;
+                    velocity.x -= radialVelComponent * normalizedX * PHYSICS.RADIAL_VEL_CORRECTION;
+                    velocity.y -= radialVelComponent * normalizedY * PHYSICS.RADIAL_VEL_CORRECTION;
                 }
 
                 // Add velocity from cursor movement (drag effect)
                 const mouseDx = mousePositionRef.current.x - lastMousePosRef.current.x;
                 const mouseDy = mousePositionRef.current.y - lastMousePosRef.current.y;
-                velocity.x += mouseDx * 0.3;
-                velocity.y += mouseDy * 0.3;
+                velocity.x += mouseDx * PHYSICS.CURSOR_DRAG_MULTIPLIER;
+                velocity.y += mouseDy * PHYSICS.CURSOR_DRAG_MULTIPLIER;
 
                 // Track throw velocity separately (smoothed mouse movement for throwing)
                 // This isn't affected by rope constraints, so it represents actual throw direction
                 throwVelocityRef.current = {
-                    x: throwVelocityRef.current.x * 0.7 + mouseDx * 0.8,
-                    y: throwVelocityRef.current.y * 0.7 + mouseDy * 0.8
+                    x: throwVelocityRef.current.x * PHYSICS.THROW_TRACKING_SMOOTHING + mouseDx * PHYSICS.THROW_TRACKING_SENSITIVITY,
+                    y: throwVelocityRef.current.y * PHYSICS.THROW_TRACKING_SMOOTHING + mouseDy * PHYSICS.THROW_TRACKING_SENSITIVITY
                 };
 
                 lastMousePosRef.current = { x: mousePositionRef.current.x, y: mousePositionRef.current.y };
@@ -258,14 +252,14 @@ export default function DraggableSwinging({
                 // Make it FUN and BOUNCY! 🐄
                 
                 // Apply light gravity during flight
-                velocity.y += gravity * 0.3;
+                velocity.y += gravity * PHYSICS.FLIGHT_GRAVITY_MULTIPLIER;
 
                 // Apply flight friction
-                velocity.x *= FLIGHT_FRICTION;
-                velocity.y *= FLIGHT_FRICTION;
+                velocity.x *= PHYSICS.FLIGHT_FRICTION;
+                velocity.y *= PHYSICS.FLIGHT_FRICTION;
 
                 // Gradually decay spin
-                spinRef.current *= 0.98;
+                spinRef.current *= PHYSICS.SPIN_DECAY;
 
                 // Update position
                 newX = pos.x + velocity.x;
@@ -281,26 +275,26 @@ export default function DraggableSwinging({
 
                 if (newX < minX) {
                     newX = minX;
-                    velocity.x = -velocity.x * BOUNCE_FACTOR;
+                    velocity.x = -velocity.x * PHYSICS.BOUNCE_FACTOR;
                     // Add dramatic spin on wall bounce!
-                    spinRef.current += velocity.y * 0.5;
+                    spinRef.current += velocity.y * PHYSICS.SPIN_ON_BOUNCE_MULTIPLIER;
                     bounced = true;
                 } else if (newX > maxX) {
                     newX = maxX;
-                    velocity.x = -velocity.x * BOUNCE_FACTOR;
-                    spinRef.current -= velocity.y * 0.5;
+                    velocity.x = -velocity.x * PHYSICS.BOUNCE_FACTOR;
+                    spinRef.current -= velocity.y * PHYSICS.SPIN_ON_BOUNCE_MULTIPLIER;
                     bounced = true;
                 }
 
                 if (newY < minY) {
                     newY = minY;
-                    velocity.y = -velocity.y * BOUNCE_FACTOR;
-                    spinRef.current += velocity.x * 0.5;
+                    velocity.y = -velocity.y * PHYSICS.BOUNCE_FACTOR;
+                    spinRef.current += velocity.x * PHYSICS.SPIN_ON_BOUNCE_MULTIPLIER;
                     bounced = true;
                 } else if (newY > maxY) {
                     newY = maxY;
-                    velocity.y = -velocity.y * BOUNCE_FACTOR;
-                    spinRef.current -= velocity.x * 0.5;
+                    velocity.y = -velocity.y * PHYSICS.BOUNCE_FACTOR;
+                    spinRef.current -= velocity.x * PHYSICS.SPIN_ON_BOUNCE_MULTIPLIER;
                     bounced = true;
                 }
 
@@ -310,7 +304,7 @@ export default function DraggableSwinging({
 
                 // Check if velocity is low enough to settle
                 const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
-                if (speed < VELOCITY_THRESHOLD) {
+                if (speed < PHYSICS.VELOCITY_THRESHOLD) {
                     // Come to rest
                     isFlyingRef.current = false;
                     setFlying(false);
@@ -384,8 +378,8 @@ export default function DraggableSwinging({
                 
                 // Always fly after release! No threshold needed - just YEET 🐄
                 velocityRef.current = { 
-                    x: throwVel.x * 2.5,
-                    y: throwVel.y * 2.5 
+                    x: throwVel.x * PHYSICS.THROW_VELOCITY_MULTIPLIER,
+                    y: throwVel.y * PHYSICS.THROW_VELOCITY_MULTIPLIER 
                 };
                 
                 // Set ref immediately to prevent drop effect from settling
@@ -485,8 +479,8 @@ export default function DraggableSwinging({
         if (!flying) return 1;
         const velocity = velocityRef.current;
         const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
-        // Scale from 1.2 to 1.5 based on speed
-        return 1.2 + Math.min(speed / 30, 0.3);
+        // Scale from base to max based on speed
+        return PHYSICS.FLYING_BASE_SCALE + Math.min(speed / PHYSICS.FLYING_SCALE_SPEED_DIVISOR, PHYSICS.FLYING_MAX_SCALE_BONUS);
     };
 
     const isAnimating = dragging || flying;
@@ -542,18 +536,19 @@ export default function DraggableSwinging({
                 transform: `
                     translate(-50%, -50%)
                     translate(${displayX + offset.x}px, ${displayY + offset.y}px)
-                    scale(${flying ? getFlyingScale() : (dragging ? 1.15 : 1)})
+                    scale(${flying ? getFlyingScale() : (dragging ? PHYSICS.DRAGGING_SCALE : 1)})
                     rotate(${getRotation()}deg)
                 `,
                 transformOrigin: "center",
                 transition: isAnimating 
-                    ? "opacity 0.1s ease-out" 
-                    : "transform 0.4s ease-out, opacity 0.3s ease-out",
+                    ? `opacity ${UI.TRANSITION_FAST_MS}ms ease-out` 
+                    : `transform ${UI.TRANSITION_SLOW_MS}ms ease-out, opacity ${UI.TRANSITION_NORMAL_MS}ms ease-out`,
                 opacity: opacity,
                 visibility: visible ? "visible" : "hidden",
-                zIndex: isAnimating ? 1000 : 0,
+                zIndex: isAnimating ? UI.DRAGGING_Z_INDEX : 0,
                 cursor: disabled ? "default" : (dragging ? "grabbing" : (flying ? "default" : "grab")),
                 pointerEvents: (isControlled && !isActive) ? "none" : "auto",
+                touchAction: "none", // Prevent browser touch gestures from interfering with drag
                 ...style
             }}
         >
@@ -611,25 +606,3 @@ DraggableSwinging.propTypes = {
     style: PropTypes.object,
 };
 
-DraggableSwinging.defaultProps = {
-    id: undefined,
-    onPickup: () => {},
-    onDrop: () => {},
-    onPositionChange: null,
-    onCollide: null,
-    collisionTargets: [],
-    collisionThreshold: PHYSICS.DEFAULT_COLLISION_THRESHOLD,
-    canGoOffScreen: false,
-    safeArea: PHYSICS.DEFAULT_SAFE_AREA,
-    initialDragging: false,
-    initialPosition: null,
-    isActive: null,
-    disabled: false,
-    offset: { x: 0, y: 0 },
-    ropeLength: PHYSICS.DEFAULT_ROPE_LENGTH,
-    gravity: PHYSICS.DEFAULT_GRAVITY,
-    damping: PHYSICS.DEFAULT_DAMPING,
-    throwable: true,
-    children: null,
-    style: {},
-};

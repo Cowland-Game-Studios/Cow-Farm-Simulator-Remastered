@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import PropTypes from 'prop-types';
 import Button from "../components/button/button";
 import styles from "./crafting.module.css";
@@ -16,6 +16,9 @@ const PRODUCTS = [
     { name: "yogurt", image: "./images/crafting/products/yogurt.svg" },
     { name: "ice cream", image: "./images/crafting/products/ice cream.svg" },
 ];
+
+// Use config for timing constants
+const { UI } = GAME_CONFIG;
 
 // Crafting recipes - time is in seconds
 const CRAFTING_RECIPES = [
@@ -45,7 +48,7 @@ const getProductImage = (name) => {
     return product?.image || "";
 };
 
-function CraftingItem({ recipe, enabled = false }) {
+function CraftingItem({ recipe = null, enabled = false }) {
     // Use recipe data if provided, otherwise show placeholder
     const displayRecipe = recipe || CRAFTING_RECIPES[0];
     const input = displayRecipe.inputs[0];
@@ -89,17 +92,13 @@ CraftingItem.propTypes = {
     enabled: PropTypes.bool,
 };
 
-CraftingItem.defaultProps = {
-    recipe: null,
-    enabled: false,
-};
 
 export default function Crafting({ onClose = () => {} }) {
     const [selectedIngredient, setSelectedIngredient] = useState(null);
     const [ingredientsPlaced, setIngredientsPlaced] = useState([]);
     const [isClosing, setIsClosing] = useState(false);
     const clickTimeoutRef = useRef(null);
-    const DOUBLE_CLICK_DELAY = 250; // ms to wait for potential double-click
+    const lastTapTimeRef = useRef({}); // Track last tap time per ingredient for double-tap detection
 
     const handleClose = () => {
         setIsClosing(true);
@@ -121,36 +120,55 @@ export default function Crafting({ onClose = () => {} }) {
         ]);
     };
 
-    const handlePlacedIngredientClick = (ingredient) => {
-        // Clear any pending single-click action
-        if (clickTimeoutRef.current) {
-            clearTimeout(clickTimeoutRef.current);
-            clickTimeoutRef.current = null;
-        }
-        
-        // Delay single-click action to allow double-click detection
-        clickTimeoutRef.current = setTimeout(() => {
-            // Remove this ingredient from placed list and make it selected (drag it)
-            setIngredientsPlaced(prev => 
-                prev.filter(ing => ing.x !== ingredient.x || ing.y !== ingredient.y)
-            );
-            setSelectedIngredient({ name: ingredient.name, image: ingredient.image });
-            clickTimeoutRef.current = null;
-        }, DOUBLE_CLICK_DELAY);
-    };
+    // Unified handler for picking up a placed ingredient (single tap/click)
+    const pickupPlacedIngredient = useCallback((ingredient) => {
+        setIngredientsPlaced(prev => 
+            prev.filter(ing => ing.x !== ingredient.x || ing.y !== ingredient.y)
+        );
+        setSelectedIngredient({ name: ingredient.name, image: ingredient.image });
+    }, []);
 
-    const handlePlacedIngredientDoubleClick = (ingredient) => {
-        // Cancel the pending single-click action
-        if (clickTimeoutRef.current) {
-            clearTimeout(clickTimeoutRef.current);
-            clickTimeoutRef.current = null;
-        }
-        
-        // Remove this ingredient from the table entirely (return to inventory)
+    // Unified handler for removing a placed ingredient (double tap/click)
+    const removePlacedIngredient = useCallback((ingredient) => {
         setIngredientsPlaced(prev =>
             prev.filter(ing => ing.x !== ingredient.x || ing.y !== ingredient.y)
         );
-    };
+    }, []);
+
+    // Handle pointer down (mouse or touch) on placed ingredient
+    const handlePlacedIngredientPointerDown = useCallback((e, ingredient) => {
+        e.stopPropagation();
+        
+        const ingredientKey = `${ingredient.x}-${ingredient.y}`;
+        const now = Date.now();
+        const lastTap = lastTapTimeRef.current[ingredientKey] || 0;
+        
+        // Check for double-tap/double-click
+        if (now - lastTap < UI.DOUBLE_TAP_DELAY_MS) {
+            // Double tap detected - clear pending single tap action and remove ingredient
+            if (clickTimeoutRef.current) {
+                clearTimeout(clickTimeoutRef.current);
+                clickTimeoutRef.current = null;
+            }
+            lastTapTimeRef.current[ingredientKey] = 0; // Reset
+            removePlacedIngredient(ingredient);
+            return;
+        }
+        
+        // Record this tap time
+        lastTapTimeRef.current[ingredientKey] = now;
+        
+        // Clear any pending action
+        if (clickTimeoutRef.current) {
+            clearTimeout(clickTimeoutRef.current);
+        }
+        
+        // Delay single-tap action to allow double-tap detection
+        clickTimeoutRef.current = setTimeout(() => {
+            pickupPlacedIngredient(ingredient);
+            clickTimeoutRef.current = null;
+        }, UI.DOUBLE_CLICK_DELAY_MS);
+    }, [pickupPlacedIngredient, removePlacedIngredient]);
 
     // Stop propagation to prevent closing when interacting with UI elements
     const stopPropagation = (e) => e.stopPropagation();
@@ -190,17 +208,12 @@ export default function Crafting({ onClose = () => {} }) {
                         padding: 0,
                         cursor: "grab",
                         userSelect: "none",
-                        WebkitUserSelect: "none"
+                        WebkitUserSelect: "none",
+                        touchAction: "none" // Prevent browser touch handling
                     }}
                     onClick={stopPropagation}
-                    onMouseDown={(e) => {
-                        stopPropagation(e);
-                        handlePlacedIngredientClick(ingredient);
-                    }}
-                    onDoubleClick={(e) => {
-                        stopPropagation(e);
-                        handlePlacedIngredientDoubleClick(ingredient);
-                    }}
+                    onMouseDown={(e) => handlePlacedIngredientPointerDown(e, ingredient)}
+                    onTouchStart={(e) => handlePlacedIngredientPointerDown(e, ingredient)}
                 >
                     <img draggable={false} src={ingredient.image} alt={ingredient.name} />
                 </button>
@@ -277,8 +290,4 @@ export default function Crafting({ onClose = () => {} }) {
 Crafting.propTypes = {
     /** Callback when crafting menu is closed */
     onClose: PropTypes.func,
-};
-
-Crafting.defaultProps = {
-    onClose: () => {},
 };

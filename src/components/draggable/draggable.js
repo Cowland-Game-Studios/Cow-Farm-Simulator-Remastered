@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { useMousePosition } from "../../engine";
 import { GAME_CONFIG } from "../../config/gameConfig";
 
-const { PHYSICS } = GAME_CONFIG;
+const { PHYSICS, UI } = GAME_CONFIG;
 
 export default function Draggable({
     id,
@@ -14,8 +14,8 @@ export default function Draggable({
     initialDragging = false,
     offset = { x: 0, y: 0 },
     trackRotationSettings = { rotates: true, sensitivity: 1, displacement: 0 },
-    children,
-    style,
+    children = null,
+    style = {},
     ...props
 }) {
     const draggableRef = useRef(null);
@@ -104,12 +104,13 @@ export default function Draggable({
                 transform: `
                     translate(-50%, -50%)
                     translate(${(dragging ? mousePosition.x : position.x) + offset.x}px, ${(dragging ? mousePosition.y : position.y) + offset.y}px)
-                    scale(${dragging ? 1.25 : 1})
+                    scale(${dragging ? PHYSICS.DRAGGING_SCALE : 1})
                     rotate(${dragging ? (trackRotationSettings.rotates ? Math.atan2(mousePosition.y - position.y, mousePosition.x - position.x) * 180 / Math.PI + 90 : 0) : 0}deg)
                 `,
                 transformOrigin: "center",
-                transition: "transform 0.1s ease-out",
-                zIndex: dragging ? 1000 : 0,
+                transition: `transform ${UI.TRANSITION_FAST_MS}ms ease-out`,
+                zIndex: dragging ? UI.DRAGGING_Z_INDEX : 0,
+                touchAction: "none", // Prevent browser touch gestures from interfering with drag
                 ...style
             }}
         >
@@ -148,15 +149,3 @@ Draggable.propTypes = {
     style: PropTypes.object,
 };
 
-Draggable.defaultProps = {
-    id: undefined,
-    onPickup: () => {},
-    onDrop: () => {},
-    canGoOffScreen: false,
-    safeArea: PHYSICS.DEFAULT_SAFE_AREA,
-    initialDragging: false,
-    offset: { x: 0, y: 0 },
-    trackRotationSettings: { rotates: true, sensitivity: 1, displacement: 0 },
-    children: null,
-    style: {},
-};

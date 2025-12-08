@@ -89,9 +89,8 @@ ErrorBoundary.propTypes = {
     onError: PropTypes.func,
 };
 
-ErrorBoundary.defaultProps = {
-    fallback: null,
-    onError: null,
-};
+// Note: For class components, we handle defaults in the component methods
+// since defaultProps is deprecated. fallback and onError default to undefined
+// and are checked with optional chaining in componentDidCatch and render.
 
 export default ErrorBoundary;

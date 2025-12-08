@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import styles from "./dock.module.css";
 
-export default function Dock ({ children, style, ...props }) {
+export default function Dock ({ children = null, style = {}, ...props }) {
     return (
         <div className={styles.dock} style={style} {...props}>
             <div className={styles.dockContainer}>
@@ -16,9 +16,4 @@ Dock.propTypes = {
     children: PropTypes.node,
     /** Custom inline styles for positioning */
     style: PropTypes.object,
-};
-
-Dock.defaultProps = {
-    children: null,
-    style: {},
 };

@@ -1,37 +1,36 @@
 import PropTypes from 'prop-types';
 import styles from "./statsDisplay.module.css";
+import { GAME_CONFIG } from "../../config/gameConfig";
 
-// XP required per level (can be moved to gameConfig)
-const XP_PER_LEVEL = 10000;
-const PROGRESS_BAR_LENGTH = 10; // Number of characters in the progress bar
+const { STATS } = GAME_CONFIG;
 
 /**
  * Calculate level from total XP
  */
 function calculateLevel(totalXp) {
-    return Math.floor(totalXp / XP_PER_LEVEL) + 1;
+    return Math.floor(totalXp / STATS.XP_PER_LEVEL) + 1;
 }
 
 /**
  * Calculate XP progress within current level
  */
 function calculateLevelProgress(totalXp) {
-    return totalXp % XP_PER_LEVEL;
+    return totalXp % STATS.XP_PER_LEVEL;
 }
 
 /**
  * Generate text-based progress bar like ████░░░░ 5,200/10,000
  */
 function generateProgressBar(current, max) {
-    const filledCount = Math.floor((current / max) * PROGRESS_BAR_LENGTH);
-    const emptyCount = PROGRESS_BAR_LENGTH - filledCount;
+    const filledCount = Math.floor((current / max) * STATS.PROGRESS_BAR_LENGTH);
+    const emptyCount = STATS.PROGRESS_BAR_LENGTH - filledCount;
     return `${'█'.repeat(filledCount)}${'░'.repeat(emptyCount)} ${current.toLocaleString()}/${max.toLocaleString()}`;
 }
 
 export default function StatsDisplay({ coins = 0, xp = 0, ...props }) {
     const level = calculateLevel(xp);
     const currentLevelXp = calculateLevelProgress(xp);
-    const progressBar = generateProgressBar(currentLevelXp, XP_PER_LEVEL);
+    const progressBar = generateProgressBar(currentLevelXp, STATS.XP_PER_LEVEL);
 
     return (
         <div className={styles.statsDisplay} {...props}>
@@ -57,9 +56,4 @@ StatsDisplay.propTypes = {
     coins: PropTypes.number,
     /** Current XP (stars converted to XP) */
     xp: PropTypes.number,
-};
-
-StatsDisplay.defaultProps = {
-    coins: 0,
-    xp: 0,
 };

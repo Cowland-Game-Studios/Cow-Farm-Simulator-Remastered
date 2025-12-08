@@ -10,6 +10,9 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { useState, useEffect } from 'react';
+import { GAME_CONFIG } from '../config/gameConfig';
+
+const { PARTICLES } = GAME_CONFIG;
 
 // ============================================
 // PARTICLE TYPES
@@ -72,12 +75,12 @@ class ParticleSystem {
         x = 0,
         y = 0,
         vx = 0,
-        vy = -3, // Default: move up
-        gravity = 0.15, // Positive = pulls down
+        vy = PARTICLES.DEFAULT_VY,
+        gravity = PARTICLES.DEFAULT_GRAVITY,
         color = '#fff',
-        fontSize = 24,
-        lifetime = 1500,
-        fadeDelay = 500, // Time before starting to fade
+        fontSize = PARTICLES.DEFAULT_FONT_SIZE,
+        lifetime = PARTICLES.DEFAULT_LIFETIME_MS,
+        fadeDelay = PARTICLES.DEFAULT_FADE_DELAY_MS,
     }) {
         const id = uuidv4();
         const particle = {
@@ -115,12 +118,12 @@ class ParticleSystem {
             text: '+1 milk',
             x,
             y,
-            vx: (Math.random() - 0.5) * 2,
-            vy: -4,
-            gravity: 0.12,
+            vx: (Math.random() - 0.5) * PARTICLES.MILK_VX_RANGE,
+            vy: PARTICLES.MILK_VY,
+            gravity: PARTICLES.MILK_GRAVITY,
             color: '#000000',
-            lifetime: 1800,
-            fadeDelay: 600,
+            lifetime: PARTICLES.MILK_LIFETIME_MS,
+            fadeDelay: PARTICLES.MILK_FADE_DELAY_MS,
         });
     }
 
@@ -132,12 +135,12 @@ class ParticleSystem {
             text: '-1 grass',
             x,
             y,
-            vx: (Math.random() - 0.5) * 2,
-            vy: -5, // Strong upward initial velocity
-            gravity: 0.18, // Gravity pulls it back down
+            vx: (Math.random() - 0.5) * PARTICLES.MILK_VX_RANGE,
+            vy: PARTICLES.FEED_VY,
+            gravity: PARTICLES.FEED_GRAVITY,
             color: '#000000',
-            lifetime: 2000,
-            fadeDelay: 800,
+            lifetime: PARTICLES.FEED_LIFETIME_MS,
+            fadeDelay: PARTICLES.FEED_FADE_DELAY_MS,
         });
     }
 
@@ -149,12 +152,12 @@ class ParticleSystem {
             text: '+1 cow',
             x,
             y,
-            vx: (Math.random() - 0.5) * 2,
-            vy: -4,
-            gravity: 0.12,
+            vx: (Math.random() - 0.5) * PARTICLES.MILK_VX_RANGE,
+            vy: PARTICLES.BREED_VY,
+            gravity: PARTICLES.BREED_GRAVITY,
             color: '#000000',
-            lifetime: 2000,
-            fadeDelay: 700,
+            lifetime: PARTICLES.BREED_LIFETIME_MS,
+            fadeDelay: PARTICLES.BREED_FADE_DELAY_MS,
         });
     }
 
@@ -166,13 +169,13 @@ class ParticleSystem {
             text: `-1 ${ingredientName}`,
             x,
             y,
-            vx: (Math.random() - 0.5) * 1.5,
-            vy: -3,
-            gravity: 0.08,
+            vx: (Math.random() - 0.5) * PARTICLES.CRAFTING_VX_RANGE,
+            vy: PARTICLES.CRAFTING_VY,
+            gravity: PARTICLES.CRAFTING_GRAVITY,
             color: '#000000',
-            fontSize: 16,
-            lifetime: 1200,
-            fadeDelay: 400,
+            fontSize: PARTICLES.CRAFTING_FONT_SIZE,
+            lifetime: PARTICLES.CRAFTING_LIFETIME_MS,
+            fadeDelay: PARTICLES.CRAFTING_FADE_DELAY_MS,
         });
     }
 
@@ -184,13 +187,13 @@ class ParticleSystem {
     spawnBurst({
         x = 0,
         y = 0,
-        count = 8,
+        count = PARTICLES.BURST_DEFAULT_COUNT,
         text = '•',
         color = '#000000',
-        speed = 5,
-        gravity = 0.1,
-        lifetime = 1000,
-        fadeDelay = 300,
+        speed = PARTICLES.BURST_DEFAULT_SPEED,
+        gravity = PARTICLES.BURST_DEFAULT_GRAVITY,
+        lifetime = PARTICLES.BURST_DEFAULT_LIFETIME_MS,
+        fadeDelay = PARTICLES.BURST_DEFAULT_FADE_DELAY_MS,
         spread = Math.PI * 2, // Full circle by default
         startAngle = 0, // Starting angle in radians
     }) {
@@ -198,8 +201,8 @@ class ParticleSystem {
         const angleStep = spread / count;
 
         for (let i = 0; i < count; i++) {
-            const angle = startAngle + (i * angleStep) + (Math.random() - 0.5) * 0.3;
-            const velocity = speed * (0.8 + Math.random() * 0.4); // Slight speed variation
+            const angle = startAngle + (i * angleStep) + (Math.random() - 0.5) * PARTICLES.BURST_ANGLE_VARIANCE;
+            const velocity = speed * (1 - PARTICLES.BURST_SPEED_VARIANCE / 2 + Math.random() * PARTICLES.BURST_SPEED_VARIANCE); // Slight speed variation
 
             const id = this.spawn({
                 text,
@@ -228,13 +231,13 @@ class ParticleSystem {
         return this.spawnBurst({
             x,
             y,
-            count: options.count || 12,
+            count: options.count || PARTICLES.EXPLOSION_DEFAULT_COUNT,
             text: options.text || '•',
             color: options.color || '#000000',
-            speed: options.speed || 6,
-            gravity: options.gravity || 0.15,
-            lifetime: options.lifetime || 1200,
-            fadeDelay: options.fadeDelay || 400,
+            speed: options.speed || PARTICLES.EXPLOSION_DEFAULT_SPEED,
+            gravity: options.gravity || PARTICLES.EXPLOSION_DEFAULT_GRAVITY,
+            lifetime: options.lifetime || PARTICLES.EXPLOSION_DEFAULT_LIFETIME_MS,
+            fadeDelay: options.fadeDelay || PARTICLES.EXPLOSION_DEFAULT_FADE_DELAY_MS,
             spread: Math.PI * 2,
             startAngle: 0,
         });
@@ -248,17 +251,17 @@ class ParticleSystem {
      * @param {Object} options - Additional options
      */
     spawnSpray(x, y, direction = -Math.PI / 2, options = {}) {
-        const spreadAngle = options.spread || Math.PI / 3; // 60 degree cone
+        const spreadAngle = options.spread || PARTICLES.SPRAY_DEFAULT_SPREAD;
         return this.spawnBurst({
             x,
             y,
-            count: options.count || 5,
+            count: options.count || PARTICLES.SPRAY_DEFAULT_COUNT,
             text: options.text || '•',
             color: options.color || '#000000',
-            speed: options.speed || 5,
-            gravity: options.gravity || 0.2,
-            lifetime: options.lifetime || 1000,
-            fadeDelay: options.fadeDelay || 300,
+            speed: options.speed || PARTICLES.SPRAY_DEFAULT_SPEED,
+            gravity: options.gravity || PARTICLES.SPRAY_DEFAULT_GRAVITY,
+            lifetime: options.lifetime || PARTICLES.SPRAY_DEFAULT_LIFETIME_MS,
+            fadeDelay: options.fadeDelay || PARTICLES.SPRAY_DEFAULT_FADE_DELAY_MS,
             spread: spreadAngle,
             startAngle: direction - spreadAngle / 2,
         });
@@ -292,7 +295,7 @@ class ParticleSystem {
         if (!this.running) return;
 
         const now = performance.now();
-        const delta = (now - this.lastTick) / 16.67; // Normalize to ~60fps
+        const delta = (now - this.lastTick) / PARTICLES.FRAME_TIME_MS; // Normalize to ~60fps
         this.lastTick = now;
 
         let hasActiveParticles = false;
@@ -316,7 +319,7 @@ class ParticleSystem {
             particle.y += particle.vy * delta;
 
             // Apply damping to horizontal movement
-            particle.vx *= 0.98;
+            particle.vx *= PARTICLES.HORIZONTAL_DAMPING;
 
             // Start fading after delay
             if (age > particle.fadeDelay) {
