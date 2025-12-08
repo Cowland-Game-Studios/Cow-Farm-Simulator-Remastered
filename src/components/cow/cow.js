@@ -242,17 +242,19 @@ export default function Cow({ id = uuidv4(), initialState = "hungry", initialCol
                         )}
                     </div>
 
-                    <div
-                        style={{
-                            transform: `scaleX(${cowFlipHorizontal ? -1 : 1}) scale(${getCowScale()})`,
-                            transition: "all 0.25s ease-in-out",
-                        }}
-                    >
-                        {cowState === "hungry" ? (
-                            <CowMilkedSVG color={color} />
-                        ) : (
-                            <CowSVG color={color} fullness={fullness} pollInterval={COW_CONFIG.FULLNESS_POLL_INTERVAL_MS} />
-                        )}
+                    <div className={styles.cowContainer}>
+                        <div
+                            style={{
+                                transform: `scaleX(${cowFlipHorizontal ? -1 : 1}) scale(${getCowScale()})`,
+                                transition: "all 0.25s ease-in-out",
+                            }}
+                        >
+                            {cowState === "hungry" ? (
+                                <CowMilkedSVG color={color} />
+                            ) : (
+                                <CowSVG color={color} fullness={fullness} pollInterval={COW_CONFIG.FULLNESS_POLL_INTERVAL_MS} />
+                            )}
+                        </div>
                     </div>
                 </DraggableSwinging>
             </div>
