@@ -134,6 +134,10 @@ export const ActionTypes = {
     START_CRAFTING: 'START_CRAFTING',
     COMPLETE_CRAFTING: 'COMPLETE_CRAFTING',
     CANCEL_CRAFTING: 'CANCEL_CRAFTING',
+    
+    // Board crafting (timed crafting on table)
+    SET_BOARD_CRAFT: 'SET_BOARD_CRAFT',
+    CLEAR_BOARD_CRAFT: 'CLEAR_BOARD_CRAFT',
 
     // UI actions
     OPEN_CRAFTING: 'OPEN_CRAFTING',

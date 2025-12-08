@@ -165,6 +165,9 @@ export function GameProvider({ children }) {
         startCrafting: (recipeId) => dispatch(actions.startCrafting(recipeId)),
         completeCrafting: (craftingId) => dispatch(actions.completeCrafting(craftingId)),
         cancelCrafting: (craftingId) => dispatch(actions.cancelCrafting(craftingId)),
+        // Board crafting (timed crafting on table)
+        setBoardCraft: (craftData) => dispatch(actions.setBoardCraft(craftData)),
+        clearBoardCraft: () => dispatch(actions.clearBoardCraft()),
         // Resource actions
         addCoins: (amount) => dispatch(actions.addCoins(amount)),
         spendCoins: (amount) => dispatch(actions.spendCoins(amount)),
@@ -190,6 +193,7 @@ export function GameProvider({ children }) {
         ui: state.ui,
         draggingCow: state.draggingCow,
         chaosImpulses: state.chaosImpulses,
+        activeBoardCraft: state.activeBoardCraft,
         
         // Actions (pre-bound for convenience)
         ...actionCreators,

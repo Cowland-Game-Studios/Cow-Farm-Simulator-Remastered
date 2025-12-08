@@ -4,7 +4,11 @@
  * Handles parsing and executing console commands for the developer console.
  */
 
-import { actions } from '../../engine/gameState';
+import { actions, createCow, randomColor } from '../../engine/gameState';
+import { GAME_CONFIG } from '../../config/gameConfig';
+
+// Runtime config overrides (allows changing magic numbers without restart)
+export const configOverrides = {};
 
 // ============================================
 // PATH UTILITIES
@@ -61,6 +65,18 @@ export const setByPath = (obj, path, value) => {
     
     current[lastKey] = value;
     return newObj;
+};
+
+/**
+ * Get a config value, checking for runtime overrides first
+ * @param {string} path - Dot-notation path (e.g., "COW.MILK_PRODUCTION_TIME_MS")
+ * @returns {*} The overridden value or original config value
+ */
+export const getConfig = (path) => {
+    if (configOverrides[path] !== undefined) {
+        return configOverrides[path];
+    }
+    return getByPath(GAME_CONFIG, path);
 };
 
 // ============================================
@@ -189,9 +205,85 @@ const formatValue = (value, indent = 0) => {
 
 const commands = {
     /**
-     * List state keys or object contents
+     * List state keys, object contents, game config, or full state
+     * Flags: --game-config (config), --game-state (full state dump)
      */
     ls: (args, state) => {
+        const flag = args[0];
+        
+        const WARNING_BANNER = '\n\n⚠️  WARNING: Modifying game state and config can have\n    unforeseen consequences and may corrupt your save.';
+        
+        // ls --game-config: Show game config magic numbers
+        if (flag === '--game-config') {
+            const path = args[1];
+            const target = path ? getByPath(GAME_CONFIG, path) : GAME_CONFIG;
+            
+            if (target === undefined) {
+                return { success: false, output: `Error: Config path "${path}" not found` };
+            }
+            
+            if (typeof target !== 'object' || target === null) {
+                const override = path ? configOverrides[path] : undefined;
+                const display = override !== undefined ? `${target} → ${override} (modified)` : target;
+                return { success: true, output: `${path || 'GAME_CONFIG'}: ${display}${WARNING_BANNER}` };
+            }
+            
+            const lines = [`📊 GAME_CONFIG${path ? '.' + path : ''}`];
+            lines.push('━'.repeat(40));
+            
+            const flattenConfig = (obj, prefix = '') => {
+                for (const [key, value] of Object.entries(obj)) {
+                    const fullPath = prefix ? `${prefix}.${key}` : key;
+                    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                        flattenConfig(value, fullPath);
+                    } else {
+                        const override = configOverrides[fullPath];
+                        const modified = override !== undefined ? ' ✏️' : '';
+                        const displayVal = override !== undefined ? override : value;
+                        lines.push(`  ${fullPath}: ${JSON.stringify(displayVal)}${modified}`);
+                    }
+                }
+            };
+            
+            flattenConfig(target, path || '');
+            lines.push('');
+            lines.push('Use: set --game-config <path> <value>');
+            lines.push(WARNING_BANNER);
+            
+            return { success: true, output: lines.join('\n') };
+        }
+        
+        // ls --game-state: Full state dump
+        if (flag === '--game-state') {
+            const path = args[1];
+            const target = path ? getByPath(state, path) : state;
+            
+            if (target === undefined) {
+                return { success: false, output: `Error: State path "${path}" not found` };
+            }
+            
+            const lines = [`🎮 Game State${path ? ': ' + path : ''}`];
+            lines.push('━'.repeat(40));
+            
+            try {
+                const json = JSON.stringify(target, (key, value) => {
+                    // Truncate long arrays
+                    if (Array.isArray(value) && value.length > 10) {
+                        return `[Array(${value.length})]`;
+                    }
+                    return value;
+                }, 2);
+                lines.push(json);
+            } catch {
+                lines.push('(Unable to serialize state)');
+            }
+            
+            lines.push(WARNING_BANNER);
+            
+            return { success: true, output: lines.join('\n') };
+        }
+        
+        // Default ls behavior
         const path = args[0];
         const target = path ? getByPath(state, path) : state;
         
@@ -261,8 +353,49 @@ const commands = {
 
     /**
      * Set a value - TYPE-SAFE with whitelist validation
+     * Flags: --game-config (set config value)
      */
     set: (args, state, dispatch) => {
+        const WARNING_BANNER = '\n\n⚠️  WARNING: Modifying game state and config can have\n    unforeseen consequences and may corrupt your save.';
+        
+        // Handle --game-config flag for config overrides
+        if (args[0] === '--game-config') {
+            const [, configPath, ...valueParts] = args;
+            const valueStr = valueParts.join(' ');
+            
+            if (!configPath || valueStr === '') {
+                return { success: false, output: 'Usage: set --game-config <path> <value>\nExample: set --game-config COW.MILK_PRODUCTION_TIME_MS 10000' };
+            }
+            
+            // Verify the config path exists
+            const currentValue = getByPath(GAME_CONFIG, configPath);
+            if (currentValue === undefined) {
+                return { success: false, output: `Error: Config path "${configPath}" not found` };
+            }
+            
+            // Only allow setting primitive values
+            if (typeof currentValue === 'object' && currentValue !== null) {
+                return { success: false, output: `Error: Cannot set object values. Set individual properties.` };
+            }
+            
+            // Parse the value
+            let value;
+            if (valueStr === 'true') value = true;
+            else if (valueStr === 'false') value = false;
+            else if (valueStr === 'reset') {
+                // Remove override to reset to default
+                delete configOverrides[configPath];
+                return { success: true, output: `✓ ${configPath} reset to default: ${currentValue}${WARNING_BANNER}` };
+            }
+            else if (!isNaN(valueStr) && valueStr !== '') value = Number(valueStr);
+            else value = valueStr;
+            
+            // Store the override
+            configOverrides[configPath] = value;
+            
+            return { success: true, output: `✓ ${configPath}: ${currentValue} → ${value}\n⚠️ Changes apply at runtime but don't persist${WARNING_BANNER}` };
+        }
+        
         const [path, ...valueParts] = args;
         const valueStr = valueParts.join(' ');
         
@@ -363,22 +496,28 @@ const commands = {
 🐄 Moo.sh Commands
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  ls [path]         List state keys or object contents
-  get <path>        Get value at path
-  set <path> <val>  Set value at path
-  add <path> <num>  Add to numeric value
-  clear             Clear console output
-  help              Show this help
-  cowsay [msg]      🐄
-  udder chaos       ???
+  ls [path]              List state keys
+  ls --game-state [p]    Full state dump
+  ls --game-config [p]   Show game config
+  get <path>             Get value at path
+  set <path> <val>       Set value at path
+  set --game-config <p> <v>  Override config
+  add <path> <num>       Add to numeric value
+  mkMoo [state]          Spawn a new cow 🐄
+  rmMoo [index]          Remove a cow 🐄💀
+  clear                  Clear console output
+  help                   Show this help
+  cowsay [msg]           🐄
+  udder chaos            ???
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Examples:
   ls inventory
-  get resources.coins
-  set inventory.milk 99
-  add resources.coins 5000
+  ls --game-config COW
+  set --game-config COW.MILK_PRODUCTION_TIME_MS 5000
+  mkMoo full
+  rmMoo 0
   cowsay Hello World!
         `.trim();
         
@@ -389,9 +528,9 @@ Examples:
      * Secret "cow" command - handles subcommands like "cow halp"
      */
     cow: (args) => {
-        const subcommand = args[0]?.toLowerCase();
+        const subcommand = args[0];
         
-        if (subcommand === 'halp') {
+        if (subcommand?.toLowerCase() === 'halp') {
             return commands.help();
         }
         
@@ -403,9 +542,9 @@ Examples:
      * Udder Chaos - sends all cows flying! 🐄💨
      */
     udder: (args, state, dispatch) => {
-        const subcommand = args[0]?.toLowerCase();
+        const subcommand = args[0];
         
-        if (subcommand === 'chaos') {
+        if (subcommand?.toLowerCase() === 'chaos') {
             // Generate random impulses for each cow
             const impulses = {};
             const chaosStrength = 30; // Velocity magnitude
@@ -471,6 +610,78 @@ Examples:
         
         return { success: true, output: cow };
     },
+
+    /**
+     * mkMoo - spawn a new cow 🐄
+     */
+    mkMoo: (args, state, dispatch) => {
+        // Random position within safe bounds
+        const safeArea = GAME_CONFIG.PHYSICS.DEFAULT_SAFE_AREA || 50;
+        const bottomSafe = GAME_CONFIG.PHYSICS.DEFAULT_BOTTOM_SAFE_AREA || 200;
+        const x = safeArea + Math.random() * (window.innerWidth - safeArea * 2);
+        const y = safeArea + Math.random() * (window.innerHeight - safeArea - bottomSafe);
+        
+        // Create new cow with random color
+        const newCow = createCow(randomColor(), { x, y });
+        
+        // Optionally set cow state from args (case-insensitive)
+        const stateArg = args[0]?.toLowerCase();
+        if (stateArg === 'full') {
+            newCow.state = 'full';
+            newCow.fullness = 1;
+        } else if (stateArg === 'producing') {
+            newCow.state = 'producing';
+            newCow.fullness = 0.5;
+        }
+        // Default is 'hungry' from createCow
+        
+        // Dispatch add cow action
+        dispatch(actions.addCow(newCow));
+        
+        // Play moo sound
+        const mooSound = new Audio('./sounds/cow/moo.wav');
+        mooSound.volume = 0.5;
+        mooSound.play().catch(() => {});
+        
+        const cowCount = state.cows.length + 1;
+        return { 
+            success: true, 
+            output: `🐄 New cow spawned! (${cowCount} total)\n   State: ${newCow.state}\n   Position: (${Math.round(x)}, ${Math.round(y)})`,
+            closeConsole: true
+        };
+    },
+
+    /**
+     * rmMoo - remove a cow (by index or last) 🐄💀
+     */
+    rmMoo: (args, state, dispatch) => {
+        if (state.cows.length === 0) {
+            return { success: false, output: 'No cows to remove!' };
+        }
+        
+        if (state.cows.length === 1) {
+            return { success: false, output: '🐄 Cannot remove the last cow! Every farm needs at least one moo.' };
+        }
+        
+        let cowIndex = state.cows.length - 1; // Default: last cow
+        
+        if (args[0]) {
+            const idx = parseInt(args[0], 10);
+            if (isNaN(idx) || idx < 0 || idx >= state.cows.length) {
+                return { success: false, output: `Invalid index. Use 0-${state.cows.length - 1}` };
+            }
+            cowIndex = idx;
+        }
+        
+        const cowToRemove = state.cows[cowIndex];
+        dispatch(actions.removeCow(cowToRemove.id));
+        
+        return { 
+            success: true, 
+            output: `🐄💀 Cow ${cowIndex} removed. (${state.cows.length - 1} remaining)`,
+            closeConsole: true
+        };
+    },
 };
 
 // ============================================
@@ -492,15 +703,16 @@ export function executeCommand(input, state, dispatch) {
     }
     
     const parts = trimmed.split(/\s+/);
-    const command = parts[0].toLowerCase();
+    const commandInput = parts[0];
+    const commandLower = commandInput.toLowerCase();
     const args = parts.slice(1);
     
-    const handler = commands[command];
+    const handler = commands[commandLower];
     
     if (!handler) {
         return { 
             success: false, 
-            output: `Unknown command: "${command}"\nType "help" for available commands.` 
+            output: `Unknown command: "${commandInput}"\nType "help" for available commands.` 
         };
     }
     
@@ -509,7 +721,7 @@ export function executeCommand(input, state, dispatch) {
     } catch (error) {
         return { 
             success: false, 
-            output: `Error executing "${command}": ${error.message}` 
+            output: `Error executing "${commandInput}": ${error.message}` 
         };
     }
 }

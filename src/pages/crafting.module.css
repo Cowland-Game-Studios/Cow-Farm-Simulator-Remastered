@@ -30,6 +30,33 @@
     animation: craftOutputPop 0.3s ease-out forwards;
 }
 
+/* Continuous spin for timed crafting */
+@keyframes continuousSpin {
+    from {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+    to {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
+.continuousSpin {
+    animation: continuousSpin 1s linear infinite !important;
+    transform-origin: center center;
+}
+
+.craftingTimer {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, 20px);
+    z-index: 15;
+    pointer-events: none;
+    margin: 0;
+    color: black;
+    text-align: center;
+}
+
 @keyframes blurFadeOut {
     from {
         background: rgba(255, 255, 255, 0.05);
@@ -395,6 +422,8 @@
     object-fit: contain;
 
     opacity: 25%;
+    pointer-events: none;
+    user-select: none;
 }
 
 .standardedizedList {

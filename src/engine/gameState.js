@@ -160,6 +160,10 @@ export const createInitialState = () => ({
 
     // Chaos mode impulses: { cowId: { x, y } }
     chaosImpulses: {},
+    
+    // Active board crafting (timed recipes in progress on the crafting table)
+    // { startedAt, duration, recipeId, ingredientIds, ingredients: [{name, image, x, y}] }
+    activeBoardCraft: null,
 });
 
 // ============================================
@@ -567,6 +571,23 @@ export function gameReducer(state, action) {
             };
         }
 
+        // ---- BOARD CRAFTING ACTIONS ----
+        
+        case ActionTypes.SET_BOARD_CRAFT: {
+            // { startedAt, duration, recipeId, ingredientIds, ingredients }
+            return {
+                ...state,
+                activeBoardCraft: action.payload,
+            };
+        }
+        
+        case ActionTypes.CLEAR_BOARD_CRAFT: {
+            return {
+                ...state,
+                activeBoardCraft: null,
+            };
+        }
+
         // ---- UI ACTIONS ----
 
         case ActionTypes.OPEN_CRAFTING:
@@ -762,6 +783,15 @@ export const actions = {
     cancelCrafting: (craftingId) => ({ 
         type: ActionTypes.CANCEL_CRAFTING, 
         payload: { craftingId } 
+    }),
+    
+    // Board crafting (timed crafting on table)
+    setBoardCraft: (craftData) => ({
+        type: ActionTypes.SET_BOARD_CRAFT,
+        payload: craftData,
+    }),
+    clearBoardCraft: () => ({
+        type: ActionTypes.CLEAR_BOARD_CRAFT,
     }),
 
     // UI

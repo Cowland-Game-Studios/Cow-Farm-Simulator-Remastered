@@ -113,7 +113,7 @@ CraftingItem.propTypes = {
 export default function Crafting({ onClose = () => {} }) {
     // Get inventory and crafting functions from game context
     const { inventory, craftingQueue, canCraft } = useCrafting();
-    const { setCraftingDrag, addItem, removeItem } = useGame();
+    const { setCraftingDrag, addItem, removeItem, activeBoardCraft, setBoardCraft, clearBoardCraft } = useGame();
 
     const [selectedIngredient, setSelectedIngredient] = useState(null);
     
@@ -133,9 +133,18 @@ export default function Crafting({ onClose = () => {} }) {
     const [outputPosition, setOutputPosition] = useState({ x: 0, y: 0 });
     const [outputTargetPosition, setOutputTargetPosition] = useState(null);
     
+    // Timed crafting state (timestamp-based for persistence)
+    const [timedCrafting, setTimedCrafting] = useState(null); // { startedAt, duration, recipe, ingredientIds }
+    const [timedCraftingRemaining, setTimedCraftingRemaining] = useState(0); // Remaining seconds for display
+    
+    // Removing ingredient animation state
+    const [removingIngredients, setRemovingIngredients] = useState([]); // [{ingredient, targetX, targetY, phase}]
+    
     // Refs to track current state for cleanup
     const selectedIngredientRef = useRef(null);
     const ingredientsPlacedRef = useRef([]);
+    const timedCraftingRef = useRef(null);
+    const craftingIngredientIdsRef = useRef([]);
     
     // Keep refs in sync
     useEffect(() => {
@@ -146,19 +155,131 @@ export default function Crafting({ onClose = () => {} }) {
         ingredientsPlacedRef.current = ingredientsPlaced;
     }, [ingredientsPlaced]);
     
-    // Return all board items to inventory when menu closes
+    useEffect(() => {
+        timedCraftingRef.current = timedCrafting;
+    }, [timedCrafting]);
+    
+    useEffect(() => {
+        craftingIngredientIdsRef.current = craftingIngredientIds;
+    }, [craftingIngredientIds]);
+    
+    // Return all board items to inventory when menu closes (except those being crafted)
     useEffect(() => {
         return () => {
             // Return held ingredient
             if (selectedIngredientRef.current) {
                 addItem(selectedIngredientRef.current.name, 1);
             }
-            // Return all placed ingredients
-            for (const ing of ingredientsPlacedRef.current) {
-                addItem(ing.name, 1);
-            }
+            // Return all placed ingredients EXCEPT those being crafted in timed crafting
+            const craftingIds = timedCraftingRef.current ? craftingIngredientIdsRef.current : [];
+            ingredientsPlacedRef.current.forEach((ing, idx) => {
+                if (!craftingIds.includes(idx)) {
+                    addItem(ing.name, 1);
+                }
+            });
         };
     }, [addItem]);
+    
+    // Restore timed crafting state from global state on mount
+    useEffect(() => {
+        if (activeBoardCraft && !timedCrafting) {
+            // Find the recipe
+            const recipe = RECIPES.find(r => r.id === activeBoardCraft.recipeId);
+            if (recipe) {
+                // Restore ingredients to board
+                setIngredientsPlaced(activeBoardCraft.ingredients || []);
+                
+                // Restore crafting state
+                setTimedCrafting({
+                    startedAt: activeBoardCraft.startedAt,
+                    duration: activeBoardCraft.duration,
+                    recipe,
+                    ingredientIds: activeBoardCraft.ingredientIds,
+                });
+                setCraftingRecipe(recipe);
+                setCraftingIngredientIds(activeBoardCraft.ingredientIds);
+                setCraftingPhase('spinning');
+                
+                // Set output target position after DOM renders
+                requestAnimationFrame(() => {
+                    const outputItem = recipe.outputs[0].item;
+                    const targetElement = document.querySelector(`[data-item-id="${outputItem}"]`);
+                    if (targetElement) {
+                        const rect = targetElement.getBoundingClientRect();
+                        setOutputTargetPosition({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+                    } else {
+                        setOutputTargetPosition({ x: 100, y: window.innerHeight / 2 });
+                    }
+                });
+            }
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Only run on mount
+    
+    // Timer update for timed crafting (runs every 100ms for smooth display)
+    useEffect(() => {
+        if (!timedCrafting) return;
+        
+        const updateTimer = () => {
+            const elapsed = Date.now() - timedCrafting.startedAt;
+            const remaining = Math.max(0, timedCrafting.duration - elapsed);
+            setTimedCraftingRemaining(remaining);
+            
+            // Check if crafting is complete
+            if (remaining <= 0) {
+                // Trigger the output animation
+                setCraftingPhase('output');
+                const output = timedCrafting.recipe.outputs[0];
+                particleSystem.spawnCraftingPlaceParticle(
+                    window.innerWidth / 2,
+                    window.innerHeight / 2 - 40,
+                    `+${output.qty} ${ITEMS[output.item]?.name || output.item}`
+                );
+                
+                // Phase 4: Flyout to sidebar
+                setTimeout(() => {
+                    setCraftingPhase('flyout');
+                }, 400);
+                
+                // Phase 5: Complete
+                setTimeout(() => {
+                    // Remove used ingredients from board
+                    setIngredientsPlaced(prev => 
+                        prev.filter((_, idx) => !timedCrafting.ingredientIds.includes(idx))
+                    );
+                    
+                    // Add output to inventory
+                    for (const out of timedCrafting.recipe.outputs) {
+                        addItem(out.item, out.qty);
+                    }
+                    
+                    // Reset all crafting state
+                    setCraftingPhase('idle');
+                    setCraftingRecipe(null);
+                    setCraftingIngredientIds([]);
+                    setTimedCrafting(null);
+                    
+                    // Clear global state
+                    clearBoardCraft();
+                }, 1000);
+            }
+        };
+        
+        updateTimer(); // Initial update
+        const interval = setInterval(updateTimer, 100);
+        return () => clearInterval(interval);
+    }, [timedCrafting, addItem, clearBoardCraft]);
+    
+    // Format remaining time for display
+    const formatTime = (ms) => {
+        const totalSeconds = Math.ceil(ms / 1000);
+        if (totalSeconds >= 60) {
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+        }
+        return `${totalSeconds}s`;
+    };
     
     // Count ingredients on the crafting board
     const boardIngredientCounts = useMemo(() => 
@@ -218,8 +339,6 @@ export default function Crafting({ onClose = () => {} }) {
         prevBoardCraftableRef.current = currentBoardCraftable;
     }, [boardIngredientCounts]);
     const [isClosing, setIsClosing] = useState(false);
-    const clickTimeoutRef = useRef(null);
-    const lastTapTimeRef = useRef({}); // Track last tap time per ingredient for double-tap detection
 
     // Swipe-to-close state
     const [swipeOffset, setSwipeOffset] = useState(0);
@@ -315,8 +434,8 @@ export default function Crafting({ onClose = () => {} }) {
 
     // Handle crafting a recipe
     const handleCraft = useCallback((recipe) => {
-        // Don't allow crafting during animation
-        if (craftingPhase !== 'idle') return;
+        // Don't allow crafting during animation or timed crafting
+        if (craftingPhase !== 'idle' || timedCrafting) return;
         
         const canCraftFromBoard = canCraftWithBoard(recipe, boardIngredientCounts);
         const canCraftFromInventory = canCraft(recipe);
@@ -358,52 +477,90 @@ export default function Crafting({ onClose = () => {} }) {
             // Start the animation sequence
             setCraftingPhase('converging');
             
+            // Check if this is a timed recipe
+            const isTimedRecipe = recipe.time > 0;
+            
             // Phase 2: Spinning (after converge)
             setTimeout(() => {
                 setCraftingPhase('spinning');
+                
+                // For timed recipes, set up the timer-based completion
+                if (isTimedRecipe) {
+                    const craftData = {
+                        startedAt: Date.now(),
+                        duration: recipe.time * 1000, // Convert to ms
+                        recipe,
+                        ingredientIds: usedIngredientIndices,
+                    };
+                    setTimedCrafting(craftData);
+                    setTimedCraftingRemaining(recipe.time * 1000);
+                    
+                    // Save to global state for persistence
+                    // Get the current ingredients that are being crafted
+                    const craftingIngredients = ingredientsPlaced.filter((_, idx) => 
+                        usedIngredientIndices.includes(idx)
+                    ).map(ing => ({
+                        name: ing.name,
+                        image: ing.image,
+                        x: window.innerWidth / 2, // They're at center during spinning
+                        y: window.innerHeight / 2,
+                    }));
+                    
+                    setBoardCraft({
+                        startedAt: craftData.startedAt,
+                        duration: craftData.duration,
+                        recipeId: recipe.id,
+                        ingredientIds: usedIngredientIndices,
+                        ingredients: craftingIngredients,
+                    });
+                }
             }, 400);
             
-            // Phase 3: Output appears (after spinning)
-            setTimeout(() => {
-                setCraftingPhase('output');
-                // Spawn particle for the new product
-                const output = recipe.outputs[0];
-                particleSystem.spawnCraftingPlaceParticle(
-                    window.innerWidth / 2,
-                    window.innerHeight / 2 - 40,
-                    `+${output.qty} ${ITEMS[output.item]?.name || output.item}`
-                );
-            }, 1200);
-            
-            // Phase 4: Flyout to sidebar
-            setTimeout(() => {
-                setCraftingPhase('flyout');
-            }, 1600);
-            
-            // Phase 5: Complete - add to inventory and cleanup
-            setTimeout(() => {
-                // Remove used ingredients from board
-                const remainingIngredients = ingredientsPlaced.filter((_, idx) => 
-                    !usedIngredientIndices.includes(idx)
-                );
-                setIngredientsPlaced(remainingIngredients);
+            // For instant recipes (time === 0), continue with quick animation
+            if (!isTimedRecipe) {
+                // Phase 3: Output appears (after spinning)
+                setTimeout(() => {
+                    setCraftingPhase('output');
+                    // Spawn particle for the new product
+                    const output = recipe.outputs[0];
+                    particleSystem.spawnCraftingPlaceParticle(
+                        window.innerWidth / 2,
+                        window.innerHeight / 2 - 40,
+                        `+${output.qty} ${ITEMS[output.item]?.name || output.item}`
+                    );
+                }, 1200);
                 
-                // Add output to inventory
-                for (const output of recipe.outputs) {
-                    addItem(output.item, output.qty);
-                }
+                // Phase 4: Flyout to sidebar
+                setTimeout(() => {
+                    setCraftingPhase('flyout');
+                }, 1600);
                 
-                // Reset animation state
-                setCraftingPhase('idle');
-                setCraftingRecipe(null);
-                setCraftingIngredientIds([]);
-            }, 2200);
+                // Phase 5: Complete - add to inventory and cleanup
+                setTimeout(() => {
+                    // Remove used ingredients from board
+                    const remainingIngredients = ingredientsPlaced.filter((_, idx) => 
+                        !usedIngredientIndices.includes(idx)
+                    );
+                    setIngredientsPlaced(remainingIngredients);
+                    
+                    // Add output to inventory
+                    for (const output of recipe.outputs) {
+                        addItem(output.item, output.qty);
+                    }
+                    
+                    // Reset animation state
+                    setCraftingPhase('idle');
+                    setCraftingRecipe(null);
+                    setCraftingIngredientIds([]);
+                }, 2200);
+            }
+            // For timed recipes, the timer effect handles phases 3-5
             
         } else {
             // Ingredients not on board - spawn them on the board instead of crafting directly
             spawnIngredientsOnBoard(recipe);
         }
-    }, [canCraft, boardIngredientCounts, ingredientsPlaced, addItem, spawnIngredientsOnBoard, craftingPhase]);
+    }, [canCraft, boardIngredientCounts, ingredientsPlaced, addItem, spawnIngredientsOnBoard, craftingPhase, timedCrafting, setBoardCraft]);
 
     // Mark animation as complete after entrance animation finishes
     useEffect(() => {
@@ -520,58 +677,55 @@ export default function Crafting({ onClose = () => {} }) {
         ]);
     };
 
-    // Unified handler for picking up a placed ingredient (single tap/click)
-    const pickupPlacedIngredient = useCallback((ingredient) => {
-        setIngredientsPlaced(prev => 
-            prev.filter(ing => ing.x !== ingredient.x || ing.y !== ingredient.y)
-        );
-        setSelectedIngredient({ name: ingredient.name, image: ingredient.image });
-    }, []);
-
-    // Unified handler for removing a placed ingredient (double tap/click)
+    // Remove a placed ingredient with flyout animation back to sidebar
     const removePlacedIngredient = useCallback((ingredient) => {
-        // Return item to inventory
-        addItem(ingredient.name, 1);
+        // Find the target position in the left sidebar
+        const targetElement = document.querySelector(`[data-item-id="${ingredient.name}"]`);
+        let targetX = 100;
+        let targetY = window.innerHeight / 2;
         
+        if (targetElement) {
+            const rect = targetElement.getBoundingClientRect();
+            targetX = rect.left + rect.width / 2;
+            targetY = rect.top + rect.height / 2;
+        }
+        
+        // Remove from placed ingredients immediately
         setIngredientsPlaced(prev =>
             prev.filter(ing => ing.x !== ingredient.x || ing.y !== ingredient.y)
         );
+        
+        // Add to removing animations - start at 'starting' phase
+        const removeId = `remove_${Date.now()}_${Math.random()}`;
+        setRemovingIngredients(prev => [...prev, {
+            id: removeId,
+            ingredient,
+            startX: ingredient.x,
+            startY: ingredient.y,
+            targetX,
+            targetY,
+            phase: 'starting',
+        }]);
+        
+        // Trigger flyout after a frame
+        requestAnimationFrame(() => {
+            setRemovingIngredients(prev => prev.map(r => 
+                r.id === removeId ? { ...r, phase: 'flyout' } : r
+            ));
+        });
+        
+        // After animation, add to inventory and clean up
+        setTimeout(() => {
+            addItem(ingredient.name, 1);
+            setRemovingIngredients(prev => prev.filter(r => r.id !== removeId));
+        }, 450);
     }, [addItem]);
 
-    // Handle pointer down (mouse or touch) on placed ingredient
-    const handlePlacedIngredientPointerDown = useCallback((e, ingredient) => {
+    // Handle click on placed ingredient - single click to remove
+    const handlePlacedIngredientClick = useCallback((e, ingredient) => {
         e.stopPropagation();
-        
-        const ingredientKey = `${ingredient.x}-${ingredient.y}`;
-        const now = Date.now();
-        const lastTap = lastTapTimeRef.current[ingredientKey] || 0;
-        
-        // Check for double-tap/double-click
-        if (now - lastTap < UI.DOUBLE_TAP_DELAY_MS) {
-            // Double tap detected - clear pending single tap action and remove ingredient
-            if (clickTimeoutRef.current) {
-                clearTimeout(clickTimeoutRef.current);
-                clickTimeoutRef.current = null;
-            }
-            lastTapTimeRef.current[ingredientKey] = 0; // Reset
-            removePlacedIngredient(ingredient);
-            return;
-        }
-        
-        // Record this tap time
-        lastTapTimeRef.current[ingredientKey] = now;
-        
-        // Clear any pending action
-        if (clickTimeoutRef.current) {
-            clearTimeout(clickTimeoutRef.current);
-        }
-        
-        // Delay single-tap action to allow double-tap detection
-        clickTimeoutRef.current = setTimeout(() => {
-            pickupPlacedIngredient(ingredient);
-            clickTimeoutRef.current = null;
-        }, UI.DOUBLE_CLICK_DELAY_MS);
-    }, [pickupPlacedIngredient, removePlacedIngredient]);
+        removePlacedIngredient(ingredient);
+    }, [removePlacedIngredient]);
 
     // Stop propagation to prevent closing when interacting with UI elements
     const stopPropagation = (e) => e.stopPropagation();
@@ -579,7 +733,6 @@ export default function Crafting({ onClose = () => {} }) {
     return (
         <div 
             className={`${styles.craftingBlurBackground} ${isClosing ? styles.closing : ''}`}
-            onMouseDown={animationComplete && !selectedIngredient ? handleSwipeStart : undefined}
             onTouchStart={animationComplete && !selectedIngredient ? handleSwipeStart : undefined}
         >
             {/* Currently dragged ingredient */}
@@ -621,15 +774,23 @@ export default function Crafting({ onClose = () => {} }) {
                     opacity = 1;
                 }
                 
+                // Check if this is timed spinning (continuous) vs instant spinning (quick)
+                const isTimedSpinning = isBeingCrafted && craftingPhase === 'spinning' && timedCrafting;
+                
                 if (isBeingCrafted) {
                     shouldTransition = true;
                     if (craftingPhase === 'converging' || craftingPhase === 'spinning' || craftingPhase === 'output' || craftingPhase === 'flyout') {
                         displayX = centerX;
                         displayY = centerY;
                     }
-                    if (craftingPhase === 'spinning') {
+                    if (craftingPhase === 'spinning' && !timedCrafting) {
+                        // Instant recipe: quick spin animation
                         rotation = 360 * 2; // Two full rotations
                         scale = 0.8;
+                    }
+                    if (craftingPhase === 'spinning' && timedCrafting) {
+                        // Timed recipe: continuous spin via CSS animation
+                        scale = 0.9;
                     }
                     if (craftingPhase === 'output' || craftingPhase === 'flyout') {
                         opacity = 0;
@@ -641,17 +802,17 @@ export default function Crafting({ onClose = () => {} }) {
                     <button
                         key={ingredient.spawnId || `${ingredient.name}-${index}`}
                         type="button"
-                        className={isClosing ? styles.placedIngredientClosing : ''}
+                        className={`${isClosing ? styles.placedIngredientClosing : ''} ${isTimedSpinning ? styles.continuousSpin : ''}`}
                         style={{
                             position: "absolute",
                             left: displayX,
                             top: displayY,
-                            transform: `translate(-50%, -50%) scale(${scale}) rotate(${rotation}deg)`,
+                            transform: `translate(-50%, -50%) scale(${scale})${!isTimedSpinning ? ` rotate(${rotation}deg)` : ''}`,
                             zIndex: isBeingCrafted || isSpawning ? 10 : 2,
                             background: "none",
                             border: "none",
                             padding: 0,
-                            cursor: isBeingCrafted || isSpawning ? "default" : "grab",
+                            cursor: isBeingCrafted || isSpawning ? "default" : "pointer",
                             userSelect: "none",
                             WebkitUserSelect: "none",
                             touchAction: "none",
@@ -661,14 +822,19 @@ export default function Crafting({ onClose = () => {} }) {
                                 : 'none',
                             pointerEvents: isBeingCrafted || isSpawning ? 'none' : 'auto',
                         }}
-                        onClick={stopPropagation}
-                        onMouseDown={(e) => !isBeingCrafted && handlePlacedIngredientPointerDown(e, ingredient)}
-                        onTouchStart={(e) => !isBeingCrafted && handlePlacedIngredientPointerDown(e, ingredient)}
+                        onClick={(e) => !isBeingCrafted && handlePlacedIngredientClick(e, ingredient)}
                     >
                         <img draggable={false} src={ingredient.image} alt={ingredient.name} />
                     </button>
                 );
             })}
+            
+            {/* Timed crafting timer display */}
+            {timedCrafting && craftingPhase === 'spinning' && (
+                <p className={styles.craftingTimer}>
+                    {formatTime(timedCraftingRemaining)}
+                </p>
+            )}
             
             {/* Crafting output animation */}
             {craftingRecipe && (craftingPhase === 'output' || craftingPhase === 'flyout') && (
@@ -694,6 +860,35 @@ export default function Crafting({ onClose = () => {} }) {
                     </div>
                 </div>
             )}
+            
+            {/* Removing ingredient flyout animations */}
+            {removingIngredients.map(removing => {
+                const isFlyout = removing.phase === 'flyout';
+                return (
+                    <div
+                        key={removing.id}
+                        style={{
+                            position: 'absolute',
+                            left: isFlyout ? removing.targetX : removing.startX,
+                            top: isFlyout ? removing.targetY : removing.startY,
+                            transform: `translate(-50%, -50%) scale(${isFlyout ? 0.5 : 1})`,
+                            zIndex: 20,
+                            opacity: isFlyout ? 0 : 1,
+                            transition: isFlyout 
+                                ? 'left 0.4s ease-in-out, top 0.4s ease-in-out, opacity 0.4s ease-out, transform 0.4s ease-out'
+                                : 'none',
+                            pointerEvents: 'none',
+                        }}
+                    >
+                        <img 
+                            draggable={false} 
+                            src={removing.ingredient.image} 
+                            alt={removing.ingredient.name}
+                            style={{ width: 50, height: 50 }}
+                        />
+                    </div>
+                );
+            })}
 
             {/* Particle system renderer for "-1" indicators */}
             <ParticleRenderer />
@@ -704,12 +899,10 @@ export default function Crafting({ onClose = () => {} }) {
                 className={`${styles.benchTop} ${isClosing ? styles.closing : ''} ${animationComplete ? styles.animationDone : ''}`} 
                 id="craftingBench"
                 onClick={stopPropagation}
-                onMouseDown={animationComplete ? handleSwipeStart : undefined}
                 onTouchStart={animationComplete ? handleSwipeStart : undefined}
                 style={animationComplete ? {
                     transform: `translate(-50%, -50%) translateY(${swipeOffset}px)`,
                     transition: isSwiping ? 'none' : 'transform 0.3s ease-out',
-                    cursor: isSwiping ? 'grabbing' : 'grab'
                 } : undefined}
             >
                 <img
