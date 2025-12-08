@@ -1,10 +1,10 @@
 import PropTypes from 'prop-types';
 import styles from "./button.module.css";
 
-export default function Button({ text = '', image = null, onClick = null, onMouseDown = null, keepOriginalCursor = false, hidden = false, ...props }) {
+export default function Button({ text = '', image = null, onClick = null, onMouseDown = null, keepOriginalCursor = false, hidden = false, disabled = false, ...props }) {
     // Handle both mouse and touch for mobile support
     const handlePointerDown = (e) => {
-        if (onMouseDown) {
+        if (onMouseDown && !disabled) {
             onMouseDown(e);
         }
     };
@@ -12,10 +12,11 @@ export default function Button({ text = '', image = null, onClick = null, onMous
     return (
         <button 
             type="button"
-            onClick={onClick ? onClick : () => {}} 
+            onClick={!disabled && onClick ? onClick : () => {}} 
             onMouseDown={handlePointerDown}
             onTouchStart={handlePointerDown}
-            className={`${styles.buttonWrapper} ${hidden ? styles.hidden : ''}`}
+            className={`${styles.buttonWrapper} ${hidden ? styles.hidden : ''} ${disabled ? styles.disabled : ''}`}
+            disabled={disabled}
             {...props}
         >
             <div className={styles.buttonContainer} style={{
@@ -50,4 +51,6 @@ Button.propTypes = {
     hidden: PropTypes.bool,
     /** Mouse down handler */
     onMouseDown: PropTypes.func,
+    /** Disable the button */
+    disabled: PropTypes.bool,
 };
