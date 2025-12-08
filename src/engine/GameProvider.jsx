@@ -156,6 +156,18 @@ export function GameProvider({ children }) {
         updateCowPosition: (id, pos) => dispatch(actions.updateCowPosition(id, pos)),
         setDraggingCow: (id, pos) => dispatch(actions.setDraggingCow(id, pos)),
         clearDraggingCow: () => dispatch(actions.clearDraggingCow()),
+        // Inventory actions
+        addItem: (itemType, amount) => dispatch(actions.addItem(itemType, amount)),
+        removeItem: (itemType, amount) => dispatch(actions.removeItem(itemType, amount)),
+        setItem: (itemType, amount) => dispatch(actions.setItem(itemType, amount)),
+        // Crafting actions
+        craftInstant: (recipeId) => dispatch(actions.craftInstant(recipeId)),
+        startCrafting: (recipeId) => dispatch(actions.startCrafting(recipeId)),
+        completeCrafting: (craftingId) => dispatch(actions.completeCrafting(craftingId)),
+        cancelCrafting: (craftingId) => dispatch(actions.cancelCrafting(craftingId)),
+        // Resource actions
+        addCoins: (amount) => dispatch(actions.addCoins(amount)),
+        spendCoins: (amount) => dispatch(actions.spendCoins(amount)),
     }), []);
 
     // ---- Context Value ----
@@ -167,6 +179,8 @@ export function GameProvider({ children }) {
         // Convenience getters
         cows: state.cows,
         resources: state.resources,
+        inventory: state.inventory,
+        craftingQueue: state.craftingQueue,
         tools: state.tools,
         ui: state.ui,
         draggingCow: state.draggingCow,
@@ -268,6 +282,57 @@ export function useTools() {
 export function useResources() {
     const { resources } = useGame();
     return resources;
+}
+
+/**
+ * Access inventory state and actions
+ */
+export function useInventory() {
+    const { 
+        inventory, 
+        addItem, 
+        removeItem, 
+        setItem,
+    } = useGame();
+    return { 
+        inventory, 
+        addItem, 
+        removeItem, 
+        setItem,
+        // Helper to check if player has enough of an item
+        hasItem: (itemType, amount = 1) => (inventory[itemType] || 0) >= amount,
+        // Helper to get item count
+        getItemCount: (itemType) => inventory[itemType] || 0,
+    };
+}
+
+/**
+ * Access crafting queue state and actions
+ */
+export function useCrafting() {
+    const { 
+        inventory,
+        craftingQueue, 
+        craftInstant, 
+        startCrafting, 
+        completeCrafting, 
+        cancelCrafting,
+    } = useGame();
+    return { 
+        inventory,
+        craftingQueue, 
+        craftInstant, 
+        startCrafting, 
+        completeCrafting, 
+        cancelCrafting,
+        // Helper to check if a recipe can be crafted
+        canCraft: (recipe) => {
+            if (!recipe) return false;
+            return recipe.inputs.every(input => 
+                (inventory[input.item] || 0) >= input.qty
+            );
+        },
+    };
 }
 
 // ============================================

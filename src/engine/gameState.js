@@ -96,9 +96,27 @@ export const createInitialState = () => ({
 
     resources: {
         coins: 10000,
-        milk: 0,
         stars: 5.2,
     },
+
+    // Inventory system - tracks all items
+    inventory: {
+        // Raw resources
+        milk: 0,
+        grass: 10, // Starting grass for feeding cows
+        
+        // Crafted products
+        cream: 0,
+        butter: 0,
+        cheese: 0,
+        yogurt: 0,
+        iceCream: 0,
+        cheesecake: 0,
+    },
+
+    // Active crafting queue (for timed recipes)
+    // Each entry: { id, recipeId, startedAt, completesAt }
+    craftingQueue: [],
 
     // Runtime state (not saved to DB)
     tools: {
@@ -133,37 +151,61 @@ export function gameReducer(state, action) {
         
         case ActionTypes.MILK_COW: {
             const { cowId } = action.payload;
+            
+            // Check if the cow exists and is full
+            const cow = state.cows.find(c => c.id === cowId);
+            if (!cow || cow.state !== 'full') {
+                return state;
+            }
+            
             return {
                 ...state,
-                cows: state.cows.map(cow =>
-                    cow.id === cowId && cow.state === 'full'
+                cows: state.cows.map(c =>
+                    c.id === cowId
                         ? { 
-                            ...cow, 
+                            ...c, 
                             state: 'hungry', 
                             fullness: GAME_CONFIG.COW.INITIAL_FULLNESS_HUNGRY 
                           }
-                        : cow
+                        : c
                 ),
-                resources: {
-                    ...state.resources,
-                    milk: state.resources.milk + 1,
+                inventory: {
+                    ...state.inventory,
+                    milk: state.inventory.milk + 1,
                 },
             };
         }
 
         case ActionTypes.FEED_COW: {
             const { cowId } = action.payload;
+            
+            // Check if we have grass to feed
+            if (state.inventory.grass < 1) {
+                console.warn('Not enough grass to feed cow');
+                return state;
+            }
+            
+            // Check if the cow exists and is hungry
+            const cow = state.cows.find(c => c.id === cowId);
+            if (!cow || cow.state !== 'hungry') {
+                return state;
+            }
+            
             return {
                 ...state,
-                cows: state.cows.map(cow =>
-                    cow.id === cowId && cow.state === 'hungry'
+                cows: state.cows.map(c =>
+                    c.id === cowId
                         ? { 
-                            ...cow, 
+                            ...c, 
                             state: 'producing', 
                             fullness: GAME_CONFIG.COW.INITIAL_FULLNESS_PRODUCING 
                           }
-                        : cow
+                        : c
                 ),
+                inventory: {
+                    ...state.inventory,
+                    grass: state.inventory.grass - 1,
+                },
             };
         }
 
@@ -307,20 +349,197 @@ export function gameReducer(state, action) {
             };
         }
 
-        case ActionTypes.ADD_MILK: {
-            const { amount } = action.payload;
-            return {
-                ...state,
-                resources: { ...state.resources, milk: state.resources.milk + amount },
-            };
-        }
-
         case ActionTypes.SPEND_COINS: {
             const { amount } = action.payload;
             if (state.resources.coins < amount) return state;
             return {
                 ...state,
                 resources: { ...state.resources, coins: state.resources.coins - amount },
+            };
+        }
+
+        // ---- INVENTORY ACTIONS ----
+
+        case ActionTypes.ADD_ITEM: {
+            const { itemType, amount = 1 } = action.payload;
+            if (!(itemType in state.inventory)) {
+                console.warn(`Unknown item type: ${itemType}`);
+                return state;
+            }
+            return {
+                ...state,
+                inventory: {
+                    ...state.inventory,
+                    [itemType]: state.inventory[itemType] + amount,
+                },
+            };
+        }
+
+        case ActionTypes.REMOVE_ITEM: {
+            const { itemType, amount = 1 } = action.payload;
+            if (!(itemType in state.inventory)) {
+                console.warn(`Unknown item type: ${itemType}`);
+                return state;
+            }
+            // Don't allow negative inventory
+            if (state.inventory[itemType] < amount) {
+                return state;
+            }
+            return {
+                ...state,
+                inventory: {
+                    ...state.inventory,
+                    [itemType]: state.inventory[itemType] - amount,
+                },
+            };
+        }
+
+        case ActionTypes.SET_ITEM: {
+            const { itemType, amount } = action.payload;
+            if (!(itemType in state.inventory)) {
+                console.warn(`Unknown item type: ${itemType}`);
+                return state;
+            }
+            return {
+                ...state,
+                inventory: {
+                    ...state.inventory,
+                    [itemType]: Math.max(0, amount),
+                },
+            };
+        }
+
+        // ---- CRAFTING ACTIONS ----
+
+        case ActionTypes.CRAFT_INSTANT: {
+            const { recipeId } = action.payload;
+            const recipe = GAME_CONFIG.RECIPES?.find(r => r.id === recipeId);
+            
+            if (!recipe) {
+                console.warn(`Unknown recipe: ${recipeId}`);
+                return state;
+            }
+
+            // Check if we have enough inputs
+            for (const input of recipe.inputs) {
+                if (state.inventory[input.item] < input.qty) {
+                    console.warn(`Not enough ${input.item} for recipe ${recipeId}`);
+                    return state;
+                }
+            }
+
+            // Consume inputs and produce outputs
+            const newInventory = { ...state.inventory };
+            
+            for (const input of recipe.inputs) {
+                newInventory[input.item] -= input.qty;
+            }
+            
+            for (const output of recipe.outputs) {
+                newInventory[output.item] += output.qty;
+            }
+
+            return {
+                ...state,
+                inventory: newInventory,
+            };
+        }
+
+        case ActionTypes.START_CRAFTING: {
+            const { recipeId } = action.payload;
+            const recipe = GAME_CONFIG.RECIPES?.find(r => r.id === recipeId);
+            
+            if (!recipe) {
+                console.warn(`Unknown recipe: ${recipeId}`);
+                return state;
+            }
+
+            // Check if we have enough inputs
+            for (const input of recipe.inputs) {
+                if (state.inventory[input.item] < input.qty) {
+                    console.warn(`Not enough ${input.item} for recipe ${recipeId}`);
+                    return state;
+                }
+            }
+
+            // Consume inputs immediately
+            const newInventory = { ...state.inventory };
+            for (const input of recipe.inputs) {
+                newInventory[input.item] -= input.qty;
+            }
+
+            // Add to crafting queue
+            const now = Date.now();
+            const craftingEntry = {
+                id: `craft_${now}_${Math.random().toString(36).substr(2, 9)}`,
+                recipeId,
+                startedAt: now,
+                completesAt: now + (recipe.time * 1000), // time is in seconds
+            };
+
+            return {
+                ...state,
+                inventory: newInventory,
+                craftingQueue: [...state.craftingQueue, craftingEntry],
+            };
+        }
+
+        case ActionTypes.COMPLETE_CRAFTING: {
+            const { craftingId } = action.payload;
+            const craftingEntry = state.craftingQueue.find(c => c.id === craftingId);
+            
+            if (!craftingEntry) {
+                return state;
+            }
+
+            const recipe = GAME_CONFIG.RECIPES?.find(r => r.id === craftingEntry.recipeId);
+            if (!recipe) {
+                // Remove invalid entry
+                return {
+                    ...state,
+                    craftingQueue: state.craftingQueue.filter(c => c.id !== craftingId),
+                };
+            }
+
+            // Produce outputs
+            const newInventory = { ...state.inventory };
+            for (const output of recipe.outputs) {
+                newInventory[output.item] += output.qty;
+            }
+
+            return {
+                ...state,
+                inventory: newInventory,
+                craftingQueue: state.craftingQueue.filter(c => c.id !== craftingId),
+            };
+        }
+
+        case ActionTypes.CANCEL_CRAFTING: {
+            const { craftingId } = action.payload;
+            const craftingEntry = state.craftingQueue.find(c => c.id === craftingId);
+            
+            if (!craftingEntry) {
+                return state;
+            }
+
+            // Refund inputs
+            const recipe = GAME_CONFIG.RECIPES?.find(r => r.id === craftingEntry.recipeId);
+            if (!recipe) {
+                return {
+                    ...state,
+                    craftingQueue: state.craftingQueue.filter(c => c.id !== craftingId),
+                };
+            }
+
+            const newInventory = { ...state.inventory };
+            for (const input of recipe.inputs) {
+                newInventory[input.item] += input.qty;
+            }
+
+            return {
+                ...state,
+                inventory: newInventory,
+                craftingQueue: state.craftingQueue.filter(c => c.id !== craftingId),
             };
         }
 
@@ -360,10 +579,31 @@ export function gameReducer(state, action) {
                 return { ...cow, fullness: newFullness, state: newState };
             });
 
+            // Process crafting queue - auto-complete finished crafts
+            const now = Date.now();
+            const completedCrafts = state.craftingQueue.filter(craft => now >= craft.completesAt);
+            const remainingCrafts = state.craftingQueue.filter(craft => now < craft.completesAt);
+
+            // If there are completed crafts, produce their outputs
+            let newInventory = state.inventory;
+            if (completedCrafts.length > 0) {
+                newInventory = { ...state.inventory };
+                for (const craft of completedCrafts) {
+                    const recipe = GAME_CONFIG.RECIPES?.find(r => r.id === craft.recipeId);
+                    if (recipe) {
+                        for (const output of recipe.outputs) {
+                            newInventory[output.item] = (newInventory[output.item] || 0) + output.qty;
+                        }
+                    }
+                }
+            }
+
             return {
                 ...state,
                 playTime: newPlayTime,
                 cows: updatedCows,
+                inventory: newInventory,
+                craftingQueue: remainingCrafts,
             };
         }
 
@@ -443,8 +683,39 @@ export const actions = {
 
     // Resources
     addCoins: (amount) => ({ type: ActionTypes.ADD_COINS, payload: { amount } }),
-    addMilk: (amount) => ({ type: ActionTypes.ADD_MILK, payload: { amount } }),
     spendCoins: (amount) => ({ type: ActionTypes.SPEND_COINS, payload: { amount } }),
+
+    // Inventory
+    addItem: (itemType, amount = 1) => ({ 
+        type: ActionTypes.ADD_ITEM, 
+        payload: { itemType, amount } 
+    }),
+    removeItem: (itemType, amount = 1) => ({ 
+        type: ActionTypes.REMOVE_ITEM, 
+        payload: { itemType, amount } 
+    }),
+    setItem: (itemType, amount) => ({ 
+        type: ActionTypes.SET_ITEM, 
+        payload: { itemType, amount } 
+    }),
+
+    // Crafting
+    craftInstant: (recipeId) => ({ 
+        type: ActionTypes.CRAFT_INSTANT, 
+        payload: { recipeId } 
+    }),
+    startCrafting: (recipeId) => ({ 
+        type: ActionTypes.START_CRAFTING, 
+        payload: { recipeId } 
+    }),
+    completeCrafting: (craftingId) => ({ 
+        type: ActionTypes.COMPLETE_CRAFTING, 
+        payload: { craftingId } 
+    }),
+    cancelCrafting: (craftingId) => ({ 
+        type: ActionTypes.CANCEL_CRAFTING, 
+        payload: { craftingId } 
+    }),
 
     // UI
     openCrafting: () => ({ type: ActionTypes.OPEN_CRAFTING }),

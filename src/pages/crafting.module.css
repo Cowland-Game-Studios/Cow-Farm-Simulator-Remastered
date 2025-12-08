@@ -396,3 +396,28 @@
     animation: buttonsOut 0.25s ease-in forwards;
     opacity: 1;
 }
+
+/* Crafting queue display */
+.craftingQueue {
+    position: absolute;
+    bottom: 25%;
+    left: 50%;
+    transform: translateX(-50%);
+    
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    padding: 10px 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    
+    animation: buttonsIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    animation-delay: 0.2s;
+    opacity: 0;
+    
+    text-align: center;
+    min-width: 150px;
+}
+
+.craftingQueue.closing {
+    animation: buttonsOut 0.25s ease-in forwards;
+    opacity: 1;
+}

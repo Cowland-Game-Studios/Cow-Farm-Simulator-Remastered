@@ -44,6 +44,8 @@ export {
     useCow,
     useTools,
     useResources,
+    useInventory,
+    useCrafting,
 } from './GameProvider';
 
 // Default export is the provider

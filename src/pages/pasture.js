@@ -16,7 +16,7 @@ import QuestMenu from "../components/questMenu/questMenu";
 import StatsDisplay from "../components/statsDisplay";
 import ParticleRenderer from "../components/particles/ParticleRenderer";
 import Crafting from "./crafting";
-import { useGame, useMousePosition, particleSystem } from "../engine";
+import { useGame, useMousePosition, useInventory, particleSystem } from "../engine";
 import { useEffect, useCallback, useMemo, useState } from "react";
 import { GAME_CONFIG } from "../config/gameConfig";
 
@@ -34,6 +34,11 @@ export default function Pasture() {
     } = useGame();
     
     const mousePosition = useMousePosition();
+    const { inventory } = useInventory();
+    
+    // ---- Grass availability ----
+    const grassCount = inventory.grass || 0;
+    const hasGrass = grassCount > 0;
     
     // ---- Crafting menu state ----
     const [showCrafting, setShowCrafting] = useState(false);
@@ -78,12 +83,13 @@ export default function Pasture() {
     // ---- Collision handler for feeding (feed collides with hungry cow) ----
     const handleFeedCollide = useCallback((cowId, position) => {
         const cow = cows.find(c => c.id === cowId);
-        if (cow && cow.state === 'hungry') {
+        // Check if cow is hungry AND we have grass (reducer also validates)
+        if (cow && cow.state === 'hungry' && hasGrass) {
             feedCow(cowId);
-            // Spawn -1 particle that floats up and falls with gravity
+            // Spawn -1 grass particle that floats up and falls with gravity
             particleSystem.spawnFeedParticle(position.x, position.y - 30);
         }
-    }, [cows, feedCow]);
+    }, [cows, feedCow, hasGrass]);
 
     // ---- Update tool position when dragging ----
     useEffect(() => {
@@ -128,7 +134,7 @@ export default function Pasture() {
                     {/* Feeding tool */}
                     <DraggableSwinging 
                         id="feed" 
-                        isActive={tools.feeding} 
+                        isActive={tools.feeding && hasGrass} 
                         ropeLength={GAME_CONFIG.PHYSICS.FEED_ROPE_LENGTH} 
                         gravity={GAME_CONFIG.PHYSICS.FEED_GRAVITY} 
                         damping={GAME_CONFIG.PHYSICS.FEED_DAMPING}
@@ -137,7 +143,7 @@ export default function Pasture() {
                     >
                         <div>
                             <img draggable={false} src="./images/pasture/grass.svg" alt="Cow feed" />
-                            <p style={{ position: "absolute", left: 30, top: 35 }}>3x</p>
+                            <p style={{ position: "absolute", left: 30, top: 35 }}>{grassCount}x</p>
                         </div>
                     </DraggableSwinging>
 
@@ -160,16 +166,17 @@ ${'||='.repeat(Math.ceil(window.innerWidth / 10))}`
                     {/* Bottom dock - Tools */}
                     <Dock style={{ bottom: 25 }}>
                         <Button 
-                            text="collect" 
+                            text="collect"
                             image="./images/buttons/bucketIcon.svg" 
                             hidden={tools.milking}
                             onMouseDown={startMilking}
                         />
                         <Button 
-                            text="feed" 
+                            text="feed"
                             image="./images/buttons/grassIcon.svg" 
                             hidden={tools.feeding}
-                            onMouseDown={startFeeding}
+                            disabled={!hasGrass}
+                            onMouseDown={hasGrass ? startFeeding : undefined}
                         />
                     </Dock>
                 </div>

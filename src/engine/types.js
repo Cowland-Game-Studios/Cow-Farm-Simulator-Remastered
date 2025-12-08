@@ -35,8 +35,31 @@
 /**
  * @typedef {Object} GameResources
  * @property {number} coins
- * @property {number} milk
  * @property {number} stars
+ */
+
+/**
+ * @typedef {Object} Inventory
+ * @property {number} milk
+ * @property {number} grass
+ * @property {number} cream
+ * @property {number} butter
+ * @property {number} cheese
+ * @property {number} yogurt
+ * @property {number} iceCream
+ * @property {number} cheesecake
+ */
+
+/**
+ * @typedef {Object} CraftingQueueItem
+ * @property {string} id - UUID for this queue entry
+ * @property {string} recipeId - Recipe identifier
+ * @property {number} startedAt - Timestamp when crafting started
+ * @property {number} completesAt - Timestamp when crafting completes
+ */
+
+/**
+ * @typedef {'milk' | 'grass' | 'cream' | 'butter' | 'cheese' | 'yogurt' | 'iceCream' | 'cheesecake'} ItemType
  */
 
 /**
@@ -59,6 +82,8 @@
  * @property {string|null} saveId - Supabase save record ID
  * @property {Cow[]} cows
  * @property {GameResources} resources
+ * @property {Inventory} inventory - All game items
+ * @property {CraftingQueueItem[]} craftingQueue - Active crafting jobs
  * @property {ToolState} tools
  * @property {UIState} ui
  * @property {number} lastSavedAt - timestamp
@@ -97,8 +122,18 @@ export const ActionTypes = {
 
     // Resource actions
     ADD_COINS: 'ADD_COINS',
-    ADD_MILK: 'ADD_MILK',
     SPEND_COINS: 'SPEND_COINS',
+
+    // Inventory actions
+    ADD_ITEM: 'ADD_ITEM',
+    REMOVE_ITEM: 'REMOVE_ITEM',
+    SET_ITEM: 'SET_ITEM',
+
+    // Crafting actions
+    CRAFT_INSTANT: 'CRAFT_INSTANT',
+    START_CRAFTING: 'START_CRAFTING',
+    COMPLETE_CRAFTING: 'COMPLETE_CRAFTING',
+    CANCEL_CRAFTING: 'CANCEL_CRAFTING',
 
     // UI actions
     OPEN_CRAFTING: 'OPEN_CRAFTING',

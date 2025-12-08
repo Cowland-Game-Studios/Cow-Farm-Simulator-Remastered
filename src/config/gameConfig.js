@@ -149,6 +149,118 @@ export const GAME_CONFIG = {
         XP_PER_LEVEL: 10000,                 // XP required per level
         PROGRESS_BAR_LENGTH: 10,             // Number of characters in progress bar
     },
+
+    // Item definitions
+    ITEMS: {
+        milk: { 
+            name: 'Milk', 
+            icon: './images/crafting/products/milk.svg',
+            category: 'resource',
+            description: 'Fresh milk from your cows',
+        },
+        grass: { 
+            name: 'Grass', 
+            icon: './images/pasture/grass.svg',
+            category: 'resource',
+            description: 'Feed for hungry cows',
+            buyPrice: 10, // Can buy grass with coins
+        },
+        cream: { 
+            name: 'Cream', 
+            icon: './images/crafting/products/cream.svg',
+            category: 'product',
+            description: 'Rich cream made from milk',
+            sellPrice: 25,
+        },
+        butter: { 
+            name: 'Butter', 
+            icon: './images/crafting/products/butter.svg',
+            category: 'product',
+            description: 'Smooth butter churned from milk',
+            sellPrice: 30,
+        },
+        cheese: { 
+            name: 'Cheese', 
+            icon: './images/crafting/products/cheese.svg',
+            category: 'product',
+            description: 'Aged cheese with rich flavor',
+            sellPrice: 50,
+        },
+        yogurt: { 
+            name: 'Yogurt', 
+            icon: './images/crafting/products/yogurt.svg',
+            category: 'product',
+            description: 'Creamy cultured yogurt',
+            sellPrice: 35,
+        },
+        iceCream: { 
+            name: 'Ice Cream', 
+            icon: './images/crafting/products/ice cream.svg',
+            category: 'product',
+            description: 'Delicious frozen treat',
+            sellPrice: 75,
+        },
+        cheesecake: { 
+            name: 'Cheesecake', 
+            icon: './images/crafting/products/cheesecake.svg',
+            category: 'product',
+            description: 'Decadent cheesecake dessert',
+            sellPrice: 100,
+        },
+    },
+
+    // Crafting recipes
+    // time: 0 = instant, time > 0 = timed in seconds
+    RECIPES: [
+        {
+            id: 'milk-to-cream',
+            name: 'Make Cream',
+            time: 0, // instant
+            inputs: [{ item: 'milk', qty: 2 }],
+            outputs: [{ item: 'cream', qty: 1 }],
+        },
+        {
+            id: 'milk-to-butter',
+            name: 'Make Butter',
+            time: 0, // instant
+            inputs: [{ item: 'milk', qty: 2 }],
+            outputs: [{ item: 'butter', qty: 1 }],
+        },
+        {
+            id: 'milk-to-yogurt',
+            name: 'Make Yogurt',
+            time: 0, // instant
+            inputs: [{ item: 'milk', qty: 2 }],
+            outputs: [{ item: 'yogurt', qty: 1 }],
+        },
+        {
+            id: 'milk-to-cheese',
+            name: 'Age Cheese',
+            time: 60, // 60 seconds (timed)
+            inputs: [{ item: 'milk', qty: 3 }],
+            outputs: [{ item: 'cheese', qty: 1 }],
+        },
+        {
+            id: 'cream-to-icecream',
+            name: 'Make Ice Cream',
+            time: 30, // 30 seconds (timed)
+            inputs: [{ item: 'cream', qty: 2 }, { item: 'milk', qty: 1 }],
+            outputs: [{ item: 'iceCream', qty: 1 }],
+        },
+        {
+            id: 'cheese-to-cheesecake',
+            name: 'Bake Cheesecake',
+            time: 120, // 120 seconds (timed)
+            inputs: [{ item: 'cheese', qty: 2 }, { item: 'cream', qty: 1 }],
+            outputs: [{ item: 'cheesecake', qty: 1 }],
+        },
+    ],
+
+    // Shop settings
+    SHOP: {
+        GRASS_BUNDLE_SIZE: 5,                // How much grass per purchase
+        GRASS_BUNDLE_PRICE: 50,              // Price for grass bundle
+    },
 };
 
 // Note: Color utilities are in gameState.js using structured color objects

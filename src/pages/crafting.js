@@ -5,99 +5,97 @@ import styles from "./crafting.module.css";
 import DraggableSwinging from "../components/draggableSwinging/draggableSwinging";
 import ParticleRenderer from "../components/particles/ParticleRenderer";
 import { particleSystem } from "../engine/particleSystem";
+import { useCrafting } from "../engine";
 import { GAME_CONFIG } from "../config/gameConfig";
 
 // Swipe-to-close configuration
 const SWIPE_THRESHOLD = 100; // pixels to swipe up before closing
 const SWIPE_RESISTANCE = 0.5; // resistance when swiping down (opposite direction)
 
-// Product definitions
-const PRODUCTS = [
-    { name: "milk", image: "./images/crafting/products/milk.svg" },
-    { name: "cream", image: "./images/crafting/products/cream.svg" },
-    { name: "butter", image: "./images/crafting/products/butter.svg" },
-    { name: "cheesecake", image: "./images/crafting/products/cheesecake.svg" },
-    { name: "yogurt", image: "./images/crafting/products/yogurt.svg" },
-    { name: "ice cream", image: "./images/crafting/products/ice cream.svg" },
-];
+// Use config for timing constants, items, and recipes
+const { UI, ITEMS, RECIPES } = GAME_CONFIG;
 
-// Use config for timing constants
-const { UI } = GAME_CONFIG;
+// Build product list from config items (filter to show useful items in crafting)
+const PRODUCTS = Object.entries(ITEMS)
+    .filter(([key]) => ['milk', 'cream', 'butter', 'cheese', 'yogurt', 'iceCream', 'cheesecake'].includes(key))
+    .map(([key, item]) => ({
+        id: key,
+        name: item.name,
+        image: item.icon,
+    }));
 
-// Crafting recipes - time is in seconds
-const CRAFTING_RECIPES = [
-    {
-        id: "milk-to-cream",
-        time: 60,
-        inputs: [{ name: "milk", amount: 2 }],
-        outputs: [{ name: "cream", amount: 1 }]
-    },
-    {
-        id: "milk-to-butter",
-        time: 60,
-        inputs: [{ name: "milk", amount: 2 }],
-        outputs: [{ name: "butter", amount: 1 }]
-    },
-    {
-        id: "milk-to-yogurt",
-        time: 60,
-        inputs: [{ name: "milk", amount: 2 }],
-        outputs: [{ name: "yogurt", amount: 1 }]
-    },
-];
-
-// Helper to get product image by name
-const getProductImage = (name) => {
-    const product = PRODUCTS.find(p => p.name === name);
-    return product?.image || "";
+// Helper to get product image by item key
+const getProductImage = (itemKey) => {
+    const item = ITEMS[itemKey];
+    return item?.icon || "";
 };
 
-function CraftingItem({ recipe = null, enabled = false }) {
+function CraftingItem({ recipe = null, canCraft = false, onCraft = () => {} }) {
     // Use recipe data if provided, otherwise show placeholder
-    const displayRecipe = recipe || CRAFTING_RECIPES[0];
+    const displayRecipe = recipe || RECIPES[0];
     const input = displayRecipe.inputs[0];
     const output = displayRecipe.outputs[0];
-    const timeMinutes = Math.floor(displayRecipe.time / 60);
+    const timeSeconds = displayRecipe.time;
+    const isInstant = timeSeconds === 0;
+    const timeDisplay = isInstant ? 'Instant' : timeSeconds < 60 ? `${timeSeconds}s` : `${Math.floor(timeSeconds / 60)} min`;
 
     return (
-        <div style={{ textAlign: "center", opacity: enabled ? 1 : 0.25 }}>
+        <button 
+            type="button"
+            onClick={() => canCraft && onCraft(recipe)}
+            style={{ 
+                textAlign: "center", 
+                opacity: canCraft ? 1 : 0.35,
+                cursor: canCraft ? 'pointer' : 'not-allowed',
+                background: 'none',
+                border: 'none',
+                padding: '5px',
+                transition: 'transform 0.1s ease',
+            }}
+            disabled={!canCraft}
+        >
             <div style={{ display: "flex", flexDirection: "row", gap: 7, justifyContent: "center", alignItems: "center" }}>
                 <img style={{ width: 10 }} src="./images/crafting/time.svg" alt="Time icon" />
-                <p style={{ color: "black", marginTop: 5 }}>{timeMinutes || 1} min</p>
+                <p style={{ color: "black", marginTop: 5, fontSize: 12 }}>{timeDisplay}</p>
             </div>
             <div style={{ display: "flex", flexDirection: "row", gap: 7, justifyContent: "center", alignItems: "center" }}>
                 <div>
-                    <img src={getProductImage(input.name)} alt={input.name} />
-                    <p style={{ color: "black", marginTop: 0 }}>{input.amount}x</p>
+                    <img src={getProductImage(input.item)} alt={input.item} style={{ width: 40, height: 40 }} />
+                    <p style={{ color: "black", marginTop: 0 }}>{input.qty}x</p>
                 </div>
                 <p style={{ color: "black", fontSize: 20, marginTop: -20 }}>=</p>
                 <div>
-                    <img src={getProductImage(output.name)} alt={output.name} />
-                    <p style={{ color: "black", marginTop: 0 }}>{output.amount}x</p>
+                    <img src={getProductImage(output.item)} alt={output.item} style={{ width: 40, height: 40 }} />
+                    <p style={{ color: "black", marginTop: 0 }}>{output.qty}x</p>
                 </div>
             </div>
-        </div>
+        </button>
     );
 }
 
 CraftingItem.propTypes = {
     recipe: PropTypes.shape({
         id: PropTypes.string,
+        name: PropTypes.string,
         time: PropTypes.number,
         inputs: PropTypes.arrayOf(PropTypes.shape({
-            name: PropTypes.string,
-            amount: PropTypes.number,
+            item: PropTypes.string,
+            qty: PropTypes.number,
         })),
         outputs: PropTypes.arrayOf(PropTypes.shape({
-            name: PropTypes.string,
-            amount: PropTypes.number,
+            item: PropTypes.string,
+            qty: PropTypes.number,
         })),
     }),
-    enabled: PropTypes.bool,
+    canCraft: PropTypes.bool,
+    onCraft: PropTypes.func,
 };
 
 
 export default function Crafting({ onClose = () => {} }) {
+    // Get inventory and crafting functions from game context
+    const { inventory, craftingQueue, craftInstant, startCrafting, canCraft } = useCrafting();
+
     const [selectedIngredient, setSelectedIngredient] = useState(null);
     const [ingredientsPlaced, setIngredientsPlaced] = useState([]);
     const [isClosing, setIsClosing] = useState(false);
@@ -109,6 +107,31 @@ export default function Crafting({ onClose = () => {} }) {
     const [isSwiping, setIsSwiping] = useState(false);
     const [animationComplete, setAnimationComplete] = useState(false);
     const swipeStartRef = useRef(null);
+
+    // Handle crafting a recipe
+    const handleCraft = useCallback((recipe) => {
+        if (!canCraft(recipe)) return;
+        
+        if (recipe.time === 0) {
+            // Instant crafting
+            craftInstant(recipe.id);
+            // Spawn success particle
+            particleSystem.spawnCraftingPlaceParticle(
+                window.innerWidth / 2, 
+                window.innerHeight / 2, 
+                `+1 ${ITEMS[recipe.outputs[0].item]?.name || recipe.outputs[0].item}`
+            );
+        } else {
+            // Timed crafting
+            startCrafting(recipe.id);
+            // Spawn queue particle
+            particleSystem.spawnCraftingPlaceParticle(
+                window.innerWidth / 2, 
+                window.innerHeight / 2, 
+                `Crafting ${recipe.name || recipe.id}...`
+            );
+        }
+    }, [canCraft, craftInstant, startCrafting]);
 
     // Mark animation as complete after entrance animation finishes
     useEffect(() => {
@@ -333,24 +356,30 @@ export default function Crafting({ onClose = () => {} }) {
                 />
             </div>
 
-            {/* Product selection panel - left side */}
+            {/* Product/Inventory panel - left side */}
             {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
             <div 
                 className={`${styles.standardedizedList} ${styles.leftSidebar} ${isClosing ? styles.closing : ''}`}
                 onClick={stopPropagation}
             >
                 <div className={styles.list}>
-                    {PRODUCTS.map(product => (
-                        <Button
-                            key={product.name}
-                            text="x100"
-                            image={product.image}
-                            onMouseDown={(e) => {
-                                e.stopPropagation();
-                                setSelectedIngredient({ name: product.name, image: product.image });
-                            }}
-                        />
-                    ))}
+                    {PRODUCTS.map(product => {
+                        const itemCount = inventory[product.id] || 0;
+                        return (
+                            <Button
+                                key={product.id}
+                                text={`x${itemCount}`}
+                                image={product.image}
+                                disabled={itemCount === 0}
+                                onMouseDown={(e) => {
+                                    e.stopPropagation();
+                                    if (itemCount > 0) {
+                                        setSelectedIngredient({ name: product.id, image: product.image });
+                                    }
+                                }}
+                            />
+                        );
+                    })}
                 </div>
             </div>
 
@@ -361,19 +390,36 @@ export default function Crafting({ onClose = () => {} }) {
                 onClick={stopPropagation}
             >
                 <div className={styles.list}>
-                    {CRAFTING_RECIPES.map((recipe, index) => (
+                    {RECIPES.map((recipe, index) => (
                         <div 
                             key={recipe.id}
                             className={`${styles.recipeItem} ${styles[`recipeItem${index + 1}`] || ''} ${isClosing ? `${styles.recipeItemClosing} ${styles[`recipeItemClosing${index + 1}`] || ''}` : ''}`}
                         >
                             <CraftingItem
                                 recipe={recipe}
-                                enabled={index === 0}
+                                canCraft={canCraft(recipe)}
+                                onCraft={handleCraft}
                             />
                         </div>
                     ))}
                 </div>
             </div>
+
+            {/* Crafting queue display */}
+            {craftingQueue.length > 0 && (
+                <div className={`${styles.craftingQueue} ${isClosing ? styles.closing : ''}`}>
+                    <p style={{ color: 'black', margin: '5px 0', fontWeight: 'bold' }}>Crafting:</p>
+                    {craftingQueue.map(craft => {
+                        const recipe = RECIPES.find(r => r.id === craft.recipeId);
+                        const remainingTime = Math.max(0, Math.ceil((craft.completesAt - Date.now()) / 1000));
+                        return (
+                            <div key={craft.id} style={{ color: 'black', fontSize: 12 }}>
+                                {recipe?.name || craft.recipeId}: {remainingTime}s
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
 
             {/* Close hint */}
             <p className={`${styles.closeHint} ${isClosing ? styles.closing : ''}`}>
