@@ -3,7 +3,7 @@ import DraggableSwinging from "../draggableSwinging/draggableSwinging";
 import { useContext, useEffect, useState, useRef, useCallback } from "react";
 import PastureStateContext from "../../contexts/PastureStateContext";
 import { v4 as uuidv4 } from 'uuid';
-import { CowSVG, CowMilkedSVG } from "./CowSVG";
+import { CowSVG, CowMilkedSVG, CowToMilkSVG } from "./CowSVG";
 import CowListContext, { opacity } from "../../contexts/CowListContext";
 
 // Game constants
@@ -227,7 +227,7 @@ export default function Cow({ id = uuidv4(), initialState = "hungry", initialCol
                     transition: "all 1s ease-in-out",
                 }}
             >
-                <DraggableSwinging onDrop={onDrop} id={cowID} ropeLength={35} gravity={0.6} damping={0.97} initialPosition={initialPosition}>
+                <DraggableSwinging onDrop={onDrop} id={cowID} ropeLength={35} gravity={0.6} damping={0.97} initialPosition={initialPosition} disabled={cowState === "full"}>
                     <div style={{
                         position: "absolute",
                         top: -5,
@@ -249,10 +249,14 @@ export default function Cow({ id = uuidv4(), initialState = "hungry", initialCol
                                 transition: "all 0.25s ease-in-out",
                             }}
                         >
-                            {cowState === "hungry" ? (
+                            {cowState === "hungry" && (
                                 <CowMilkedSVG color={color} />
-                            ) : (
+                            )}
+                            {cowState === "producing milk" && (
                                 <CowSVG color={color} fullness={fullness} pollInterval={COW_CONFIG.FULLNESS_POLL_INTERVAL_MS} />
+                            )}
+                            {cowState === "full" && (
+                                <CowToMilkSVG color={color} />
                             )}
                         </div>
                     </div>

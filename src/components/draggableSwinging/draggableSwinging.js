@@ -9,6 +9,7 @@ export default function DraggableSwinging({
     initialDragging = false,
     initialPosition = null,
     isActive = null,  // null = always visible, true/false = controlled visibility
+    disabled = false, // Prevents dragging when true
     offset = { x: 0, y: 0 },
     ropeLength = 80,
     gravity = 0.5,
@@ -261,6 +262,7 @@ export default function DraggableSwinging({
             {...props}
             ref={draggableRef}
             onMouseDown={() => {
+                if (disabled) return;
                 if (isControlled && !isActive) return;
                 // Initialize swing position below cursor
                 objectPosRef.current = { 
@@ -273,6 +275,7 @@ export default function DraggableSwinging({
                 onPickup();
             }}
             onTouchStart={() => {
+                if (disabled) return;
                 if (isControlled && !isActive) return;
                 objectPosRef.current = { 
                     x: mousePosition.x, 
@@ -298,7 +301,7 @@ export default function DraggableSwinging({
                 opacity: opacity,
                 visibility: visible ? "visible" : "hidden",
                 zIndex: dragging ? 1000 : 0,
-                cursor: dragging ? "grabbing" : "grab",
+                cursor: disabled ? "default" : (dragging ? "grabbing" : "grab"),
                 pointerEvents: (isControlled && !isActive) ? "none" : "auto",
                 ...props.style
             }}
