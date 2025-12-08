@@ -421,3 +421,20 @@
     animation: buttonsOut 0.25s ease-in forwards;
     opacity: 1;
 }
+
+/* Hover animations for sidebar items */
+.ingredientItem {
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ingredientItem:hover {
+    transform: scale(1.15);
+}
+
+.recipeItem > button {
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.recipeItem:hover > button {
+    transform: scale(1.1);
+}

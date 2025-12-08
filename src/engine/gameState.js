@@ -135,6 +135,7 @@ export const createInitialState = () => ({
         crafting: false,
         paused: false,
         saving: false,
+        draggingCraftingItem: false,
     },
 
     // Chaos mode impulses: { cowId: { x, y } }
@@ -560,6 +561,9 @@ export function gameReducer(state, action) {
         case ActionTypes.RESUME_GAME:
             return { ...state, ui: { ...state.ui, paused: false } };
 
+        case ActionTypes.SET_CRAFTING_DRAG:
+            return { ...state, ui: { ...state.ui, draggingCraftingItem: action.payload.isDragging } };
+
         // ---- GAME LOOP ----
 
         case ActionTypes.TICK: {
@@ -745,6 +749,7 @@ export const actions = {
     closeCrafting: () => ({ type: ActionTypes.CLOSE_CRAFTING }),
     pauseGame: () => ({ type: ActionTypes.PAUSE_GAME }),
     resumeGame: () => ({ type: ActionTypes.RESUME_GAME }),
+    setCraftingDrag: (isDragging) => ({ type: ActionTypes.SET_CRAFTING_DRAG, payload: { isDragging } }),
 
     // Game loop
     tick: (delta) => ({ type: ActionTypes.TICK, payload: { delta } }),

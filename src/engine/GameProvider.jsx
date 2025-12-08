@@ -171,6 +171,8 @@ export function GameProvider({ children }) {
         // Chaos mode
         triggerChaos: (impulses) => dispatch(actions.triggerChaos(impulses)),
         clearCowImpulse: (cowId) => dispatch(actions.clearCowImpulse(cowId)),
+        // Crafting drag
+        setCraftingDrag: (isDragging) => dispatch(actions.setCraftingDrag(isDragging)),
     }), []);
 
     // ---- Context Value ----

@@ -76,6 +76,21 @@ function findHoverTarget(x, y) {
     return null;
 }
 
+// Check if element is a button-like element (should be square cursor)
+function isButtonElement(element) {
+    const tagName = element.tagName.toLowerCase();
+    return tagName === 'button' || 
+           element.getAttribute('role') === 'button' ||
+           element.getAttribute('data-cursor-target') === 'true' ||
+           element.closest('.buttonContainer') !== null;
+}
+
+// Check if element is a cow (should also be square cursor)
+function isCowElement(element) {
+    return element.closest('.cowContainer') !== null ||
+           element.classList?.contains('cowContainer');
+}
+
 // Calculate target shape from element
 function getTargetShape(element) {
     if (!element) {
@@ -92,10 +107,27 @@ function getTargetShape(element) {
     const rect = element.getBoundingClientRect();
     const padding = CURSOR_CONFIG.HOVER_PADDING;
     
+    // Calculate dimensions
+    let width = rect.width + padding * 2;
+    let height = rect.height + padding * 2;
+    
+    // For buttons and cows, make the cursor a square using the larger dimension
+    if (isButtonElement(element) || isCowElement(element)) {
+        const maxSize = Math.max(width, height);
+        width = maxSize;
+        height = maxSize;
+    }
+    
     // Determine border radius
     let borderRadius;
-    if (isCircularElement(element)) {
-        // For circular elements (cows, icons), use ellipse
+    if (isCowElement(element)) {
+        // For cows, use half the size for a nice circle
+        borderRadius = Math.max(width, height) / 2;
+    } else if (isButtonElement(element)) {
+        // For buttons, keep square shape with original border radius
+        borderRadius = Math.max(getBorderRadius(element) + padding / 2, 12);
+    } else if (isCircularElement(element)) {
+        // For other circular elements (icons), use ellipse
         borderRadius = Math.max(rect.width, rect.height) / 2 + padding;
     } else {
         // Use element's border radius + padding, with a minimum
@@ -103,8 +135,8 @@ function getTargetShape(element) {
     }
     
     return {
-        width: rect.width + padding * 2,
-        height: rect.height + padding * 2,
+        width,
+        height,
         borderRadius,
         // Offset from cursor to element center
         offsetX: rect.left + rect.width / 2,

@@ -20,11 +20,12 @@ import "./App.css";
 function CursorWrapper() {
     const mousePosition = useMousePosition();
     const tools = useTools();
-    const { draggingCow } = useGame();
+    const { draggingCow, ui } = useGame();
     // Use defensive check - only hide cursor if actively dragging something
     const isDraggingTool = tools?.milking || tools?.feeding;
     const isDraggingCow = Boolean(draggingCow?.cowId);
-    const isDragging = isDraggingTool || isDraggingCow;
+    const isDraggingCraftingItem = ui?.draggingCraftingItem;
+    const isDragging = isDraggingTool || isDraggingCow || isDraggingCraftingItem;
     return <BlobCursor mousePosition={mousePosition} isDragging={isDragging} />;
 }
 

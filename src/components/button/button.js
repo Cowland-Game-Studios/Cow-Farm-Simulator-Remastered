@@ -16,7 +16,7 @@ export default function Button({ text = '', image = null, onClick = null, onMous
             onMouseDown={handlePointerDown}
             onTouchStart={handlePointerDown}
             className={`${styles.buttonWrapper} ${hidden ? styles.hidden : ''} ${disabled ? styles.disabled : ''}`}
-            disabled={disabled}
+            aria-disabled={disabled}
             {...props}
         >
             <div className={styles.buttonContainer} style={{

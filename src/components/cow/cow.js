@@ -202,21 +202,17 @@ export default function Cow({ cowId }) {
                 y: cowRect.y + cowRect.height / 2,
             };
             pickupPositionRef.current = position;
-            // Only report dragging for full cows (breeding candidates)
-            if (cow?.state === 'full') {
-                setDraggingCow(cowId, position);
-            }
+            // Report dragging for all cows (for cursor hiding + breeding for full cows)
+            setDraggingCow(cowId, position);
         }
-    }, [cowId, cow?.state, setDraggingCow]);
+    }, [cowId, setDraggingCow]);
 
     // ---- Handle position change during drag (for breeding hover) ----
     const onPositionChange = useCallback((position) => {
         if (!cow || !isBeingDragged) return;
         
-        // Only report dragging for full cows (breeding candidates)
-        if (cow.state === 'full') {
-            setDraggingCow(cowId, position);
-        }
+        // Report dragging position for all cows
+        setDraggingCow(cowId, position);
     }, [cow, cowId, setDraggingCow, isBeingDragged]);
 
     // ---- Handle drop (breeding check) ----

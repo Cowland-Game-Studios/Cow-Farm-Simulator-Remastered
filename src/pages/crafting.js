@@ -5,7 +5,7 @@ import styles from "./crafting.module.css";
 import DraggableSwinging from "../components/draggableSwinging/draggableSwinging";
 import ParticleRenderer from "../components/particles/ParticleRenderer";
 import { particleSystem } from "../engine/particleSystem";
-import { useCrafting } from "../engine";
+import { useCrafting, useGame } from "../engine";
 import { GAME_CONFIG } from "../config/gameConfig";
 
 // Swipe-to-close configuration
@@ -95,8 +95,16 @@ CraftingItem.propTypes = {
 export default function Crafting({ onClose = () => {} }) {
     // Get inventory and crafting functions from game context
     const { inventory, craftingQueue, craftInstant, startCrafting, canCraft } = useCrafting();
+    const { setCraftingDrag } = useGame();
 
     const [selectedIngredient, setSelectedIngredient] = useState(null);
+    
+    // Track dragging state for blob cursor
+    useEffect(() => {
+        setCraftingDrag(selectedIngredient !== null);
+        // Clear on unmount
+        return () => setCraftingDrag(false);
+    }, [selectedIngredient, setCraftingDrag]);
     const [ingredientsPlaced, setIngredientsPlaced] = useState([]);
     const [isClosing, setIsClosing] = useState(false);
     const clickTimeoutRef = useRef(null);
@@ -369,6 +377,8 @@ export default function Crafting({ onClose = () => {} }) {
                         return (
                             <div 
                                 key={product.id}
+                                className={styles.ingredientItem}
+                                data-cursor-target="true"
                                 style={{
                                     opacity: hasItem ? 1 : 0.35,
                                     transition: 'opacity 0.2s ease',

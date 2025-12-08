@@ -17,7 +17,6 @@
 .buttonWrapper.disabled {
     opacity: 0.35;
     cursor: not-allowed;
-    pointer-events: none;
 }
 
 .buttonWrapper.disabled .buttonContainer {
@@ -40,7 +39,8 @@
     transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.buttonContainer:hover .buttonImage {
+/* Hover from wrapper level so it works on disabled buttons too */
+.buttonWrapper:hover .buttonImage {
     transform: scale(1.2);
 }
 
@@ -61,7 +61,8 @@
                 opacity 0.2s ease;
 }
 
-.buttonContainer:hover .buttonText {
+/* Hover from wrapper level so it works on disabled buttons too */
+.buttonWrapper:hover .buttonText {
     transform: translate(3px, 3px);
     opacity: 0.8;
 }

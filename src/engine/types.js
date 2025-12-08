@@ -140,6 +140,7 @@ export const ActionTypes = {
     CLOSE_CRAFTING: 'CLOSE_CRAFTING',
     PAUSE_GAME: 'PAUSE_GAME',
     RESUME_GAME: 'RESUME_GAME',
+    SET_CRAFTING_DRAG: 'SET_CRAFTING_DRAG',
 
     // Game loop
     TICK: 'TICK',
