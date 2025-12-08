@@ -23,8 +23,11 @@ const COW_CONFIG = GAME_CONFIG.COW;
 
 export default function Cow({ cowId }) {
     // ---- Get cow data from central state ----
-    const { state, breedCows, updateCowPosition, setDraggingCow, clearDraggingCow, draggingCow } = useGame();
+    const { state, breedCows, updateCowPosition, setDraggingCow, clearDraggingCow, draggingCow, chaosImpulses, clearCowImpulse } = useGame();
     const cow = state.cows.find(c => c.id === cowId);
+    
+    // ---- Chaos mode impulse ----
+    const cowImpulse = chaosImpulses?.[cowId] || null;
     
     // ---- Local visual state (not saved) ----
     const [cowOffset, setCowOffset] = useState({ x: 0, y: 0 });
@@ -144,6 +147,17 @@ export default function Cow({ cowId }) {
             }
         };
     }, [cowState]);
+
+    // ---- Clear chaos impulse after it's been applied ----
+    useEffect(() => {
+        if (cowImpulse) {
+            // Small delay to ensure DraggableSwinging receives it
+            const timeout = setTimeout(() => {
+                clearCowImpulse(cowId);
+            }, 100);
+            return () => clearTimeout(timeout);
+        }
+    }, [cowImpulse, cowId, clearCowImpulse]);
 
     // ---- Check if this cow is a breed target (another full cow is being dragged near) ----
     useEffect(() => {
@@ -306,6 +320,7 @@ export default function Cow({ cowId }) {
                     gravity={GAME_CONFIG.PHYSICS.COW_GRAVITY} 
                     damping={GAME_CONFIG.PHYSICS.COW_DAMPING} 
                     initialPosition={position}
+                    impulse={cowImpulse}
                 >
                     {/* Thought bubble */}
                     <div style={{

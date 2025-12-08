@@ -25,6 +25,7 @@ export default function DraggableSwinging({
     gravity = PHYSICS.DEFAULT_GRAVITY,
     damping = PHYSICS.DEFAULT_DAMPING,
     throwable = true,
+    impulse = null, // { x, y } velocity to apply externally (for chaos mode etc)
     children = null,
     style = {},
     ...props
@@ -138,6 +139,19 @@ export default function DraggableSwinging({
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [onPositionChange]);
+
+    // Handle external impulse (for chaos mode etc)
+    useEffect(() => {
+        if (impulse && (impulse.x !== 0 || impulse.y !== 0)) {
+            // Apply the impulse velocity
+            velocityRef.current = {
+                x: velocityRef.current.x + impulse.x,
+                y: velocityRef.current.y + impulse.y,
+            };
+            // Trigger flying mode
+            setFlying(true);
+        }
+    }, [impulse]);
 
     // Handle controlled visibility (isActive prop)
     useEffect(() => {
@@ -600,6 +614,11 @@ DraggableSwinging.propTypes = {
     damping: PropTypes.number,
     /** Whether the object can be thrown (continues flying with momentum on release) */
     throwable: PropTypes.bool,
+    /** External impulse to apply { x, y } velocity */
+    impulse: PropTypes.shape({
+        x: PropTypes.number,
+        y: PropTypes.number,
+    }),
     /** Child elements to render */
     children: PropTypes.node,
     /** Custom inline styles */

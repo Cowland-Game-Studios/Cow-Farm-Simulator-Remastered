@@ -16,6 +16,7 @@ import QuestMenu from "../components/questMenu/questMenu";
 import StatsDisplay from "../components/statsDisplay";
 import ParticleRenderer from "../components/particles/ParticleRenderer";
 import Crafting from "./crafting";
+import Cownsole from "../components/cownsole/cownsole";
 import { useGame, useMousePosition, useInventory, particleSystem } from "../engine";
 import { useEffect, useCallback, useMemo, useState } from "react";
 import { GAME_CONFIG } from "../config/gameConfig";
@@ -42,12 +43,15 @@ export default function Pasture() {
     
     // ---- Crafting menu state ----
     const [showCrafting, setShowCrafting] = useState(false);
+    
+    // ---- Moo.sh (dev console) state ----
+    const [showCownsole, setShowCownsole] = useState(false);
 
     // ---- Open crafting on scroll up ----
     useEffect(() => {
         const handleWheel = (e) => {
             // Scroll up (negative deltaY) opens crafting
-            if (e.deltaY < -50 && !showCrafting) {
+            if (e.deltaY < -50 && !showCrafting && !showCownsole) {
                 setShowCrafting(true);
             }
         };
@@ -56,6 +60,26 @@ export default function Pasture() {
 
         return () => {
             window.removeEventListener('wheel', handleWheel);
+        };
+    }, [showCrafting, showCownsole]);
+
+    // ---- Open Moo.sh on "/" key press ----
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            // Don't trigger if typing in an input or if other menus are open
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            if (showCrafting) return;
+            
+            if (e.key === '/') {
+                e.preventDefault();
+                setShowCownsole(prev => !prev);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
         };
     }, [showCrafting]);
 
@@ -107,6 +131,11 @@ export default function Pasture() {
             {/* Crafting menu popup */}
             {showCrafting && (
                 <Crafting onClose={() => setShowCrafting(false)} />
+            )}
+
+            {/* Moo.sh (dev console) popup */}
+            {showCownsole && (
+                <Cownsole onClose={() => setShowCownsole(false)} />
             )}
 
             <div className={styles.pasture}>

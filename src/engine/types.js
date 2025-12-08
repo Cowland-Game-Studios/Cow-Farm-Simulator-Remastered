@@ -148,6 +148,10 @@ export const ActionTypes = {
     LOAD_SAVE: 'LOAD_SAVE',
     MARK_SAVED: 'MARK_SAVED',
     SET_USER: 'SET_USER',
+
+    // Chaos mode
+    TRIGGER_CHAOS: 'TRIGGER_CHAOS',
+    CLEAR_COW_IMPULSE: 'CLEAR_COW_IMPULSE',
 };
 
 export default ActionTypes;

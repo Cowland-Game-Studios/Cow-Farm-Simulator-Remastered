@@ -136,6 +136,9 @@ export const createInitialState = () => ({
         paused: false,
         saving: false,
     },
+
+    // Chaos mode impulses: { cowId: { x, y } }
+    chaosImpulses: {},
 });
 
 // ============================================
@@ -635,6 +638,26 @@ export function gameReducer(state, action) {
             return { ...state, userId };
         }
 
+        // ---- CHAOS MODE ----
+
+        case ActionTypes.TRIGGER_CHAOS: {
+            const { impulses } = action.payload; // { cowId: { x, y }, ... }
+            return {
+                ...state,
+                chaosImpulses: impulses,
+            };
+        }
+
+        case ActionTypes.CLEAR_COW_IMPULSE: {
+            const { cowId } = action.payload;
+            const newImpulses = { ...state.chaosImpulses };
+            delete newImpulses[cowId];
+            return {
+                ...state,
+                chaosImpulses: newImpulses,
+            };
+        }
+
         default:
             console.warn(`Unknown action type: ${action.type}`);
             return state;
@@ -733,6 +756,10 @@ export const actions = {
         payload: { saveId, timestamp } 
     }),
     setUser: (userId) => ({ type: ActionTypes.SET_USER, payload: { userId } }),
+
+    // Chaos mode
+    triggerChaos: (impulses) => ({ type: ActionTypes.TRIGGER_CHAOS, payload: { impulses } }),
+    clearCowImpulse: (cowId) => ({ type: ActionTypes.CLEAR_COW_IMPULSE, payload: { cowId } }),
 };
 
 export default gameReducer;

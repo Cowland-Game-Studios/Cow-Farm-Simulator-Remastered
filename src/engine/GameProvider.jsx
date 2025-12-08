@@ -168,6 +168,9 @@ export function GameProvider({ children }) {
         // Resource actions
         addCoins: (amount) => dispatch(actions.addCoins(amount)),
         spendCoins: (amount) => dispatch(actions.spendCoins(amount)),
+        // Chaos mode
+        triggerChaos: (impulses) => dispatch(actions.triggerChaos(impulses)),
+        clearCowImpulse: (cowId) => dispatch(actions.clearCowImpulse(cowId)),
     }), []);
 
     // ---- Context Value ----
@@ -184,6 +187,7 @@ export function GameProvider({ children }) {
         tools: state.tools,
         ui: state.ui,
         draggingCow: state.draggingCow,
+        chaosImpulses: state.chaosImpulses,
         
         // Actions (pre-bound for convenience)
         ...actionCreators,
