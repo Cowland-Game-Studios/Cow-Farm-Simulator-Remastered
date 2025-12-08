@@ -22,7 +22,7 @@ const COW_CONFIG = {
     SCALE_NORMAL: 1,                     // Normal scale
 };
 
-export default function Cow({ id = uuidv4(), initialState = "hungry", initialColor = "cyan", initialFullness = 0.1 }) {
+export default function Cow({ id = uuidv4(), initialState = "hungry", initialColor = "cyan", initialFullness = 0.1, initialPosition = null }) {
 
     const cowID = id;  // No need for state since ID doesn't change
     const { isMilking, isFeeding } = useContext(PastureStateContext);
@@ -101,7 +101,10 @@ export default function Cow({ id = uuidv4(), initialState = "hungry", initialCol
         }
 
         const intervalId = setInterval(() => {
-            if (isTouching("bucket")) {
+            // Check for bucket (milking) or feed (feeding) based on current action
+            const targetId = isMilking ? "bucket" : "feed";
+            
+            if (isTouching(targetId)) {
                 if (isMilking && cowState === "full") {
                     setCowState("hungry");
                     setFullness(COW_CONFIG.INITIAL_FULLNESS_HUNGRY);
@@ -164,16 +167,35 @@ export default function Cow({ id = uuidv4(), initialState = "hungry", initialCol
             return `rgba(${averageArray[0]}, ${averageArray[1]}, ${averageArray[2]}, ${opacity})`;
         };
 
+        // Get midpoint between two cows
+        const getMidpoint = (id1, id2) => {
+            const rect1 = document.getElementById(id1)?.getBoundingClientRect();
+            const rect2 = document.getElementById(id2)?.getBoundingClientRect();
+
+            if (!rect1 || !rect2) return null;
+
+            const center1 = { x: rect1.x + rect1.width / 2, y: rect1.y + rect1.height / 2 };
+            const center2 = { x: rect2.x + rect2.width / 2, y: rect2.y + rect2.height / 2 };
+
+            return {
+                x: (center1.x + center2.x) / 2,
+                y: (center1.y + center2.y) / 2
+            };
+        };
+
         for (const cow of cowList) {
             if (cow.id === cowID) {
                 continue;
             }
 
             if (isTouching(cow.id)) {
+                const spawnPosition = getMidpoint(cowID, cow.id);
+
                 const newCow = {
                     id: uuidv4(),
                     color: averageTwoRGB(cow.color, color),
-                    state: "hungry"
+                    state: "hungry",
+                    initialPosition: spawnPosition
                 };
 
                 setCowState("hungry");
@@ -205,7 +227,7 @@ export default function Cow({ id = uuidv4(), initialState = "hungry", initialCol
                     transition: "all 1s ease-in-out",
                 }}
             >
-                <DraggableSwinging onDrop={onDrop} id={cowID} ropeLength={35} gravity={0.6} damping={0.97}>
+                <DraggableSwinging onDrop={onDrop} id={cowID} ropeLength={35} gravity={0.6} damping={0.97} initialPosition={initialPosition}>
                     <div style={{
                         position: "absolute",
                         top: -5,
@@ -229,7 +251,7 @@ export default function Cow({ id = uuidv4(), initialState = "hungry", initialCol
                         {cowState === "hungry" ? (
                             <CowMilkedSVG color={color} />
                         ) : (
-                            <CowSVG color={color} />
+                            <CowSVG color={color} fullness={fullness} pollInterval={COW_CONFIG.FULLNESS_POLL_INTERVAL_MS} />
                         )}
                     </div>
                 </DraggableSwinging>

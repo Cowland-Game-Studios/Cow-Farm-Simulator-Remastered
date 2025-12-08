@@ -35,22 +35,22 @@ export default function Pasture() {
 
                 <div className={styles.pasture}>
 
-                    {cowList.map((cow) => <Cow key={cow.id} id={cow.id} initialColor={cow.color} initialFullness={cow.fullness} initialState={cow.state} />)}
+                    {cowList.map((cow) => <Cow key={cow.id} id={cow.id} initialColor={cow.color} initialFullness={cow.fullness} initialState={cow.state} initialPosition={cow.initialPosition} />)}
 
                     <div className={styles.UI}>
 
-                        {isMilking && <DraggableSwinging id="bucket" initialDragging ropeLength={30} gravity={0.4} damping={0.96}>
+                        <DraggableSwinging id="bucket" isActive={isMilking} ropeLength={30} gravity={0.4} damping={0.96}>
                             <div>
                                 <img draggable={false} src="./images/pasture/bucket.svg" alt="Milk bucket" />
                             </div>
-                        </DraggableSwinging>}
+                        </DraggableSwinging>
 
-                        {isFeeding && <DraggableSwinging id="bucket" initialDragging ropeLength={25} gravity={0.3} damping={0.95}>
+                        <DraggableSwinging id="feed" isActive={isFeeding} ropeLength={25} gravity={0.3} damping={0.95}>
                         <div>
                                 <img draggable={false} src="./images/pasture/grass.svg" alt="Cow feed" />
                                 <p style={{position: "absolute", left: 30, top: 35}}>3x</p>
                             </div>
-                        </DraggableSwinging>}
+                        </DraggableSwinging>
 
                         {true && <QuestMenu />}
 

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 const CURSOR_CONFIG = {
     SIZE: 20,
-    LERP_SPEED: 0.25,  // Higher = faster following (0-1)
+    LERP_SPEED: 0.5,  // Higher = faster following (0-1)
     COLOR: "rgba(0, 0, 0, 0.15)",  // 15% opacity black
 };
 

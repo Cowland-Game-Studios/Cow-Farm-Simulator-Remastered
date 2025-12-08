@@ -7,6 +7,8 @@ export default function DraggableSwinging({
     canGoOffScreen = false,
     safeArea = 25,
     initialDragging = false,
+    initialPosition = null,
+    isActive = null,  // null = always visible, true/false = controlled visibility
     offset = { x: 0, y: 0 },
     ropeLength = 80,
     gravity = 0.5,
@@ -20,6 +22,9 @@ export default function DraggableSwinging({
     const velocityRef = useRef({ x: 0, y: 0 });
     const objectPosRef = useRef({ x: 0, y: 0 });
     const lastMousePosRef = useRef({ x: 0, y: 0 });
+    const spawnPositionRef = useRef(null);
+
+    const isControlled = isActive !== null;
 
     const isPositionBad = (x, y) => {
         if (canGoOffScreen) {
@@ -49,10 +54,58 @@ export default function DraggableSwinging({
         return { x, y };
     };
 
-    const [restPosition, setRestPosition] = useState(getRandomValidLocation);
+    // Get initial position - use provided position if valid, otherwise random
+    const getInitialPosition = () => {
+        if (initialPosition && initialPosition.x && initialPosition.y) {
+            return getClosestSafePosition(initialPosition.x, initialPosition.y);
+        }
+        return getRandomValidLocation();
+    };
+
+    const [restPosition, setRestPosition] = useState(getInitialPosition);
     const [objectPos, setObjectPos] = useState({ x: 0, y: 0 });
     const { mousePosition } = useContext(MousePositionContext);
     const [dragging, setDragging] = useState(initialDragging);
+    const [opacity, setOpacity] = useState(isControlled ? 0 : 1);
+    const [visible, setVisible] = useState(!isControlled);
+
+    // Store spawn position on mount
+    useEffect(() => {
+        spawnPositionRef.current = getInitialPosition();
+    }, []);
+
+    // Handle controlled visibility (isActive prop)
+    useEffect(() => {
+        if (!isControlled) return;
+
+        if (isActive) {
+            // Becoming active - show at mouse position and start dragging
+            setVisible(true);
+            setOpacity(1);
+            setDragging(true);
+            
+            // Position at mouse
+            objectPosRef.current = { 
+                x: mousePosition.x, 
+                y: mousePosition.y + ropeLength 
+            };
+            setObjectPos(objectPosRef.current);
+            setRestPosition({ x: mousePosition.x, y: mousePosition.y });
+            velocityRef.current = { x: 0, y: 0 };
+        } else {
+            // Becoming inactive - fade out and return to spawn
+            setOpacity(0);
+            if (spawnPositionRef.current) {
+                setRestPosition(spawnPositionRef.current);
+            }
+            // Hide after animation completes
+            const hideTimeout = setTimeout(() => {
+                setVisible(false);
+                setDragging(false);
+            }, 400);
+            return () => clearTimeout(hideTimeout);
+        }
+    }, [isActive, isControlled]);
 
     // Initialize object position below the rest position
     useEffect(() => {
@@ -101,7 +154,6 @@ export default function DraggableSwinging({
                 newY = anchorY + normalizedY * ropeLength;
 
                 // Adjust velocity to be tangent to the rope (remove radial component)
-                // This creates more realistic pendulum motion
                 const radialVelComponent = (velocity.x * normalizedX + velocity.y * normalizedY);
                 velocity.x -= radialVelComponent * normalizedX * 0.5;
                 velocity.y -= radialVelComponent * normalizedY * 0.5;
@@ -141,8 +193,10 @@ export default function DraggableSwinging({
         };
     }, [dragging, mousePosition, gravity, damping, ropeLength]);
 
-    // Handle mouse/touch up
+    // Handle mouse/touch up (only for non-controlled mode)
     useEffect(() => {
+        if (isControlled) return;
+
         const up = () => {
             setDragging(false);
         };
@@ -162,10 +216,11 @@ export default function DraggableSwinging({
             window.removeEventListener("touchend", up);
             window.removeEventListener("resize", resize);
         };
-    }, [dragging, restPosition]);
+    }, [dragging, restPosition, isControlled]);
 
-    // Handle drop
+    // Handle drop (only for non-controlled mode)
     useEffect(() => {
+        if (isControlled) return;
         if (dragging) return;
 
         const dropX = objectPosRef.current.x || mousePosition.x;
@@ -184,7 +239,7 @@ export default function DraggableSwinging({
         velocityRef.current = { x: 0, y: 0 };
 
         onDrop({ x: dropX, y: dropY });
-    }, [dragging]);
+    }, [dragging, isControlled]);
 
     // Calculate rotation based on rope angle
     const getRotation = () => {
@@ -206,6 +261,7 @@ export default function DraggableSwinging({
             {...props}
             ref={draggableRef}
             onMouseDown={() => {
+                if (isControlled && !isActive) return;
                 // Initialize swing position below cursor
                 objectPosRef.current = { 
                     x: mousePosition.x, 
@@ -217,6 +273,7 @@ export default function DraggableSwinging({
                 onPickup();
             }}
             onTouchStart={() => {
+                if (isControlled && !isActive) return;
                 objectPosRef.current = { 
                     x: mousePosition.x, 
                     y: mousePosition.y + ropeLength 
@@ -235,9 +292,14 @@ export default function DraggableSwinging({
                     rotate(${getRotation()}deg)
                 `,
                 transformOrigin: "center",
-                transition: dragging ? "none" : "transform 0.2s ease-out",
+                transition: dragging 
+                    ? "opacity 0.1s ease-out" 
+                    : "transform 0.4s ease-out, opacity 0.3s ease-out",
+                opacity: opacity,
+                visibility: visible ? "visible" : "hidden",
                 zIndex: dragging ? 1000 : 0,
                 cursor: dragging ? "grabbing" : "grab",
+                pointerEvents: (isControlled && !isActive) ? "none" : "auto",
                 ...props.style
             }}
         >
@@ -245,4 +307,3 @@ export default function DraggableSwinging({
         </div>
     );
 }
-
