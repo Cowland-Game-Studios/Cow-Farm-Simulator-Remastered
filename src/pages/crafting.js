@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import PropTypes from 'prop-types';
 import Button from "../components/button/button";
 import styles from "./crafting.module.css";
@@ -15,6 +15,22 @@ const SWIPE_RESISTANCE = 0.5; // resistance when swiping down (opposite directio
 // Use config for timing constants, items, and recipes
 const { UI, ITEMS, RECIPES } = GAME_CONFIG;
 
+// Helper to count ingredients on the board
+function countIngredientsOnBoard(ingredientsPlaced) {
+    const counts = {};
+    for (const ing of ingredientsPlaced) {
+        counts[ing.name] = (counts[ing.name] || 0) + 1;
+    }
+    return counts;
+}
+
+// Check if recipe can be crafted with ingredients on board
+function canCraftWithBoard(recipe, boardCounts) {
+    return recipe.inputs.every(input => 
+        (boardCounts[input.item] || 0) >= input.qty
+    );
+}
+
 // Build product list from config items (filter to show useful items in crafting)
 const PRODUCTS = Object.entries(ITEMS)
     .filter(([key]) => ['milk', 'cream', 'butter', 'cheese', 'yogurt', 'iceCream', 'cheesecake'].includes(key))
@@ -30,7 +46,7 @@ const getProductImage = (itemKey) => {
     return item?.icon || "";
 };
 
-function CraftingItem({ recipe = null, canCraft = false, onCraft = () => {} }) {
+function CraftingItem({ recipe = null, canCraft = false, onCraft = () => {}, highlight = false }) {
     // Use recipe data if provided, otherwise show placeholder
     const displayRecipe = recipe || RECIPES[0];
     const input = displayRecipe.inputs[0];
@@ -47,12 +63,13 @@ function CraftingItem({ recipe = null, canCraft = false, onCraft = () => {} }) {
                 textAlign: "center", 
                 opacity: canCraft ? 1 : 0.35,
                 cursor: canCraft ? 'pointer' : 'not-allowed',
-                background: 'none',
-                border: 'none',
+                background: highlight ? 'rgba(100, 200, 100, 0.15)' : 'none',
+                border: highlight ? '2px solid rgba(100, 200, 100, 0.4)' : 'none',
+                borderRadius: highlight ? '12px' : '0',
                 padding: '5px',
-                transition: 'transform 0.1s ease',
+                transition: 'all 0.3s ease',
             }}
-            disabled={!canCraft}
+            aria-disabled={!canCraft}
         >
             <div style={{ display: "flex", flexDirection: "row", gap: 7, justifyContent: "center", alignItems: "center" }}>
                 <img style={{ width: 10 }} src="./images/crafting/time.svg" alt="Time icon" />
@@ -89,6 +106,7 @@ CraftingItem.propTypes = {
     }),
     canCraft: PropTypes.bool,
     onCraft: PropTypes.func,
+    highlight: PropTypes.bool,
 };
 
 
@@ -106,6 +124,64 @@ export default function Crafting({ onClose = () => {} }) {
         return () => setCraftingDrag(false);
     }, [selectedIngredient, setCraftingDrag]);
     const [ingredientsPlaced, setIngredientsPlaced] = useState([]);
+    
+    // Count ingredients on the crafting board
+    const boardIngredientCounts = useMemo(() => 
+        countIngredientsOnBoard(ingredientsPlaced),
+        [ingredientsPlaced]
+    );
+    
+    // Track which recipes were previously craftable from board (for animation)
+    const prevBoardCraftableRef = useRef(new Set());
+    
+    // Sort recipes: enabled ones first (board > inventory), then by time (faster first)
+    const sortedRecipes = useMemo(() => {
+        return [...RECIPES].sort((a, b) => {
+            const aCanBoard = canCraftWithBoard(a, boardIngredientCounts);
+            const bCanBoard = canCraftWithBoard(b, boardIngredientCounts);
+            const aCanInv = canCraft(a);
+            const bCanInv = canCraft(b);
+            
+            // Priority: board craftable > inventory craftable > disabled
+            const aPriority = aCanBoard ? 2 : (aCanInv ? 1 : 0);
+            const bPriority = bCanBoard ? 2 : (bCanInv ? 1 : 0);
+            
+            if (aPriority !== bPriority) {
+                return bPriority - aPriority; // Higher priority first
+            }
+            
+            // Same priority, sort by time (faster first)
+            return a.time - b.time;
+        });
+    }, [boardIngredientCounts, canCraft]);
+    
+    // Track newly enabled recipes for pulse animation
+    const [pulsingRecipes, setPulsingRecipes] = useState(new Set());
+    
+    useEffect(() => {
+        const currentBoardCraftable = new Set(
+            RECIPES.filter(r => canCraftWithBoard(r, boardIngredientCounts)).map(r => r.id)
+        );
+        
+        // Find newly enabled recipes
+        const newlyEnabled = new Set();
+        currentBoardCraftable.forEach(id => {
+            if (!prevBoardCraftableRef.current.has(id)) {
+                newlyEnabled.add(id);
+            }
+        });
+        
+        if (newlyEnabled.size > 0) {
+            setPulsingRecipes(newlyEnabled);
+            // Remove pulse class after animation
+            const timeout = setTimeout(() => {
+                setPulsingRecipes(new Set());
+            }, 400);
+            return () => clearTimeout(timeout);
+        }
+        
+        prevBoardCraftableRef.current = currentBoardCraftable;
+    }, [boardIngredientCounts]);
     const [isClosing, setIsClosing] = useState(false);
     const clickTimeoutRef = useRef(null);
     const lastTapTimeRef = useRef({}); // Track last tap time per ingredient for double-tap detection
@@ -409,18 +485,26 @@ export default function Crafting({ onClose = () => {} }) {
                 onClick={stopPropagation}
             >
                 <div className={styles.list}>
-                    {RECIPES.map((recipe, index) => (
-                        <div 
-                            key={recipe.id}
-                            className={`${styles.recipeItem} ${styles[`recipeItem${index + 1}`] || ''} ${isClosing ? `${styles.recipeItemClosing} ${styles[`recipeItemClosing${index + 1}`] || ''}` : ''}`}
-                        >
-                            <CraftingItem
-                                recipe={recipe}
-                                canCraft={canCraft(recipe)}
-                                onCraft={handleCraft}
-                            />
-                        </div>
-                    ))}
+                    {sortedRecipes.map((recipe) => {
+                        const canCraftFromBoard = canCraftWithBoard(recipe, boardIngredientCounts);
+                        const canCraftFromInventory = canCraft(recipe);
+                        const isEnabled = canCraftFromBoard || canCraftFromInventory;
+                        const isPulsing = pulsingRecipes.has(recipe.id);
+                        
+                        return (
+                            <div 
+                                key={recipe.id}
+                                className={`${styles.recipeItem} ${styles.recipeItemAnimated} ${isPulsing ? styles.recipeEnabled : ''} ${isClosing ? styles.recipeItemClosing : ''}`}
+                            >
+                                <CraftingItem
+                                    recipe={recipe}
+                                    canCraft={isEnabled}
+                                    onCraft={handleCraft}
+                                    highlight={canCraftFromBoard}
+                                />
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
 

@@ -284,6 +284,29 @@
     animation: listItemPopInRight 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
+.recipeItemAnimated {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), 
+                opacity 0.3s ease,
+                margin 0.3s ease;
+}
+
+/* Pulse animation for when recipe becomes craftable */
+@keyframes recipePulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.08);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.recipeEnabled {
+    animation: recipePulse 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 .recipeItem1 { animation-delay: 0.2s; }
 .recipeItem2 { animation-delay: 0.25s; }
 .recipeItem3 { animation-delay: 0.3s; }
@@ -329,6 +352,14 @@
 .list {
     /* background-color: blue; */
 
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    overflow: visible;
+}
+
+/* Animated list for recipes - smooth reordering */
+.animatedList {
     display: flex;
     flex-direction: column;
     gap: 15px;

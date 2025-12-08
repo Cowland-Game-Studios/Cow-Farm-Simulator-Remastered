@@ -156,6 +156,9 @@ export default function BlobCursor({ mousePosition, isDragging = false }) {
         isHovering: false,
     });
     
+    // Track if using touch input (hide cursor on touch devices)
+    const [isTouch, setIsTouch] = useState(false);
+    
     const animationRef = useRef(null);
     const positionRef = useRef({ x: mousePosition.x, y: mousePosition.y });
     const shapeRef = useRef(shape);
@@ -164,6 +167,45 @@ export default function BlobCursor({ mousePosition, isDragging = false }) {
     // Lerp helper
     const lerp = useCallback((current, target, speed) => {
         return current + (target - current) * speed;
+    }, []);
+    
+    // Detect touch vs mouse input
+    useEffect(() => {
+        const handleTouchStart = () => {
+            setIsTouch(true);
+        };
+        
+        const handleMouseMove = (e) => {
+            // Only show cursor if it's a real mouse movement (not touch-generated)
+            // Touch events often trigger mousemove too, but with no movement
+            if (e.movementX !== 0 || e.movementY !== 0) {
+                setIsTouch(false);
+            }
+        };
+        
+        const handleMouseDown = () => {
+            // Mouse click indicates mouse usage
+            setIsTouch(false);
+        };
+        
+        window.addEventListener('touchstart', handleTouchStart, { passive: true });
+        window.addEventListener('mousemove', handleMouseMove, { passive: true });
+        window.addEventListener('mousedown', handleMouseDown, { passive: true });
+        
+        // Check initial state - if device has touch capability and no mouse
+        const hasTouchScreen = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        const hasMousePointer = window.matchMedia('(pointer: fine)').matches;
+        
+        // Start hidden on touch-only devices
+        if (hasTouchScreen && !hasMousePointer) {
+            setIsTouch(true);
+        }
+        
+        return () => {
+            window.removeEventListener('touchstart', handleTouchStart);
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mousedown', handleMouseDown);
+        };
     }, []);
 
     useEffect(() => {
@@ -228,6 +270,11 @@ export default function BlobCursor({ mousePosition, isDragging = false }) {
             }
         };
     }, [mousePosition, lerp]);
+
+    // Hide cursor completely on touch devices
+    if (isTouch) {
+        return null;
+    }
 
     return (
         <div
