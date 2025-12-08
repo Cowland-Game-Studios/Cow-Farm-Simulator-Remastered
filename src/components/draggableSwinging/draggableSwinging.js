@@ -15,6 +15,7 @@ export default function DraggableSwinging({
     collisionThreshold = PHYSICS.DEFAULT_COLLISION_THRESHOLD,
     canGoOffScreen = false,
     safeArea = PHYSICS.DEFAULT_SAFE_AREA,
+    bottomSafeArea = 200, // Safe area at bottom - up to tip of fence
     initialDragging = false,
     initialPosition = null,
     isActive = null,
@@ -39,6 +40,7 @@ export default function DraggableSwinging({
     const collidedTargetsRef = useRef(new Set()); // Track collisions to avoid duplicates
     const mousePositionRef = useRef({ x: 0, y: 0 }); // Ref for animation loop to read current mouse position
     const throwVelocityRef = useRef({ x: 0, y: 0 }); // Track actual throw velocity from mouse movement
+    const draggingRef = useRef(false); // Ref to track dragging state for event handlers (avoids stale closure)
 
     const isControlled = isActive !== null;
 
@@ -76,7 +78,7 @@ export default function DraggableSwinging({
             return false;
         }
         return (x < safeArea || x > window.innerWidth - safeArea) || 
-               (y < safeArea || y > window.innerHeight - safeArea);
+               (y < safeArea || y > window.innerHeight - bottomSafeArea);
     };
 
     // Clamp position to the closest safe spot within bounds
@@ -84,7 +86,7 @@ export default function DraggableSwinging({
         const minX = safeArea;
         const maxX = window.innerWidth - safeArea;
         const minY = safeArea;
-        const maxY = window.innerHeight - safeArea;
+        const maxY = window.innerHeight - bottomSafeArea;
 
         return {
             x: Math.max(minX, Math.min(maxX, x)),
@@ -95,7 +97,7 @@ export default function DraggableSwinging({
     // Get a random valid starting location
     const getRandomValidLocation = () => {
         const x = Math.random() * (window.innerWidth - safeArea * 2) + safeArea;
-        const y = Math.random() * (window.innerHeight - safeArea * 2) + safeArea;
+        const y = Math.random() * (window.innerHeight - safeArea - bottomSafeArea) + safeArea;
         return { x, y };
     };
 
@@ -115,13 +117,16 @@ export default function DraggableSwinging({
 
     // Keep mousePositionRef updated so animation loop can read current position
     mousePositionRef.current = mousePosition;
+    // Keep draggingRef in sync with dragging state (for event handlers to avoid stale closures)
+    draggingRef.current = dragging;
+    
     const [opacity, setOpacity] = useState(isControlled ? 0 : 1);
     const [visible, setVisible] = useState(!isControlled);
     
     // Threshold for considering object at rest (velocity magnitude)
-    const VELOCITY_THRESHOLD = 0.2;
-    // Friction applied during flight (1.0 = no friction at all!)
-    const FLIGHT_FRICTION = 1.0;
+    const VELOCITY_THRESHOLD = 3;
+    // Friction applied during flight (lower = more friction, faster slowdown)
+    const FLIGHT_FRICTION = 0.985;
     // Bounce factor when hitting edges (0 = no bounce, 1 = perfect bounce)
     const BOUNCE_FACTOR = 0.85;
     // Track spin from bounces for visual effect
@@ -252,15 +257,15 @@ export default function DraggableSwinging({
                 // FLYING MODE: No rope, just momentum with friction and gravity
                 // Make it FUN and BOUNCY! 🐄
                 
-                // No gravity during flight for testing
-                // velocity.y += gravity * 0.3;
+                // Apply light gravity during flight
+                velocity.y += gravity * 0.3;
 
-                // Apply very light flight friction (keeps them bouncing longer!)
+                // Apply flight friction
                 velocity.x *= FLIGHT_FRICTION;
                 velocity.y *= FLIGHT_FRICTION;
 
-                // No spin decay for testing
-                // spinRef.current *= 0.98;
+                // Gradually decay spin
+                spinRef.current *= 0.98;
 
                 // Update position
                 newX = pos.x + velocity.x;
@@ -270,7 +275,7 @@ export default function DraggableSwinging({
                 const minX = safeArea;
                 const maxX = window.innerWidth - safeArea;
                 const minY = safeArea;
-                const maxY = window.innerHeight - safeArea;
+                const maxY = window.innerHeight - bottomSafeArea; // Use larger bottom safe area
 
                 let bounced = false;
 
@@ -369,26 +374,28 @@ export default function DraggableSwinging({
         if (isControlled) return;
 
         const up = () => {
-            if (!dragging) return;
+            // Use ref to get current dragging state (avoids stale closure)
+            if (!draggingRef.current) return;
             
             // Check velocity to decide if we should fly or settle
             if (throwable) {
                 // Use throw velocity (from mouse movement) not rope-constrained velocity
                 const throwVel = throwVelocityRef.current;
-                const speed = Math.sqrt(throwVel.x * throwVel.x + throwVel.y * throwVel.y);
                 
                 // Always fly after release! No threshold needed - just YEET 🐄
                 velocityRef.current = { 
-                    x: throwVel.x * 2.5,  // Big amplify for satisfying throw feel
+                    x: throwVel.x * 2.5,
                     y: throwVel.y * 2.5 
                 };
+                
                 // Set ref immediately to prevent drop effect from settling
                 isFlyingRef.current = true;
                 setDragging(false);
                 setFlying(true);
                 return;
             }
-            // If not throwable or speed is low, the drop effect will handle settling
+            
+            // If not throwable, the drop effect will handle settling
             isFlyingRef.current = false;
             setDragging(false);
             // Reset throw velocity

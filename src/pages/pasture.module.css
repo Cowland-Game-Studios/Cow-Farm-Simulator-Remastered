@@ -9,3 +9,20 @@
 .UI {
     z-index: 1000;
 }
+
+.fence {
+    position: absolute;
+    bottom: 125px;
+    left: 0;
+    width: 100%;
+    margin: 0;
+    font-family: monospace;
+    font-size: 10px;
+    line-height: 1;
+    color: #aaa;
+    opacity: 0.5;
+    user-select: none;
+    pointer-events: none;
+    z-index: 100;
+    overflow: hidden;
+}

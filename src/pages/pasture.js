@@ -122,6 +122,13 @@ export default function Pasture() {
                         </div>
                     </DraggableSwinging>
 
+                    {/* Fence row at bottom */}
+                    <pre className={styles.fence}>{
+`${'/\\ '.repeat(Math.ceil(window.innerWidth / 10))}
+${'||='.repeat(Math.ceil(window.innerWidth / 10))}
+${'||='.repeat(Math.ceil(window.innerWidth / 10))}`
+                    }</pre>
+
                     {/* Quest Menu (bottom left) */}
                     <QuestMenu />
 
