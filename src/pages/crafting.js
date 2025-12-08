@@ -209,52 +209,60 @@ export default function Crafting({ onClose = () => {} }) {
             {/* Particle system renderer for "-1" indicators */}
             <ParticleRenderer />
 
+            {/* Crafting bench - full center area */}
             {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
-            <div className={styles.spreadEvenlyContainer} onClick={stopPropagation}>
-                {/* Product selection panel */}
-                <div className={`${styles.standardedizedList} ${styles.leftSidebar} ${isClosing ? styles.closing : ''}`}>
-                    <div style={{ marginLeft: "50%" }}>
-                        <div className={styles.list}>
-                            {PRODUCTS.map(product => (
-                                <Button
-                                    key={product.name}
-                                    text="x100"
-                                    image={product.image}
-                                    onMouseDown={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedIngredient({ name: product.name, image: product.image });
-                                    }}
-                                />
-                            ))}
+            <div 
+                className={`${styles.benchTop} ${isClosing ? styles.closing : ''}`} 
+                id="craftingBench"
+                onClick={stopPropagation}
+            >
+                <img
+                    draggable={false}
+                    className={styles.craftingInstructions}
+                    src="./images/crafting/instruction.svg"
+                    alt="Crafting instructions"
+                />
+            </div>
+
+            {/* Product selection panel - left side */}
+            {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+            <div 
+                className={`${styles.standardedizedList} ${styles.leftSidebar} ${isClosing ? styles.closing : ''}`}
+                onClick={stopPropagation}
+            >
+                <div className={styles.list}>
+                    {PRODUCTS.map(product => (
+                        <Button
+                            key={product.name}
+                            text="x100"
+                            image={product.image}
+                            onMouseDown={(e) => {
+                                e.stopPropagation();
+                                setSelectedIngredient({ name: product.name, image: product.image });
+                            }}
+                        />
+                    ))}
+                </div>
+            </div>
+
+            {/* Recipe list - right side */}
+            {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+            <div 
+                className={`${styles.standardedizedList} ${styles.rightSidebar} ${isClosing ? styles.closing : ''}`}
+                onClick={stopPropagation}
+            >
+                <div className={styles.list}>
+                    {CRAFTING_RECIPES.map((recipe, index) => (
+                        <div 
+                            key={recipe.id}
+                            className={`${styles.recipeItem} ${styles[`recipeItem${index + 1}`] || ''} ${isClosing ? `${styles.recipeItemClosing} ${styles[`recipeItemClosing${index + 1}`] || ''}` : ''}`}
+                        >
+                            <CraftingItem
+                                recipe={recipe}
+                                enabled={index === 0}
+                            />
                         </div>
-                    </div>
-                </div>
-
-                {/* Crafting bench */}
-                <div className={`${styles.benchTop} ${isClosing ? styles.closing : ''}`} id="craftingBench">
-                    <img
-                        draggable={false}
-                        className={styles.craftingInstructions}
-                        src="./images/crafting/instruction.svg"
-                        alt="Crafting instructions"
-                    />
-                </div>
-
-                {/* Recipe list */}
-                <div className={`${styles.standardedizedList} ${styles.rightSidebar} ${isClosing ? styles.closing : ''}`}>
-                    <div className={styles.list}>
-                        {CRAFTING_RECIPES.map((recipe, index) => (
-                            <div 
-                                key={recipe.id}
-                                className={`${styles.recipeItem} ${styles[`recipeItem${index + 1}`] || ''} ${isClosing ? `${styles.recipeItemClosing} ${styles[`recipeItemClosing${index + 1}`] || ''}` : ''}`}
-                            >
-                                <CraftingItem
-                                    recipe={recipe}
-                                    enabled={index === 0}
-                                />
-                            </div>
-                        ))}
-                    </div>
+                    ))}
                 </div>
             </div>
 

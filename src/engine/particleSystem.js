@@ -169,7 +169,7 @@ class ParticleSystem {
             vx: (Math.random() - 0.5) * 1.5,
             vy: -3,
             gravity: 0.08,
-            color: '#e74c3c',
+            color: '#000000',
             fontSize: 16,
             lifetime: 1200,
             fadeDelay: 400,

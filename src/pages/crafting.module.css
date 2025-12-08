@@ -200,20 +200,18 @@
     animation: blurFadeOut 0.3s ease-in forwards;
 }
 
-.spreadEvenlyContainer {
+.craftingLayout {
+    position: relative;
     width: 100vw;
     height: 100vh;
-
-    display: flex;
-    justify-content: space-evenly;
-    align-items: center;
 }
 
 .benchTop {
-    position: relative;
-
-    width: 25vw;
-    height: 25vw;
+    position: absolute;
+    left: 150px;
+    right: 150px;
+    top: 50px;
+    bottom: 50px;
 
     border-radius: 50px;
 
@@ -227,7 +225,10 @@
 }
 
 .leftSidebar {
-    /* Container doesn't animate - items animate individually */
+    position: absolute;
+    left: 50px;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 .leftSidebar .list > * {
@@ -259,7 +260,10 @@
 .leftSidebar.closing .list > *:nth-child(8) { animation-delay: 0s; }
 
 .rightSidebar {
-    /* Container doesn't animate - items animate individually */
+    position: absolute;
+    right: 50px;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 .recipeItem {
@@ -305,7 +309,6 @@
 }
 
 .standardedizedList {
-    width: 100px;
     overflow: visible;
 }
 
