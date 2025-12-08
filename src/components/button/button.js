@@ -1,11 +1,11 @@
 import styles from "./button.module.css";
 
-export default function Button({ text, image, onClick, keepOriginalCursor = false, ...props }) {
+export default function Button({ text, image, onClick, keepOriginalCursor = false, hidden = false, ...props }) {
     return (
         <button 
             type="button"
             onClick={onClick ? onClick : () => {}} 
-            className={styles.buttonWrapper}
+            className={`${styles.buttonWrapper} ${hidden ? styles.hidden : ''}`}
             {...props}
         >
             <div className={styles.buttonContainer} style={{

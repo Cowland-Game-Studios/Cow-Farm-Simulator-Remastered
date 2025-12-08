@@ -63,10 +63,10 @@ export default function Pasture() {
                                 {/* <Button text="quest" image={"./images/buttons/questIcon.svg"} onClick={() => {
                                     setShowQuestMenu(!showQuestMenu);
                                 }}/> */}
-                                <Button text="collect" image={"./images/buttons/bucketIcon.svg"} onMouseDown={() => {
+                                <Button text="collect" image={"./images/buttons/bucketIcon.svg"} hidden={isMilking} onMouseDown={() => {
                                     setIsMilking(true);
                                 }}/>
-                                <Button text="feed" image={"./images/buttons/grassIcon.svg"} onMouseDown={() => {
+                                <Button text="feed" image={"./images/buttons/grassIcon.svg"} hidden={isFeeding} onMouseDown={() => {
                                     setIsFeeding(true);
                                 }}/>
                                 <Button text="make" image={"./images/buttons/milkIcon.svg"} onMouseDown={() => {
