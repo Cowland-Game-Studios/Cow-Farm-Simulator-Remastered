@@ -73,6 +73,7 @@ export const createCow = (color: Color, position: Position | null = null): Cow =
     state: 'hungry',
     fullness: GAME_CONFIG.COW.INITIAL_FULLNESS_HUNGRY,
     position: position || { x: 0, y: 0 },
+    lastFedAt: null,
     lastBredAt: 0,
     createdAt: Date.now(),
 });
@@ -100,6 +101,7 @@ export const createInitialState = (): GameState => ({
             state: 'full',
             fullness: 1,
             position: { x: 300, y: 300 },
+            lastFedAt: null,
             lastBredAt: 0,
             createdAt: Date.now(),
         },
@@ -109,6 +111,7 @@ export const createInitialState = (): GameState => ({
             state: 'full',
             fullness: 1,
             position: { x: 500, y: 300 },
+            lastFedAt: null,
             lastBredAt: 0,
             createdAt: Date.now(),
         },
@@ -193,7 +196,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
                         ? { 
                             ...c, 
                             state: 'hungry' as CowState, 
-                            fullness: GAME_CONFIG.COW.INITIAL_FULLNESS_HUNGRY 
+                            fullness: GAME_CONFIG.COW.INITIAL_FULLNESS_HUNGRY,
+                            lastFedAt: null, // Clear timestamp when milked
                           }
                         : c
                 ),
@@ -226,7 +230,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
                         ? { 
                             ...c, 
                             state: 'producing' as CowState, 
-                            fullness: GAME_CONFIG.COW.INITIAL_FULLNESS_PRODUCING 
+                            fullness: GAME_CONFIG.COW.INITIAL_FULLNESS_PRODUCING,
+                            lastFedAt: Date.now(), // Set timestamp when feeding starts
                           }
                         : c
                 ),
@@ -265,6 +270,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
                                 ...cow,
                                 state: 'hungry' as CowState,
                                 fullness: GAME_CONFIG.COW.INITIAL_FULLNESS_HUNGRY,
+                                lastFedAt: null, // Clear timestamp when breeding makes cow hungry
                                 lastBredAt: now,
                             };
                         }
@@ -615,20 +621,23 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
             // Update play time
             const newPlayTime = state.playTime + delta / 1000;
 
-            // Update milk production for all producing cows
-            const fullnessIncrement = delta / GAME_CONFIG.COW.MILK_PRODUCTION_TIME_MS;
+            // Update milk production for all producing cows using timestamp-based calculation
+            // This ensures progress continues correctly even when tab is inactive
+            const now = Date.now();
             
             const updatedCows = state.cows.map(cow => {
-                if (cow.state !== 'producing') return cow;
+                if (cow.state !== 'producing' || cow.lastFedAt === null) return cow;
                 
-                const newFullness = Math.min(1, cow.fullness + fullnessIncrement);
+                // Calculate fullness based on elapsed time since feeding
+                const elapsedMs = now - cow.lastFedAt;
+                const newFullness = Math.min(1, elapsedMs / GAME_CONFIG.COW.MILK_PRODUCTION_TIME_MS);
                 const newState: CowState = newFullness >= 1 ? 'full' : 'producing';
                 
                 return { ...cow, fullness: newFullness, state: newState };
             });
 
             // Process crafting queue - auto-complete finished crafts
-            const now = Date.now();
+            // (reuses 'now' from cow fullness calculation above)
             const completedCrafts = state.craftingQueue.filter(craft => now >= craft.completesAt);
             const remainingCrafts = state.craftingQueue.filter(craft => now < craft.completesAt);
 

@@ -24,8 +24,9 @@ export interface Cow {
     id: string;
     color: Color;
     state: CowState;
-    fullness: number; // 0-1
+    fullness: number; // 0-1 (computed from lastFedAt for 'producing' cows)
     position: Position;
+    lastFedAt: number | null; // timestamp when cow started producing (null if hungry/full)
     lastBredAt: number; // timestamp
     createdAt: number; // timestamp
 }
