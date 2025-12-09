@@ -6,13 +6,18 @@
  * - Text particles with customizable content
  * - Fade out animation
  * - Configurable physics (gravity direction, velocity, etc.)
+ * - Object pooling for memory efficiency
+ * - Max particle limit to prevent unbounded growth
  */
 
-import { v4 as uuidv4 } from 'uuid';
 import { useState, useEffect } from 'react';
 import { GAME_CONFIG } from '../config/gameConfig';
 
 const { PARTICLES } = GAME_CONFIG;
+
+// Memory management constants
+const MAX_PARTICLES = 100; // Maximum active particles
+const POOL_SIZE = 150; // Object pool size (slightly larger than max to handle bursts)
 
 // ============================================
 // PARTICLE TYPES
@@ -84,24 +89,83 @@ export interface SprayOptions {
 }
 
 // ============================================
-// PARTICLE SYSTEM CLASS
+// PARTICLE SYSTEM CLASS (with Object Pooling)
 // ============================================
 
 type ParticleListener = (particles: Particle[]) => void;
 
 class ParticleSystem {
-    private particles: Map<string, Particle>;
+    private activeParticles: Map<string, Particle>;
+    private particlePool: Particle[];
     private listeners: Set<ParticleListener>;
     private animationFrameId: number | null;
     private lastTick: number;
     private running: boolean;
+    private nextId: number;
 
     constructor() {
-        this.particles = new Map();
+        this.activeParticles = new Map();
+        this.particlePool = [];
         this.listeners = new Set();
         this.animationFrameId = null;
         this.lastTick = performance.now();
         this.running = false;
+        this.nextId = 0;
+        
+        // Pre-allocate particle pool
+        this.initializePool();
+    }
+
+    /**
+     * Pre-allocate particles for object pooling
+     */
+    private initializePool(): void {
+        for (let i = 0; i < POOL_SIZE; i++) {
+            this.particlePool.push(this.createEmptyParticle());
+        }
+    }
+
+    /**
+     * Create an empty particle object for the pool
+     */
+    private createEmptyParticle(): Particle {
+        return {
+            id: '',
+            text: '',
+            x: 0,
+            y: 0,
+            vx: 0,
+            vy: 0,
+            gravity: 0,
+            opacity: 0,
+            fadeRate: 0,
+            fadeDelay: 0,
+            color: '',
+            fontSize: 0,
+            createdAt: 0,
+            lifetime: 0,
+        };
+    }
+
+    /**
+     * Get a particle from the pool or create a new one if pool is empty
+     */
+    private acquireParticle(): Particle {
+        if (this.particlePool.length > 0) {
+            return this.particlePool.pop()!;
+        }
+        // Pool exhausted, create new particle (rare case)
+        return this.createEmptyParticle();
+    }
+
+    /**
+     * Return a particle to the pool
+     */
+    private releaseParticle(particle: Particle): void {
+        // Only add back to pool if under limit
+        if (this.particlePool.length < POOL_SIZE) {
+            this.particlePool.push(particle);
+        }
     }
 
     /**
@@ -116,12 +180,13 @@ class ParticleSystem {
      * Notify all listeners of current particles
      */
     private notify(): void {
-        const particleArray = Array.from(this.particles.values());
+        const particleArray = Array.from(this.activeParticles.values());
         this.listeners.forEach(cb => cb(particleArray));
     }
 
     /**
      * Spawn a new particle
+     * Returns empty string if max particles reached
      */
     spawn({
         text = '+1',
@@ -135,25 +200,39 @@ class ParticleSystem {
         lifetime = PARTICLES.DEFAULT_LIFETIME_MS,
         fadeDelay = PARTICLES.DEFAULT_FADE_DELAY_MS,
     }: SpawnOptions = {}): string {
-        const id = uuidv4();
-        const particle: Particle = {
-            id,
-            text,
-            x,
-            y,
-            vx,
-            vy,
-            gravity,
-            opacity: 1,
-            fadeRate: 0,
-            fadeDelay,
-            color,
-            fontSize,
-            createdAt: performance.now(),
-            lifetime,
-        };
+        // Enforce max particle limit
+        if (this.activeParticles.size >= MAX_PARTICLES) {
+            // Remove oldest particle to make room
+            const oldestId = this.activeParticles.keys().next().value;
+            if (oldestId) {
+                const oldParticle = this.activeParticles.get(oldestId);
+                if (oldParticle) {
+                    this.releaseParticle(oldParticle);
+                }
+                this.activeParticles.delete(oldestId);
+            }
+        }
 
-        this.particles.set(id, particle);
+        const id = `p_${this.nextId++}`;
+        const particle = this.acquireParticle();
+        
+        // Reset particle properties
+        particle.id = id;
+        particle.text = text;
+        particle.x = x;
+        particle.y = y;
+        particle.vx = vx;
+        particle.vy = vy;
+        particle.gravity = gravity;
+        particle.opacity = 1;
+        particle.fadeRate = 0;
+        particle.fadeDelay = fadeDelay;
+        particle.color = color;
+        particle.fontSize = fontSize;
+        particle.createdAt = performance.now();
+        particle.lifetime = lifetime;
+
+        this.activeParticles.set(id, particle);
 
         // Start loop if not running
         if (!this.running) {
@@ -343,13 +422,14 @@ class ParticleSystem {
         this.lastTick = now;
 
         let hasActiveParticles = false;
+        const toRemove: string[] = [];
 
-        for (const [id, particle] of this.particles) {
+        for (const [id, particle] of this.activeParticles) {
             const age = now - particle.createdAt;
 
-            // Remove expired particles
+            // Mark expired particles for removal
             if (age > particle.lifetime || particle.opacity <= 0) {
-                this.particles.delete(id);
+                toRemove.push(id);
                 continue;
             }
 
@@ -373,6 +453,15 @@ class ParticleSystem {
             }
         }
 
+        // Remove expired particles and return them to pool
+        for (const id of toRemove) {
+            const particle = this.activeParticles.get(id);
+            if (particle) {
+                this.releaseParticle(particle);
+            }
+            this.activeParticles.delete(id);
+        }
+
         // Notify listeners
         this.notify();
 
@@ -386,10 +475,13 @@ class ParticleSystem {
     }
 
     /**
-     * Clear all particles
+     * Clear all particles (return to pool)
      */
     clear(): void {
-        this.particles.clear();
+        for (const particle of this.activeParticles.values()) {
+            this.releaseParticle(particle);
+        }
+        this.activeParticles.clear();
         this.notify();
     }
 
@@ -397,7 +489,18 @@ class ParticleSystem {
      * Get current particle count
      */
     getCount(): number {
-        return this.particles.size;
+        return this.activeParticles.size;
+    }
+
+    /**
+     * Get pool statistics (for debugging)
+     */
+    getPoolStats(): { active: number; pooled: number; maxActive: number } {
+        return {
+            active: this.activeParticles.size,
+            pooled: this.particlePool.length,
+            maxActive: MAX_PARTICLES,
+        };
     }
 }
 

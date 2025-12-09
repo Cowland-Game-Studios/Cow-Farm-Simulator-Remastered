@@ -165,14 +165,14 @@ export default function Cownsole({ onClose, onMinimize }: CownsoleProps): React.
         }
     }, [output]);
     
-    // Handle close with animation (clears saved output)
+    // Handle close with animation (preserves output for next boot)
     const handleClose = useCallback(() => {
-        clearSavedOutput();
+        saveOutput(output);
         setIsClosing(true);
         setTimeout(() => {
             onClose();
         }, 150);
-    }, [onClose]);
+    }, [onClose, output]);
     
     // Handle minimize with animation (preserves output for next boot)
     const handleMinimize = useCallback(() => {
@@ -335,6 +335,7 @@ export default function Cownsole({ onClose, onMinimize }: CownsoleProps): React.
         
         if (result.clear) {
             setOutput([]);
+            clearSavedOutput();
         } else {
             setOutput(prev => [...prev, {
                 command: trimmedInput,

@@ -206,14 +206,10 @@ export const ActionTypes = {
 export type ActionType = typeof ActionTypes[keyof typeof ActionTypes];
 
 // ============================================
-// ACTION INTERFACES
+// ACTION INTERFACES (Discriminated Union)
 // ============================================
 
-export interface GameAction {
-    type: string;
-    payload?: unknown;
-}
-
+// Cow actions
 export interface MilkCowAction {
     type: typeof ActionTypes.MILK_COW;
     payload: { cowId: string };
@@ -239,6 +235,11 @@ export interface UpdateCowPositionAction {
     payload: { cowId: string; position: Position };
 }
 
+export interface UpdateCowFacingAction {
+    type: typeof ActionTypes.UPDATE_COW_FACING;
+    payload: { cowId: string; facingRight: boolean };
+}
+
 export interface AddCowAction {
     type: typeof ActionTypes.ADD_COW;
     payload: { cow: Cow };
@@ -249,26 +250,39 @@ export interface RemoveCowAction {
     payload: { cowId: string };
 }
 
-export interface TickAction {
-    type: typeof ActionTypes.TICK;
-    payload: { delta: number };
+// Tool actions
+export interface StartMilkingAction {
+    type: typeof ActionTypes.START_MILKING;
 }
 
-export interface LoadSaveAction {
-    type: typeof ActionTypes.LOAD_SAVE;
-    payload: { saveData: Partial<GameState> };
+export interface StopMilkingAction {
+    type: typeof ActionTypes.STOP_MILKING;
 }
 
-export interface MarkSavedAction {
-    type: typeof ActionTypes.MARK_SAVED;
-    payload: { saveId: string; timestamp: number };
+export interface StartFeedingAction {
+    type: typeof ActionTypes.START_FEEDING;
 }
 
-export interface SetUserAction {
-    type: typeof ActionTypes.SET_USER;
-    payload: { userId: string };
+export interface StopFeedingAction {
+    type: typeof ActionTypes.STOP_FEEDING;
 }
 
+export interface UpdateToolPositionAction {
+    type: typeof ActionTypes.UPDATE_TOOL_POSITION;
+    payload: { position: Position };
+}
+
+// Dragging actions
+export interface SetDraggingCowAction {
+    type: typeof ActionTypes.SET_DRAGGING_COW;
+    payload: { cowId: string; position: Position };
+}
+
+export interface ClearDraggingCowAction {
+    type: typeof ActionTypes.CLEAR_DRAGGING_COW;
+}
+
+// Resource actions
 export interface AddCoinsAction {
     type: typeof ActionTypes.ADD_COINS;
     payload: { amount: number };
@@ -279,14 +293,15 @@ export interface SpendCoinsAction {
     payload: { amount: number };
 }
 
+// Inventory actions
 export interface AddItemAction {
     type: typeof ActionTypes.ADD_ITEM;
-    payload: { itemType: string; amount: number };
+    payload: { itemType: string; amount?: number };
 }
 
 export interface RemoveItemAction {
     type: typeof ActionTypes.REMOVE_ITEM;
-    payload: { itemType: string; amount: number };
+    payload: { itemType: string; amount?: number };
 }
 
 export interface SetItemAction {
@@ -294,36 +309,7 @@ export interface SetItemAction {
     payload: { itemType: string; amount: number };
 }
 
-export interface TriggerChaosAction {
-    type: typeof ActionTypes.TRIGGER_CHAOS;
-    payload: { impulses: ChaosImpulses };
-}
-
-export interface ClearCowImpulseAction {
-    type: typeof ActionTypes.CLEAR_COW_IMPULSE;
-    payload: { cowId: string };
-}
-
-export interface SetDraggingCowAction {
-    type: typeof ActionTypes.SET_DRAGGING_COW;
-    payload: { cowId: string; position: Position };
-}
-
-export interface UpdateToolPositionAction {
-    type: typeof ActionTypes.UPDATE_TOOL_POSITION;
-    payload: { position: Position };
-}
-
-export interface SetCraftingDragAction {
-    type: typeof ActionTypes.SET_CRAFTING_DRAG;
-    payload: { isDragging: boolean };
-}
-
-export interface SetBoardCraftAction {
-    type: typeof ActionTypes.SET_BOARD_CRAFT;
-    payload: ActiveBoardCraft;
-}
-
+// Crafting actions
 export interface CraftInstantAction {
     type: typeof ActionTypes.CRAFT_INSTANT;
     payload: { recipeId: string };
@@ -343,6 +329,127 @@ export interface CancelCraftingAction {
     type: typeof ActionTypes.CANCEL_CRAFTING;
     payload: { craftingId: string };
 }
+
+export interface SetBoardCraftAction {
+    type: typeof ActionTypes.SET_BOARD_CRAFT;
+    payload: ActiveBoardCraft | null;
+}
+
+export interface ClearBoardCraftAction {
+    type: typeof ActionTypes.CLEAR_BOARD_CRAFT;
+}
+
+// UI actions
+export interface OpenCraftingAction {
+    type: typeof ActionTypes.OPEN_CRAFTING;
+}
+
+export interface CloseCraftingAction {
+    type: typeof ActionTypes.CLOSE_CRAFTING;
+}
+
+export interface PauseGameAction {
+    type: typeof ActionTypes.PAUSE_GAME;
+}
+
+export interface ResumeGameAction {
+    type: typeof ActionTypes.RESUME_GAME;
+}
+
+export interface SetCraftingDragAction {
+    type: typeof ActionTypes.SET_CRAFTING_DRAG;
+    payload: { isDragging: boolean };
+}
+
+// Game loop
+export interface TickAction {
+    type: typeof ActionTypes.TICK;
+    payload: { delta: number };
+}
+
+// Save/Load
+export interface LoadSaveAction {
+    type: typeof ActionTypes.LOAD_SAVE;
+    payload: { saveData: Partial<GameState> };
+}
+
+export interface MarkSavedAction {
+    type: typeof ActionTypes.MARK_SAVED;
+    payload: { saveId: string; timestamp: number };
+}
+
+export interface SetUserAction {
+    type: typeof ActionTypes.SET_USER;
+    payload: { userId: string };
+}
+
+// Chaos mode
+export interface TriggerChaosAction {
+    type: typeof ActionTypes.TRIGGER_CHAOS;
+    payload: { impulses: ChaosImpulses };
+}
+
+export interface ClearCowImpulseAction {
+    type: typeof ActionTypes.CLEAR_COW_IMPULSE;
+    payload: { cowId: string };
+}
+
+// ============================================
+// DISCRIMINATED UNION OF ALL ACTIONS
+// ============================================
+
+/**
+ * Union type of all game actions
+ * TypeScript will infer the correct payload type based on action.type
+ */
+export type GameAction =
+    // Cow actions
+    | MilkCowAction
+    | FeedCowAction
+    | BreedCowsAction
+    | UpdateCowFullnessAction
+    | UpdateCowPositionAction
+    | UpdateCowFacingAction
+    | AddCowAction
+    | RemoveCowAction
+    // Tool actions
+    | StartMilkingAction
+    | StopMilkingAction
+    | StartFeedingAction
+    | StopFeedingAction
+    | UpdateToolPositionAction
+    // Dragging actions
+    | SetDraggingCowAction
+    | ClearDraggingCowAction
+    // Resource actions
+    | AddCoinsAction
+    | SpendCoinsAction
+    // Inventory actions
+    | AddItemAction
+    | RemoveItemAction
+    | SetItemAction
+    // Crafting actions
+    | CraftInstantAction
+    | StartCraftingAction
+    | CompleteCraftingAction
+    | CancelCraftingAction
+    | SetBoardCraftAction
+    | ClearBoardCraftAction
+    // UI actions
+    | OpenCraftingAction
+    | CloseCraftingAction
+    | PauseGameAction
+    | ResumeGameAction
+    | SetCraftingDragAction
+    // Game loop
+    | TickAction
+    // Save/Load
+    | LoadSaveAction
+    | MarkSavedAction
+    | SetUserAction
+    // Chaos mode
+    | TriggerChaosAction
+    | ClearCowImpulseAction;
 
 export default ActionTypes;
 

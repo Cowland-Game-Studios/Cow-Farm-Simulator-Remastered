@@ -3,6 +3,10 @@
  * 
  * Handles all database operations for the game.
  * Currently operates in offline mode - ready for Supabase connection.
+ * 
+ * Features:
+ * - Race condition prevention with mutex pattern
+ * - Debounced auto-save to batch rapid requests
  */
 
 import { actions } from '../engine/gameState';
@@ -24,6 +28,15 @@ import { GameState, GameAction } from '../engine/types';
 
 // Placeholder until Supabase is connected
 export const supabase: null = null;
+
+// ============================================
+// SAVE MUTEX & DEBOUNCE
+// ============================================
+
+let isSaving = false;
+let pendingSave: { state: GameState; dispatch: React.Dispatch<GameAction> } | null = null;
+let saveDebounceTimer: NodeJS.Timeout | null = null;
+const SAVE_DEBOUNCE_MS = 1000; // Debounce rapid save requests
 
 // ============================================
 // LOCAL STORAGE TYPES
@@ -119,9 +132,9 @@ function loadFromLocalStorage(): SaveData | null {
 // ============================================
 
 /**
- * Save game to Supabase (or localStorage fallback)
+ * Internal save implementation (no mutex)
  */
-export async function saveGame(state: GameState, dispatch: React.Dispatch<GameAction>): Promise<SaveResult> {
+async function saveGameInternal(state: GameState, dispatch: React.Dispatch<GameAction>): Promise<SaveResult> {
     // If no Supabase connection, use localStorage
     if (!supabase) {
         const result = saveToLocalStorage(state);
@@ -174,6 +187,35 @@ export async function saveGame(state: GameState, dispatch: React.Dispatch<GameAc
         console.error('Failed to save to Supabase:', error);
         // Fall back to localStorage
         return saveToLocalStorage(state);
+    }
+}
+
+/**
+ * Save game to Supabase (or localStorage fallback)
+ * Uses mutex pattern to prevent concurrent saves
+ */
+export async function saveGame(state: GameState, dispatch: React.Dispatch<GameAction>): Promise<SaveResult> {
+    // If already saving, queue this save for later
+    if (isSaving) {
+        pendingSave = { state, dispatch };
+        return { success: true, saveId: 'queued' };
+    }
+
+    isSaving = true;
+    
+    try {
+        const result = await saveGameInternal(state, dispatch);
+        return result;
+    } finally {
+        isSaving = false;
+        
+        // Process pending save if one was queued
+        if (pendingSave) {
+            const { state: pendingState, dispatch: pendingDispatch } = pendingSave;
+            pendingSave = null;
+            // Use setTimeout to avoid stack overflow on rapid saves
+            setTimeout(() => saveGame(pendingState, pendingDispatch), 0);
+        }
     }
 }
 
@@ -249,17 +291,32 @@ export async function loadGame(dispatch: React.Dispatch<GameAction>): Promise<Sa
 
 /**
  * Auto-save (called periodically)
+ * Debounced to prevent rapid consecutive saves
  */
 export async function autoSave(state: GameState, dispatch: React.Dispatch<GameAction>): Promise<SaveResult | undefined> {
     // Only auto-save if there's been activity since last save
     const timeSinceLastSave = Date.now() - state.lastSavedAt;
     if (timeSinceLastSave < GAME_CONFIG.UI.MIN_SAVE_INTERVAL_MS) return;
 
-    // Only log in development
-    if (process.env.NODE_ENV === 'development') {
-        console.log('Auto-saving...');
+    // Clear any pending debounce timer
+    if (saveDebounceTimer) {
+        clearTimeout(saveDebounceTimer);
     }
-    return saveGame(state, dispatch);
+
+    // Return a promise that resolves when the debounced save completes
+    return new Promise((resolve) => {
+        saveDebounceTimer = setTimeout(async () => {
+            saveDebounceTimer = null;
+            
+            // Only log in development
+            if (process.env.NODE_ENV === 'development') {
+                console.log('Auto-saving...');
+            }
+            
+            const result = await saveGame(state, dispatch);
+            resolve(result);
+        }, SAVE_DEBOUNCE_MS);
+    });
 }
 
 /**
