@@ -6,14 +6,18 @@
  * - Game loop integration
  * - Collision engine integration
  * - Mouse/Touch position tracking
- * - Save/Load functionality with loading states
+ * - Save/Load functionality with auto-save
  */
 
 import React, { createContext, useContext, useReducer, useEffect, useState, useCallback, useRef, useMemo, ReactNode } from 'react';
 import { gameReducer, createInitialState, actions, colorToString } from './gameState';
 import { useGameLoop } from './gameLoop';
-import { saveGame, loadGame, autoSave } from '../services/supabaseService';
-import { GAME_CONFIG } from '../config/gameConfig';
+import { 
+    saveGame as saveGameToStorage, 
+    loadGame as loadGameFromStorage,
+    deleteSave,
+    SAVE_CONFIG,
+} from '../save';
 import { GameState, GameAction, Position, Cow, GameResources, Inventory, CraftingQueueItem, ToolState, UIState, DraggingCow, ChaosImpulses, ActiveBoardCraft, Color, Recipe } from './types';
 
 // ============================================
@@ -23,6 +27,7 @@ import { GameState, GameAction, Position, Cow, GameResources, Inventory, Craftin
 interface SaveLoadState {
     saving: boolean;
     loading: boolean;
+    lastSavedAt: number;
     error: string | null;
 }
 
@@ -77,10 +82,11 @@ interface GameContextValue {
     isPaused: boolean;
     
     // Save/Load with loading states
-    saveGame: () => Promise<{ success: boolean; saveId?: string; error?: unknown }>;
-    loadGame: () => Promise<{ success: boolean; source?: string; error?: unknown }>;
+    saveGame: () => { success: boolean; error?: unknown };
+    resetGame: () => void;
     isSaving: boolean;
     isLoading: boolean;
+    lastSavedAt: number;
     saveLoadError: string | null;
     
     // Utilities
@@ -96,6 +102,36 @@ const GameContext = createContext<GameContextValue | null>(null);
 const MouseContext = createContext<Position>({ x: 0, y: 0 });
 
 // ============================================
+// INITIAL STATE WITH LOAD
+// ============================================
+
+/**
+ * Create initial state, loading from save if available
+ */
+function createInitialStateWithLoad(): GameState {
+    // Try to load saved game
+    const savedState = loadGameFromStorage();
+    
+    if (savedState) {
+        console.log('Loaded save data, play time:', Math.round(savedState.playTime), 'seconds');
+        
+        // Merge saved state with fresh initial state (to get any new fields)
+        const freshState = createInitialState();
+        return {
+            ...freshState,
+            cows: savedState.cows,
+            resources: savedState.resources,
+            inventory: savedState.inventory,
+            craftingQueue: savedState.craftingQueue,
+            activeBoardCraft: savedState.activeBoardCraft,
+            playTime: savedState.playTime,
+        };
+    }
+    
+    return createInitialState();
+}
+
+// ============================================
 // GAME PROVIDER COMPONENT
 // ============================================
 
@@ -104,16 +140,53 @@ interface GameProviderProps {
 }
 
 export function GameProvider({ children }: GameProviderProps): React.ReactElement {
-    const [state, dispatch] = useReducer(gameReducer, null, createInitialState);
+    const [state, dispatch] = useReducer(gameReducer, null, createInitialStateWithLoad);
     const [mousePosition, setMousePosition] = useState<Position>({ x: 0, y: 0 });
-    const [saveLoadState, setSaveLoadState] = useState<SaveLoadState>({ saving: false, loading: false, error: null });
+    const [saveLoadState, setSaveLoadState] = useState<SaveLoadState>({ 
+        saving: false, 
+        loading: false, 
+        lastSavedAt: 0,
+        error: null 
+    });
     const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const stateRef = useRef<GameState>(state);
+    const lastSaveTimeRef = useRef<number>(0);
 
     // Keep stateRef updated to avoid stale closures in auto-save
     useEffect(() => {
         stateRef.current = state;
     }, [state]);
+
+    // ---- Perform Save ----
+    const performSave = useCallback(() => {
+        const now = Date.now();
+        
+        // Debounce saves
+        if (now - lastSaveTimeRef.current < SAVE_CONFIG.MIN_SAVE_INTERVAL_MS) {
+            return { success: true };
+        }
+        
+        setSaveLoadState(prev => ({ ...prev, saving: true, error: null }));
+        
+        const result = saveGameToStorage(stateRef.current);
+        
+        if (result.success) {
+            lastSaveTimeRef.current = now;
+            setSaveLoadState(prev => ({ 
+                ...prev, 
+                saving: false, 
+                lastSavedAt: now 
+            }));
+        } else {
+            setSaveLoadState(prev => ({ 
+                ...prev, 
+                saving: false, 
+                error: result.error instanceof Error ? result.error.message : 'Save failed'
+            }));
+        }
+        
+        return result;
+    }, []);
 
     // ---- Mouse and Touch Position Tracking ----
     useEffect(() => {
@@ -175,48 +248,39 @@ export function GameProvider({ children }: GameProviderProps): React.ReactElemen
         };
     }, [state.tools.milking, state.tools.feeding]);
 
-    // ---- Auto-Save (when Supabase is connected) ----
+    // ---- Auto-Save Interval ----
     useEffect(() => {
-        // Auto-save every 30 seconds if user is logged in
-        if (state.userId) {
-            autoSaveIntervalRef.current = setInterval(() => {
-                // Use stateRef to avoid stale closure
-                autoSave(stateRef.current, dispatch);
-            }, GAME_CONFIG.UI.AUTO_SAVE_INTERVAL_MS);
-        }
+        // Auto-save every 30 seconds
+        autoSaveIntervalRef.current = setInterval(() => {
+            performSave();
+        }, SAVE_CONFIG.AUTO_SAVE_INTERVAL_MS);
 
         return () => {
             if (autoSaveIntervalRef.current) {
                 clearInterval(autoSaveIntervalRef.current);
             }
         };
-    }, [state.userId]);
+    }, [performSave]);
 
-    // ---- Save/Load with Loading States ----
-    const handleSaveGame = useCallback(async () => {
-        setSaveLoadState(prev => ({ ...prev, saving: true, error: null }));
-        try {
-            const result = await saveGame(stateRef.current, dispatch);
-            setSaveLoadState(prev => ({ ...prev, saving: false }));
-            return result;
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            setSaveLoadState(prev => ({ ...prev, saving: false, error: errorMessage }));
-            return { success: false, error };
-        }
+    // ---- Save on Page Unload ----
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            // Synchronous save on page close
+            saveGameToStorage(stateRef.current);
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
     }, []);
 
-    const handleLoadGame = useCallback(async () => {
-        setSaveLoadState(prev => ({ ...prev, loading: true, error: null }));
-        try {
-            const result = await loadGame(dispatch);
-            setSaveLoadState(prev => ({ ...prev, loading: false }));
-            return result;
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            setSaveLoadState(prev => ({ ...prev, loading: false, error: errorMessage }));
-            return { success: false, error };
-        }
+    // ---- Reset Game ----
+    const resetGame = useCallback(() => {
+        deleteSave();
+        // Reload the page to reset everything
+        window.location.reload();
     }, []);
 
     // ---- Memoized Action Creators ----
@@ -282,16 +346,17 @@ export function GameProvider({ children }: GameProviderProps): React.ReactElemen
         isPaused: gameLoop.isPaused,
         
         // Save/Load with loading states
-        saveGame: handleSaveGame,
-        loadGame: handleLoadGame,
+        saveGame: performSave,
+        resetGame,
         isSaving: saveLoadState.saving,
         isLoading: saveLoadState.loading,
+        lastSavedAt: saveLoadState.lastSavedAt,
         saveLoadError: saveLoadState.error,
         
         // Utilities
         colorToString,
         mousePosition,
-    }), [state, actionCreators, gameLoop.pause, gameLoop.resume, gameLoop.isPaused, handleSaveGame, handleLoadGame, saveLoadState, mousePosition]);
+    }), [state, actionCreators, gameLoop.pause, gameLoop.resume, gameLoop.isPaused, performSave, resetGame, saveLoadState, mousePosition]);
 
     return (
         <GameContext.Provider value={contextValue}>
@@ -423,5 +488,12 @@ export function useCrafting() {
     };
 }
 
-export default GameProvider;
+/**
+ * Access save state
+ */
+export function useSaveState() {
+    const { isSaving, isLoading, lastSavedAt, saveLoadError, saveGame, resetGame } = useGame();
+    return { isSaving, isLoading, lastSavedAt, saveLoadError, saveGame, resetGame };
+}
 
+export default GameProvider;

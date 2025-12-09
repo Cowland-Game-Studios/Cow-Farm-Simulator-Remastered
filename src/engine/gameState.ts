@@ -73,6 +73,7 @@ export const createCow = (color: Color, position: Position | null = null): Cow =
     state: 'hungry',
     fullness: GAME_CONFIG.COW.INITIAL_FULLNESS_HUNGRY,
     position: position || { x: 0, y: 0 },
+    facingRight: Math.random() > 0.5, // Random initial facing
     lastFedAt: null,
     lastBredAt: 0,
     createdAt: Date.now(),
@@ -101,6 +102,7 @@ export const createInitialState = (): GameState => ({
             state: 'full',
             fullness: 1,
             position: { x: 300, y: 300 },
+            facingRight: false,
             lastFedAt: null,
             lastBredAt: 0,
             createdAt: Date.now(),
@@ -111,6 +113,7 @@ export const createInitialState = (): GameState => ({
             state: 'full',
             fullness: 1,
             position: { x: 500, y: 300 },
+            facingRight: true,
             lastFedAt: null,
             lastBredAt: 0,
             createdAt: Date.now(),
@@ -302,6 +305,16 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
                 ...state,
                 cows: state.cows.map(cow =>
                     cow.id === cowId ? { ...cow, position } : cow
+                ),
+            };
+        }
+
+        case ActionTypes.UPDATE_COW_FACING: {
+            const { cowId, facingRight } = action.payload as { cowId: string; facingRight: boolean };
+            return {
+                ...state,
+                cows: state.cows.map(cow =>
+                    cow.id === cowId ? { ...cow, facingRight } : cow
                 ),
             };
         }
@@ -737,6 +750,10 @@ export const actions = {
     updateCowPosition: (cowId: string, position: Position): GameAction => ({ 
         type: ActionTypes.UPDATE_COW_POSITION, 
         payload: { cowId, position } 
+    }),
+    updateCowFacing: (cowId: string, facingRight: boolean): GameAction => ({ 
+        type: ActionTypes.UPDATE_COW_FACING, 
+        payload: { cowId, facingRight } 
     }),
     addCow: (cow: Cow): GameAction => ({ type: ActionTypes.ADD_COW, payload: { cow } }),
     removeCow: (cowId: string): GameAction => ({ type: ActionTypes.REMOVE_COW, payload: { cowId } }),

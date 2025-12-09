@@ -26,6 +26,7 @@ export interface Cow {
     state: CowState;
     fullness: number; // 0-1 (computed from lastFedAt for 'producing' cows)
     position: Position;
+    facingRight: boolean; // which direction the cow faces
     lastFedAt: number | null; // timestamp when cow started producing (null if hungry/full)
     lastBredAt: number; // timestamp
     createdAt: number; // timestamp
@@ -148,6 +149,7 @@ export const ActionTypes = {
     BREED_COWS: 'BREED_COWS',
     UPDATE_COW_FULLNESS: 'UPDATE_COW_FULLNESS',
     UPDATE_COW_POSITION: 'UPDATE_COW_POSITION',
+    UPDATE_COW_FACING: 'UPDATE_COW_FACING',
     ADD_COW: 'ADD_COW',
     REMOVE_COW: 'REMOVE_COW',
 

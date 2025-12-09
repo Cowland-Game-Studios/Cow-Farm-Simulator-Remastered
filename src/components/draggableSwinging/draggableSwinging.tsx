@@ -89,6 +89,7 @@ export default function DraggableSwinging({
     const mousePositionRef = useRef<Position>({ x: 0, y: 0 }); // Ref for animation loop to read current mouse position
     const throwVelocityRef = useRef<Position>({ x: 0, y: 0 }); // Track actual throw velocity from mouse movement
     const draggingRef = useRef<boolean>(false); // Ref to track dragging state for event handlers (avoids stale closure)
+    const hasInteractedRef = useRef<boolean>(false); // Track if user has interacted (to avoid drop effect on mount)
 
     const isControlled = isActive !== null;
 
@@ -500,6 +501,7 @@ export default function DraggableSwinging({
         if (dragging) return;
         if (flying) return; // Flying mode handles its own settling
         if (isFlyingRef.current) return; // Also check ref to handle race condition
+        if (!hasInteractedRef.current) return; // Skip on initial mount (before user picks up)
 
         const dropX = objectPosRef.current.x || mousePosition.x;
         const dropY = objectPosRef.current.y || mousePosition.y;
@@ -579,6 +581,8 @@ export default function DraggableSwinging({
             onMouseDown={() => {
                 if (disabled) return;
                 if (isControlled && !isActive) return;
+                // Mark that user has interacted
+                hasInteractedRef.current = true;
                 // Stop flying if currently in flight
                 isFlyingRef.current = false;
                 setFlying(false);
@@ -599,6 +603,8 @@ export default function DraggableSwinging({
             onTouchStart={() => {
                 if (disabled) return;
                 if (isControlled && !isActive) return;
+                // Mark that user has interacted
+                hasInteractedRef.current = true;
                 // Stop flying if currently in flight
                 isFlyingRef.current = false;
                 setFlying(false);

@@ -16,6 +16,7 @@ import {
     colorToString,
     particleSystem,
     Position,
+    actions,
 } from "../../engine";
 import { GAME_CONFIG } from "../../config/gameConfig";
 
@@ -28,7 +29,7 @@ interface CowProps {
 
 export default function Cow({ cowId }: CowProps): React.ReactElement | null {
     // ---- Get cow data from central state ----
-    const { state, breedCows, updateCowPosition, setDraggingCow, clearDraggingCow, draggingCow, chaosImpulses, clearCowImpulse } = useGame();
+    const { state, dispatch, breedCows, updateCowPosition, setDraggingCow, clearDraggingCow, draggingCow, chaosImpulses, clearCowImpulse } = useGame();
     const cow = state.cows.find(c => c.id === cowId);
     
     // ---- Chaos mode impulse ----
@@ -36,7 +37,6 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
     
     // ---- Local visual state (not saved) ----
     const [cowOffset, setCowOffset] = useState<Position>({ x: 0, y: 0 });
-    const [cowFlipHorizontal, setCowFlipHorizontal] = useState(false);
     const [isPulsing, setIsPulsing] = useState(false);
     const [isBreedTarget, setIsBreedTarget] = useState(false);
     const [isBeingDragged, setIsBeingDragged] = useState(false);
@@ -44,6 +44,9 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
     const pulseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const pickupPositionRef = useRef<Position | null>(null);
     const breedCheckThrottleRef = useRef<number>(0); // Timestamp of last breed target check
+    
+    // ---- Get facing direction from cow data ----
+    const facingRight = cow?.facingRight ?? false;
 
     // ---- DOM-based collision detection (for breeding only) ----
     const isTouchingCow = useCallback((otherCowId: string, maxDistance: number = COW_CONFIG.TOUCH_DISTANCE_THRESHOLD): boolean => {
@@ -93,7 +96,8 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
             const randomY = Math.random() * COW_CONFIG.MOVE_MAX_DISTANCE - COW_CONFIG.MOVE_MAX_DISTANCE / 2;
 
             setCowOffset({ x: randomX, y: randomY });
-            setCowFlipHorizontal(randomX > 0);
+            // Update facing direction in state (persisted)
+            dispatch(actions.updateCowFacing(cowId, randomX > 0));
 
             moveTimeoutRef.current = setTimeout(
                 moveRandomly,
@@ -108,7 +112,7 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
                 clearTimeout(moveTimeoutRef.current);
             }
         };
-    }, [cowState]); // Only re-run when cow state actually changes
+    }, [cowState, cowId, dispatch]); // Only re-run when cow state actually changes
 
     // ---- "Ready to milk" pulse animation (only when full) ----
     useEffect(() => {
@@ -329,7 +333,7 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
                     >
                         <div
                             style={{
-                                transform: `scaleX(${cowFlipHorizontal ? -1 : 1}) scale(${getCowScale()})`,
+                                transform: `scaleX(${facingRight ? -1 : 1}) scale(${getCowScale()})`,
                                 transition: "all 0.25s ease-in-out",
                             }}
                         >

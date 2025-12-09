@@ -65,6 +65,7 @@ export {
     useResources,
     useInventory,
     useCrafting,
+    useSaveState,
 } from './GameProvider';
 
 // Default export is the provider

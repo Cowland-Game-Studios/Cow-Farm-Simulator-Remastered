@@ -5,14 +5,15 @@
  * - GameProvider for state management
  * - Collision engine for interactions
  * - Single game loop
- * - Supabase-ready persistence
+ * - Auto-save with visual indicator
  * - Error boundary for graceful error handling
  */
 
-import { GameProvider, useMousePosition, useTools, useGame } from "./engine";
+import { GameProvider, useMousePosition, useTools, useGame, useSaveState } from "./engine";
 import Pasture from "./pages/pasture";
 import BlobCursor from "./components/cursor/BlobCursor";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { AutosaveIndicator } from "./components/autosaveIndicator";
 
 import "./App.css";
 
@@ -29,12 +30,19 @@ function CursorWrapper(): React.ReactElement {
     return <BlobCursor mousePosition={mousePosition} isDragging={isDragging} />;
 }
 
+// Autosave indicator wrapper
+function AutosaveWrapper(): React.ReactElement {
+    const { isSaving, lastSavedAt } = useSaveState();
+    return <AutosaveIndicator isSaving={isSaving} lastSavedAt={lastSavedAt} />;
+}
+
 function App(): React.ReactElement {
     return (
         <ErrorBoundary>
         <GameProvider>
             <main className="canvas">
                 <CursorWrapper />
+                <AutosaveWrapper />
                 <Pasture />
             </main>
         </GameProvider>
