@@ -497,24 +497,27 @@ const commands: Record<string, CommandHandler> = {
     },
 
     /**
-     * Show help
+     * cow halp - Show help
      */
-    help: () => {
-        const helpText = `
+    cow: (args) => {
+        const subcommand = args[0];
+        
+        if (subcommand?.toLowerCase() === 'halp') {
+            const helpText = `
 🐄 Moo.sh Commands
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   ls [path]              List state keys
-  ls --state [p]    Full state dump
-  ls --config [p]   Show game config
+  ls --state [p]         Full state dump
+  ls --config [p]        Show game config
   get <path>             Get value at path
   set <path> <val>       Set value at path
-  set --config <p> <v>  Override config
+  set --config <p> <v>   Override config
   add <path> <num>       Add to numeric value
   mkMoo [state]          Spawn a new cow 🐄
   rmMoo [index]          Remove a cow 🐄💀
   clear                  Clear console output
-  help                   Show this help
+  cow halp               Show this help
   cowsay [msg]           🐄
   udder chaos            ???
 
@@ -527,19 +530,9 @@ Examples:
   mkMoo full
   rmMoo 0
   cowsay Hello World!
-        `.trim();
-        
-        return { success: true, output: helpText };
-    },
-
-    /**
-     * Secret "cow" command
-     */
-    cow: (args) => {
-        const subcommand = args[0];
-        
-        if (subcommand?.toLowerCase() === 'halp') {
-            return commands.help([], {} as GameState, (() => {}) as React.Dispatch<GameAction>);
+            `.trim();
+            
+            return { success: true, output: helpText };
         }
         
         return { success: true, output: '🐄 Moo?' };
@@ -742,7 +735,7 @@ export function executeCommand(input: string, state: GameState, dispatch: React.
     if (!handler) {
         return { 
             success: false, 
-            output: `Unknown command: "${commandInput}"\nType "help" for available commands.` 
+            output: `Unknown command: "${commandInput}"\nType "cow halp" for available commands.` 
         };
     }
     

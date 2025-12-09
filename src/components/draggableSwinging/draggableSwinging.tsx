@@ -93,6 +93,12 @@ export default function DraggableSwinging({
 
     const isControlled = isActive !== null;
 
+    // Store callbacks in refs to avoid triggering effects when callbacks change
+    const onDropRef = useRef(onDrop);
+    const onPositionChangeRef = useRef(onPositionChange);
+    onDropRef.current = onDrop;
+    onPositionChangeRef.current = onPositionChange;
+
     // Check collision with target elements using DOM
     const checkCollisions = useCallback((position: Position) => {
         if (!onCollide || !collisionTargets || collisionTargets.length === 0) return;
@@ -122,16 +128,16 @@ export default function DraggableSwinging({
         }
     }, [onCollide, collisionTargets, collisionThreshold]);
 
-    const isPositionBad = (x: number, y: number): boolean => {
+    const isPositionBad = useCallback((x: number, y: number): boolean => {
         if (canGoOffScreen) {
             return false;
         }
         return (x < safeArea || x > window.innerWidth - safeArea) || 
                (y < safeArea || y > window.innerHeight - bottomSafeArea);
-    };
+    }, [canGoOffScreen, safeArea, bottomSafeArea]);
 
     // Clamp position to the closest safe spot within bounds
-    const getClosestSafePosition = (x: number, y: number): Position => {
+    const getClosestSafePosition = useCallback((x: number, y: number): Position => {
         const minX = safeArea;
         const maxX = window.innerWidth - safeArea;
         const minY = safeArea;
@@ -141,22 +147,22 @@ export default function DraggableSwinging({
             x: Math.max(minX, Math.min(maxX, x)),
             y: Math.max(minY, Math.min(maxY, y))
         };
-    };
+    }, [safeArea, bottomSafeArea]);
 
     // Get a random valid starting location
-    const getRandomValidLocation = (): Position => {
+    const getRandomValidLocation = useCallback((): Position => {
         const x = Math.random() * (window.innerWidth - safeArea * 2) + safeArea;
         const y = Math.random() * (window.innerHeight - safeArea - bottomSafeArea) + safeArea;
         return { x, y };
-    };
+    }, [safeArea, bottomSafeArea]);
 
     // Get initial position - use provided position if valid, otherwise random
-    const getInitialPosition = (): Position => {
+    const getInitialPosition = useCallback((): Position => {
         if (initialPosition && initialPosition.x && initialPosition.y) {
             return getClosestSafePosition(initialPosition.x, initialPosition.y);
         }
         return getRandomValidLocation();
-    };
+    }, [initialPosition, getClosestSafePosition, getRandomValidLocation]);
 
     const [restPosition, setRestPosition] = useState<Position>(getInitialPosition);
     const [objectPos, setObjectPos] = useState<Position>({ x: 0, y: 0 });
@@ -181,13 +187,11 @@ export default function DraggableSwinging({
         const initialPos = getInitialPosition();
         spawnPositionRef.current = initialPos;
         
-        // Report initial position to collision engine
-        if (onPositionChange) {
-            onPositionChange(initialPos);
+        // Report initial position to collision engine (use ref to avoid re-reporting on callback change)
+        if (onPositionChangeRef.current) {
+            onPositionChangeRef.current(initialPos);
         }
-    // Intentionally run only on mount - onPositionChange excluded to avoid re-reporting position on callback changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [onPositionChange]);
+    }, [getInitialPosition]);
 
     // Handle external impulse (for chaos mode etc)
     useEffect(() => {
@@ -203,6 +207,7 @@ export default function DraggableSwinging({
     }, [impulse]);
 
     // Handle controlled visibility (isActive prop)
+    // Uses mousePositionRef to capture current mouse position at state change time
     useEffect(() => {
         if (!isControlled) return;
 
@@ -212,17 +217,20 @@ export default function DraggableSwinging({
             setOpacity(1);
             setDragging(true);
             
+            // Capture current mouse position at moment of activation (via ref, not prop)
+            const currentMouse = mousePositionRef.current;
+            
             // Position at mouse
             objectPosRef.current = { 
-                x: mousePosition.x, 
-                y: mousePosition.y + ropeLength 
+                x: currentMouse.x, 
+                y: currentMouse.y + ropeLength 
             };
             setObjectPos(objectPosRef.current);
-            setRestPosition({ x: mousePosition.x, y: mousePosition.y });
+            setRestPosition({ x: currentMouse.x, y: currentMouse.y });
             
             // Reset all velocity/tracking refs for clean start
             velocityRef.current = { x: 0, y: 0 };
-            lastMousePosRef.current = { x: mousePosition.x, y: mousePosition.y };
+            lastMousePosRef.current = { x: currentMouse.x, y: currentMouse.y };
             throwVelocityRef.current = { x: 0, y: 0 };
         } else {
             // Becoming inactive - fade out from current position (don't move)
@@ -244,18 +252,20 @@ export default function DraggableSwinging({
             }, UI.HIDE_TIMEOUT_MS);
             return () => clearTimeout(hideTimeout);
         }
-    // mousePosition and ropeLength excluded - we capture current values when isActive changes,
-    // not when these values change (would cause unwanted re-positioning during drag)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isActive, isControlled]);
+    }, [isActive, isControlled, ropeLength]);
 
-    // Initialize object position below the rest position
+    // Store initial rest position in ref for mount-only initialization
+    const initialRestPositionRef = useRef(restPosition);
+    const initialRopeLengthRef = useRef(ropeLength);
+
+    // Initialize object position below the rest position (mount only)
     useEffect(() => {
-        const initialPos = { x: restPosition.x, y: restPosition.y + ropeLength };
+        const initialPos = { 
+            x: initialRestPositionRef.current.x, 
+            y: initialRestPositionRef.current.y + initialRopeLengthRef.current 
+        };
         objectPosRef.current = initialPos;
         setObjectPos(initialPos);
-    // Intentionally run only on mount - restPosition/ropeLength read from initial values only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Ref to track if we're transitioning to flying mode (avoids race condition with drop effect)
@@ -394,10 +404,10 @@ export default function DraggableSwinging({
                     setRestPosition(finalPos);
                     velocityRef.current = { x: 0, y: 0 };
                     
-                    if (onPositionChange) {
-                        onPositionChange(finalPos);
+                    if (onPositionChangeRef.current) {
+                        onPositionChangeRef.current(finalPos);
                     }
-                    onDrop(finalPos);
+                    onDropRef.current(finalPos);
                     return; // Stop animation
                 }
             }
@@ -410,8 +420,8 @@ export default function DraggableSwinging({
             setObjectPos({ x: newX, y: newY });
 
             // Notify collision engine of position change
-            if (onPositionChange) {
-                onPositionChange({ x: newX, y: newY });
+            if (onPositionChangeRef.current) {
+                onPositionChangeRef.current({ x: newX, y: newY });
             }
 
             // Check for collisions with targets
@@ -437,10 +447,7 @@ export default function DraggableSwinging({
                 cancelAnimationFrame(animationRef.current);
             }
         };
-    // bottomSafeArea excluded - uses current value via closure in animation loop (not reactive)
-    // Helper functions use refs to avoid stale closures in requestAnimationFrame
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dragging, flying, gravity, damping, ropeLength, safeArea, checkCollisions, onDrop, onPositionChange]);
+    }, [dragging, flying, gravity, damping, ropeLength, safeArea, bottomSafeArea, checkCollisions, getClosestSafePosition]);
 
     // Handle mouse/touch up (only for non-controlled mode)
     useEffect(() => {
@@ -476,9 +483,12 @@ export default function DraggableSwinging({
         };
 
         const resize = () => {
-            if (!dragging && !flying && isPositionBad(restPosition.x, restPosition.y)) {
-                setRestPosition(getClosestSafePosition(restPosition.x, restPosition.y));
-            }
+            setRestPosition(prev => {
+                if (!dragging && !flying && isPositionBad(prev.x, prev.y)) {
+                    return getClosestSafePosition(prev.x, prev.y);
+                }
+                return prev;
+            });
         };
 
         window.addEventListener("mouseup", up);
@@ -490,10 +500,7 @@ export default function DraggableSwinging({
             window.removeEventListener("touchend", up);
             window.removeEventListener("resize", resize);
         };
-    // Helper functions (isPositionBad, getClosestSafePosition) use component-scoped values
-    // Uses draggingRef to avoid stale closure issues with event listeners
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dragging, flying, restPosition, isControlled, throwable]);
+    }, [dragging, flying, isControlled, throwable, isPositionBad, getClosestSafePosition]);
 
     // Handle drop (only for non-controlled mode, and only if not flying)
     useEffect(() => {
@@ -503,8 +510,9 @@ export default function DraggableSwinging({
         if (isFlyingRef.current) return; // Also check ref to handle race condition
         if (!hasInteractedRef.current) return; // Skip on initial mount (before user picks up)
 
-        const dropX = objectPosRef.current.x || mousePosition.x;
-        const dropY = objectPosRef.current.y || mousePosition.y;
+        // Use refs to get current values at moment of drop
+        const dropX = objectPosRef.current.x || mousePositionRef.current.x;
+        const dropY = objectPosRef.current.y || mousePositionRef.current.y;
 
         let finalPos: Position;
         if (isPositionBad(dropX, dropY)) {
@@ -520,16 +528,13 @@ export default function DraggableSwinging({
         // Reset velocity on drop
         velocityRef.current = { x: 0, y: 0 };
 
-        // Report final position to collision engine
-        if (onPositionChange) {
-            onPositionChange(finalPos);
+        // Report final position to collision engine (use ref to avoid triggering effect on callback change)
+        if (onPositionChangeRef.current) {
+            onPositionChangeRef.current(finalPos);
         }
 
-        onDrop(finalPos);
-    // mousePosition, ropeLength, onDrop, onPositionChange excluded - this effect handles state transitions,
-    // not prop changes. Uses refs and current values when dragging/flying state changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dragging, flying, isControlled]);
+        onDropRef.current(finalPos);
+    }, [dragging, flying, isControlled, ropeLength, isPositionBad, getClosestSafePosition]);
 
     // Calculate rotation based on rope angle (when dragging) or velocity/spin (when flying)
     const getRotation = (): number => {

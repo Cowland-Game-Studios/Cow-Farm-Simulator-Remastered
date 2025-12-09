@@ -95,6 +95,7 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
     const craftingIngredientIdsRef = useRef<number[]>([]);
     const componentMountedRef = useRef(true);
     const timedCraftingCompletedRef = useRef(false);
+    const hasRestoredCraftingRef = useRef(false);
 
     // Keep refs in sync with state
     useEffect(() => {
@@ -177,28 +178,31 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
     // ============================================
     
     useEffect(() => {
-        if (activeBoardCraft && !timedCrafting) {
-            const recipe = RECIPES.find(r => r.id === activeBoardCraft.recipeId);
-            if (recipe) {
-                setIngredientsPlaced(activeBoardCraft.ingredients || []);
-                setTimedCrafting({
-                    startedAt: activeBoardCraft.startedAt,
-                    duration: activeBoardCraft.duration,
-                    recipe,
-                    ingredientIds: activeBoardCraft.ingredientIds,
-                });
-                setCraftingRecipe(recipe);
-                setCraftingIngredientIds(activeBoardCraft.ingredientIds);
-                setCraftingPhase('spinning');
-                
-                requestAnimationFrame(() => {
-                    const pos = getSidebarItemPosition(recipe.outputs[0].item);
-                    setOutputTargetPosition(pos);
-                });
-            }
+        // Only restore once - use ref to prevent repeated restoration
+        if (hasRestoredCraftingRef.current) return;
+        if (!activeBoardCraft || timedCrafting) return;
+        
+        hasRestoredCraftingRef.current = true;
+        
+        const recipe = RECIPES.find(r => r.id === activeBoardCraft.recipeId);
+        if (recipe) {
+            setIngredientsPlaced(activeBoardCraft.ingredients || []);
+            setTimedCrafting({
+                startedAt: activeBoardCraft.startedAt,
+                duration: activeBoardCraft.duration,
+                recipe,
+                ingredientIds: activeBoardCraft.ingredientIds,
+            });
+            setCraftingRecipe(recipe);
+            setCraftingIngredientIds(activeBoardCraft.ingredientIds);
+            setCraftingPhase('spinning');
+            
+            requestAnimationFrame(() => {
+                const pos = getSidebarItemPosition(recipe.outputs[0].item);
+                setOutputTargetPosition(pos);
+            });
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [activeBoardCraft, timedCrafting]);
 
     // ============================================
     // TIMED CRAFTING TIMER
@@ -603,12 +607,14 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
             <ParticleRenderer />
 
             {/* Crafting bench */}
-            {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
             <div 
                 className={`${styles.benchTop} ${isClosing ? styles.closing : ''} ${animationComplete ? styles.animationDone : ''}`} 
                 id="craftingBench"
                 onClick={stopPropagation}
+                onKeyDown={(e) => e.stopPropagation()}
                 onTouchStart={animationComplete ? handleSwipeStart : undefined}
+                role="region"
+                aria-label="Crafting bench"
                 style={animationComplete ? {
                     transform: `translate(-50%, -50%) translateY(${swipeOffset}px)`,
                     transition: isSwiping ? 'none' : 'transform 0.3s ease-out',

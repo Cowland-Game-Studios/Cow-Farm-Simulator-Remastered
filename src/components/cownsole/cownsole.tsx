@@ -387,7 +387,7 @@ export default function Cownsole({ onClose, onMinimize }: CownsoleProps): React.
         
         if (e.key === 'Tab') {
             e.preventDefault();
-            const commands = ['ls', 'dir', 'get', 'set', 'add', 'clear', 'help', 'cowsay'];
+            const commands = ['ls', 'dir', 'get', 'set', 'add', 'clear', 'cow', 'cowsay'];
             const match = commands.find(cmd => cmd.startsWith(input.toLowerCase()));
             if (match) {
                 setInput(match + ' ');
@@ -478,7 +478,7 @@ export default function Cownsole({ onClose, onMinimize }: CownsoleProps): React.
             <div className={styles.outputArea} ref={outputRef}>
                 <div className={styles.welcomeMessage}>
                     Welcome to Moo.sh v1.0.1 🐄<br />
-                    Type <span style={{ color: '#1a1a1a', fontWeight: 600 }}>help</span> for available commands.
+                    Type <span style={{ color: '#1a1a1a', fontWeight: 600 }}>cow halp</span> for available commands.
                 </div>
                 
                 {output.map((entry, index) => (

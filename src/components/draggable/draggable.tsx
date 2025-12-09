@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, CSSProperties, ReactNode } from "react";
+import React, { useEffect, useRef, useState, useCallback, CSSProperties, ReactNode } from "react";
 import { useMousePosition, Position } from "../../engine";
 import { GAME_CONFIG } from "../../config/gameConfig";
 
@@ -48,17 +48,23 @@ export default function Draggable({
     ...props
 }: DraggableProps): React.ReactElement {
     const draggableRef = useRef<HTMLDivElement>(null);
+    const mousePosition = useMousePosition();
+    const [dragging, setDragging] = useState(initialDragging);
+    
+    // Store onDrop in a ref to avoid triggering effect when callback changes
+    const onDropRef = useRef(onDrop);
+    onDropRef.current = onDrop;
 
-    const isPositionBad = (x: number, y: number): boolean => {
+    const isPositionBad = useCallback((x: number, y: number): boolean => {
         if (canGoOffScreen) {
             return false;
         }
         return (x < safeArea || x > window.innerWidth - safeArea) || 
                (y < safeArea || y > window.innerHeight - safeArea);
-    };
+    }, [canGoOffScreen, safeArea]);
 
     // Clamp position to the closest safe spot within bounds
-    const getClosestSafePosition = (x: number, y: number): Position => {
+    const getClosestSafePosition = useCallback((x: number, y: number): Position => {
         const minX = safeArea;
         const maxX = window.innerWidth - safeArea;
         const minY = safeArea;
@@ -68,18 +74,16 @@ export default function Draggable({
             x: Math.max(minX, Math.min(maxX, x)),
             y: Math.max(minY, Math.min(maxY, y))
         };
-    };
+    }, [safeArea]);
 
     // Get a random valid starting location
-    const getRandomValidLocation = (): Position => {
+    const getRandomValidLocation = useCallback((): Position => {
         const x = Math.random() * (window.innerWidth - safeArea * 2) + safeArea;
         const y = Math.random() * (window.innerHeight - safeArea * 2) + safeArea;
         return { x, y };
-    };
+    }, [safeArea]);
 
     const [position, setPosition] = useState<Position>(getRandomValidLocation);
-    const mousePosition = useMousePosition();
-    const [dragging, setDragging] = useState(initialDragging);
 
     useEffect(() => {
         const handleMouseUp = () => {
@@ -87,9 +91,12 @@ export default function Draggable({
         };
 
         const handleResize = () => {
-            if (isPositionBad(position.x, position.y)) {
-                setPosition(getClosestSafePosition(position.x, position.y));
-            }
+            setPosition(prev => {
+                if (isPositionBad(prev.x, prev.y)) {
+                    return getClosestSafePosition(prev.x, prev.y);
+                }
+                return prev;
+            });
         };
 
         window.addEventListener("mouseup", handleMouseUp);
@@ -101,21 +108,23 @@ export default function Draggable({
             window.removeEventListener("touchend", handleMouseUp);
             window.removeEventListener("resize", handleResize);
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [position.x, position.y]);
+    }, [isPositionBad, getClosestSafePosition]);
 
+    // Handle drop when dragging ends
     useEffect(() => {
         if (dragging) return;
 
-        if (isPositionBad(mousePosition.x, mousePosition.y)) {
-            setPosition(getClosestSafePosition(mousePosition.x, mousePosition.y));
+        const dropX = mousePosition.x;
+        const dropY = mousePosition.y;
+
+        if (isPositionBad(dropX, dropY)) {
+            setPosition(getClosestSafePosition(dropX, dropY));
         } else {
-            setPosition({ x: mousePosition.x, y: mousePosition.y });
+            setPosition({ x: dropX, y: dropY });
         }
 
-        onDrop({ x: mousePosition.x, y: mousePosition.y });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dragging]);
+        onDropRef.current({ x: dropX, y: dropY });
+    }, [dragging, mousePosition.x, mousePosition.y, isPositionBad, getClosestSafePosition]);
 
     return (
         <div

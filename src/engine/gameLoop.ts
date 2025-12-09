@@ -29,8 +29,6 @@ export function useGameLoop(state: GameState, dispatch: React.Dispatch<GameActio
     const animationRef = useRef<number | null>(null);
     const lastTimeRef = useRef<number>(performance.now());
     const pausedRef = useRef<boolean>(state.ui.paused);
-    
-    const MAX_DELTA = GAME_CONFIG.GAME_LOOP.MAX_DELTA_MS;
 
     // Keep pausedRef in sync with state
     useEffect(() => {
@@ -43,7 +41,7 @@ export function useGameLoop(state: GameState, dispatch: React.Dispatch<GameActio
         lastTimeRef.current = currentTime;
 
         // Cap delta to prevent large jumps (e.g., tab was inactive)
-        delta = Math.min(delta, MAX_DELTA);
+        delta = Math.min(delta, GAME_CONFIG.GAME_LOOP.MAX_DELTA_MS);
 
         // Don't update if paused - use ref to avoid stale closure
         if (!pausedRef.current) {

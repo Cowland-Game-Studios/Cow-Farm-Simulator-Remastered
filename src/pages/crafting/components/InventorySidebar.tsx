@@ -28,10 +28,12 @@ export default function InventorySidebar({
     onStopPropagation,
 }: InventorySidebarProps): React.ReactElement {
     return (
-        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
         <div 
             className={`${styles.standardedizedList} ${styles.leftSidebar} ${isClosing ? styles.closing : ''}`}
             onClick={onStopPropagation}
+            onKeyDown={(e) => e.stopPropagation()}
+            role="region"
+            aria-label="Inventory"
         >
             <div className={styles.list}>
                 {PRODUCTS.map(product => {
