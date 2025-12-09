@@ -204,6 +204,7 @@ interface CommandResult {
     output: string | null;
     clear?: boolean;
     closeConsole?: boolean;
+    warning?: boolean;
 }
 
 type CommandHandler = (args: string[], state: GameState, dispatch: React.Dispatch<GameAction>) => CommandResult;
@@ -233,7 +234,7 @@ const commands: Record<string, CommandHandler> = {
             if (typeof target !== 'object' || target === null) {
                 const override = path ? configOverrides[path] : undefined;
                 const display = override !== undefined ? `${target} → ${override} (modified)` : target;
-                return { success: true, output: `${path || 'GAME_CONFIG'}: ${display}${WARNING_BANNER}` };
+                return { success: true, output: `${path || 'GAME_CONFIG'}: ${display}${WARNING_BANNER}`, warning: true };
             }
             
             const lines = [`📊 GAME_CONFIG${path ? '.' + path : ''}`];
@@ -258,7 +259,7 @@ const commands: Record<string, CommandHandler> = {
             lines.push('Use: set --game-config <path> <value>');
             lines.push(WARNING_BANNER);
             
-            return { success: true, output: lines.join('\n') };
+            return { success: true, output: lines.join('\n'), warning: true };
         }
         
         // ls --game-state: Full state dump
@@ -288,7 +289,7 @@ const commands: Record<string, CommandHandler> = {
             
             lines.push(WARNING_BANNER);
             
-            return { success: true, output: lines.join('\n') };
+            return { success: true, output: lines.join('\n'), warning: true };
         }
         
         // Default ls behavior
@@ -392,7 +393,7 @@ const commands: Record<string, CommandHandler> = {
             else if (valueStr === 'reset') {
                 // Remove override to reset to default
                 delete configOverrides[configPath];
-                return { success: true, output: `✓ ${configPath} reset to default: ${currentValue}${WARNING_BANNER}` };
+                return { success: true, output: `✓ ${configPath} reset to default: ${currentValue}${WARNING_BANNER}`, warning: true };
             }
             else if (!isNaN(Number(valueStr)) && valueStr !== '') value = Number(valueStr);
             else value = valueStr;
@@ -400,7 +401,7 @@ const commands: Record<string, CommandHandler> = {
             // Store the override
             configOverrides[configPath] = value;
             
-            return { success: true, output: `✓ ${configPath}: ${currentValue} → ${value}\n⚠️ Changes apply at runtime but don't persist${WARNING_BANNER}` };
+            return { success: true, output: `✓ ${configPath}: ${currentValue} → ${value}\n⚠️ Changes apply at runtime but don't persist${WARNING_BANNER}`, warning: true };
         }
         
         const [path, ...valueParts] = args;

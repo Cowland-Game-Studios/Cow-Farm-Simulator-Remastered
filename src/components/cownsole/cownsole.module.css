@@ -1,45 +1,38 @@
 /* ============================================
-   Moo.sh - Developer Console Styles
+   Moo.sh - macOS-style Terminal Styles
    ============================================ */
 
 /* Animations */
-@keyframes fadeIn {
+@keyframes slideInFromBottom {
     from {
         opacity: 0;
+        transform: translateY(20px) scale(0.95);
     }
     to {
         opacity: 1;
+        transform: translateY(0) scale(1);
     }
 }
 
-@keyframes fadeOut {
+@keyframes slideOutToBottom {
     from {
         opacity: 1;
+        transform: translateY(0) scale(1);
     }
     to {
         opacity: 0;
+        transform: translateY(20px) scale(0.95);
     }
 }
 
-@keyframes slideIn {
-    0% {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(0.9) translateY(-20px);
-    }
-    100% {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1) translateY(0);
-    }
-}
-
-@keyframes slideOut {
+@keyframes minimizeToIcon {
     from {
         opacity: 1;
-        transform: translate(-50%, -50%) scale(1) translateY(0);
+        transform: scale(1);
     }
     to {
         opacity: 0;
-        transform: translate(-50%, -50%) scale(0.95) translateY(-10px);
+        transform: scale(0.1) translateX(100px) translateY(100px);
     }
 }
 
@@ -52,111 +45,198 @@
     }
 }
 
-/* Background overlay */
-.cownsoleBackground {
-    position: fixed;
-    inset: 0;
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(5px);
-    z-index: 100;
-    animation: fadeIn 0.2s ease-out forwards;
-}
-
-.cownsoleBackground.closing {
-    animation: fadeOut 0.15s ease-in forwards;
-}
-
-/* Terminal window */
+/* Terminal window - PiP style */
 .terminal {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    position: fixed;
+    top: auto;
+    left: auto;
+    right: 25px;
+    bottom: 140px;
     
-    width: 650px;
+    width: 420px;
+    height: 320px;
+    min-width: 320px;
+    min-height: 200px;
     max-width: 90vw;
-    max-height: 75vh;
+    max-height: 70vh;
     
-    background: rgba(0, 0, 0, 0.05);
-    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 10px;
     border: 1px solid rgba(0, 0, 0, 0.1);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+    box-shadow: 
+        0 25px 50px -12px rgba(0, 0, 0, 0.15),
+        0 0 0 1px rgba(255, 255, 255, 0.5) inset;
     
-    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
-    color: #2d5a27;
-    font-size: 13px;
+    font-family: 'SF Mono', 'Monaco', 'Menlo', 'Inconsolata', 'Fira Code', monospace;
+    color: #1a1a1a;
+    font-size: 12px;
     line-height: 1.5;
     
     display: flex;
     flex-direction: column;
     overflow: hidden;
     
-    animation: slideIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    z-index: 1001;
+    
+    animation: slideInFromBottom 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    transition: top 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                left 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                right 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                bottom 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                height 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                max-width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                max-height 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                border-radius 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .terminal.closing {
-    animation: slideOut 0.15s ease-in forwards;
+    animation: slideOutToBottom 0.15s ease-in forwards;
 }
 
-/* Header bar */
+.terminal.minimizing {
+    animation: minimizeToIcon 0.3s ease-in forwards;
+}
+
+.terminal.maximized {
+    top: 25px !important;
+    left: 25px !important;
+    right: 25px !important;
+    bottom: 25px !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    border-radius: 12px;
+}
+
+.terminal.dragging {
+    cursor: grabbing;
+    user-select: none;
+}
+
+.terminal.resizing {
+    user-select: none;
+}
+
+/* Header bar - macOS style */
 .header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 12px;
     
-    background: rgba(0, 0, 0, 0.05);
-    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.6);
+    padding: 10px 14px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     
     user-select: none;
     -webkit-user-select: none;
+    cursor: grab;
 }
 
-.headerTitle {
+.header:active {
+    cursor: grabbing;
+}
+
+/* Traffic light buttons */
+.trafficLights {
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.trafficButton {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.trafficButton:hover {
+    filter: brightness(1.1);
+    transform: scale(1.3);
+}
+
+.trafficButton:active {
+    transform: scale(1.1);
+}
+
+.trafficButton svg {
+    width: 8px;
+    height: 8px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.trafficLights:hover .trafficButton svg {
+    opacity: 1;
+}
+
+.closeBtn {
+    background: #ff5f57;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15) inset;
+}
+
+.closeBtn svg {
+    stroke: #820005;
+    stroke-width: 2;
+}
+
+.minimizeBtn {
+    background: #febc2e;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15) inset;
+}
+
+.minimizeBtn svg {
+    stroke: #9a6700;
+    stroke-width: 2;
+}
+
+.maximizeBtn {
+    background: #28c840;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15) inset;
+}
+
+.maximizeBtn svg {
+    stroke: #006500;
+    stroke-width: 2;
+}
+
+.headerTitle {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     
-    font-weight: 600;
-    font-size: 14px;
-    color: #000;
-    letter-spacing: 0.5px;
+    font-weight: 500;
+    font-size: 13px;
+    color: #1a1a1a;
+    letter-spacing: 0.3px;
 }
 
 .headerIcon {
-    font-size: 16px;
-}
-
-.closeButton {
-    background: rgba(0, 0, 0, 0.08);
-    border: none;
-    border-radius: 6px;
-    padding: 4px 10px;
-    
-    color: #666;
-    font-family: inherit;
-    font-size: 12px;
-    cursor: pointer;
-    
-    transition: all 0.15s ease;
-}
-
-.closeButton:hover {
-    background: rgba(0, 0, 0, 0.12);
-    color: #333;
+    font-size: 14px;
 }
 
 /* Output area */
 .outputArea {
     flex: 1;
     overflow-y: auto;
-    padding: 12px 16px;
-    min-height: 200px;
-    max-height: 400px;
+    padding: 12px 14px;
+    background: transparent;
     
     /* Custom scrollbar */
     scrollbar-width: thin;
-    scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
 
 .outputArea::-webkit-scrollbar {
@@ -168,47 +248,52 @@
 }
 
 .outputArea::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.15);
+    background: rgba(0, 0, 0, 0.2);
     border-radius: 4px;
 }
 
 .outputArea::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.25);
+    background: rgba(0, 0, 0, 0.3);
 }
 
 /* Output entries */
 .outputEntry {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
 .commandLine {
     display: flex;
     align-items: flex-start;
     gap: 8px;
-    color: #666;
+    color: #1a1a1a;
 }
 
 .outputResult {
     margin-top: 4px;
-    margin-left: 20px;
+    margin-left: 0;
     white-space: pre-wrap;
     word-break: break-word;
+    font-size: 12px;
 }
 
 .outputResult.success {
-    color: #2d5a27;
+    color: #166534;
+}
+
+.outputResult.warning {
+    color: #946c00;
 }
 
 .outputResult.error {
-    color: #b54040;
+    color: #cb2431;
 }
 
 /* Welcome message */
 .welcomeMessage {
-    color: #888;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px dashed rgba(0, 0, 0, 0.15);
+    color: #1a1a1a;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 /* Input area */
@@ -217,14 +302,14 @@
     align-items: center;
     gap: 8px;
     
-    padding: 12px 16px;
-    background: rgba(0, 0, 0, 0.03);
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.5);
     border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .prompt {
-    color: #000;
-    font-weight: bold;
+    color: #1a1a1a;
+    font-weight: 600;
     flex-shrink: 0;
 }
 
@@ -234,33 +319,104 @@
     border: none;
     outline: none;
     
-    color: #2d5a27;
+    color: #1a1a1a;
     font-family: inherit;
     font-size: inherit;
     line-height: inherit;
     
-    caret-color: #2d5a27;
+    caret-color: #1a1a1a;
 }
 
 .inputField::placeholder {
-    color: #aaa;
+    color: rgba(0, 0, 0, 0.35);
 }
 
 /* Hint text */
 .hint {
-    padding: 8px 16px;
-    background: rgba(0, 0, 0, 0.02);
+    padding: 6px 14px;
+    background: rgba(0, 0, 0, 0.03);
     border-top: 1px solid rgba(0, 0, 0, 0.05);
     
-    font-size: 11px;
-    color: #999;
+    font-size: 10px;
+    color: rgba(0, 0, 0, 0.5);
     text-align: center;
 }
 
 .hint kbd {
-    background: rgba(0, 0, 0, 0.08);
-    padding: 2px 6px;
-    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.06);
+    padding: 2px 5px;
+    border-radius: 3px;
     margin: 0 2px;
-    color: #666;
+    color: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Resize handles */
+.resizeHandle {
+    position: absolute;
+    z-index: 10;
+}
+
+.resizeN {
+    top: 0;
+    left: 10px;
+    right: 10px;
+    height: 6px;
+    cursor: n-resize;
+}
+
+.resizeS {
+    bottom: 0;
+    left: 10px;
+    right: 10px;
+    height: 6px;
+    cursor: s-resize;
+}
+
+.resizeE {
+    top: 10px;
+    right: 0;
+    bottom: 10px;
+    width: 6px;
+    cursor: e-resize;
+}
+
+.resizeW {
+    top: 10px;
+    left: 0;
+    bottom: 10px;
+    width: 6px;
+    cursor: w-resize;
+}
+
+.resizeNE {
+    top: 0;
+    right: 0;
+    width: 12px;
+    height: 12px;
+    cursor: ne-resize;
+}
+
+.resizeNW {
+    top: 0;
+    left: 0;
+    width: 12px;
+    height: 12px;
+    cursor: nw-resize;
+}
+
+.resizeSE {
+    bottom: 0;
+    right: 0;
+    width: 12px;
+    height: 12px;
+    cursor: se-resize;
+}
+
+.resizeSW {
+    bottom: 0;
+    left: 0;
+    width: 12px;
+    height: 12px;
+    cursor: sw-resize;
 }

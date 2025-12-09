@@ -17,6 +17,7 @@ import StatsDisplay from "../components/statsDisplay";
 import ParticleRenderer from "../components/particles/ParticleRenderer";
 import Crafting from "./crafting";
 import Cownsole from "../components/cownsole/cownsole";
+import IconDock from "../components/iconDock";
 import { useGame, useMousePosition, useInventory, particleSystem } from "../engine";
 import React, { useEffect, useCallback, useMemo, useState, useRef } from "react";
 import { GAME_CONFIG } from "../config/gameConfig";
@@ -143,6 +144,11 @@ export default function Pasture(): React.ReactElement {
         };
     }, [showCrafting]);
 
+    // ---- Toggle Moo.sh from icon dock ----
+    const handleTerminalToggle = useCallback(() => {
+        setShowCownsole(prev => !prev);
+    }, []);
+
     // ---- Get cow IDs for collision detection ----
     const fullCowIds = useMemo(() => 
         cows.filter(cow => cow.state === 'full').map(cow => cow.id),
@@ -193,9 +199,12 @@ export default function Pasture(): React.ReactElement {
                 <Crafting onClose={() => setShowCrafting(false)} />
             )}
 
-            {/* Moo.sh (dev console) popup */}
+            {/* Moo.sh (dev console) - PiP style window */}
             {showCownsole && (
-                <Cownsole onClose={() => setShowCownsole(false)} />
+                <Cownsole 
+                    onClose={() => setShowCownsole(false)} 
+                    onMinimize={() => setShowCownsole(false)}
+                />
             )}
 
             <div className={styles.pasture}>
@@ -248,10 +257,16 @@ ${'||='.repeat(Math.ceil(window.innerWidth / 10))}`
                     {/* Quest Menu (bottom left) */}
                     <QuestMenu />
 
-                    {/* Stats Display (top right) */}
+                    {/* Stats Display (bottom right, above icon dock) */}
                     <StatsDisplay 
                         coins={resources.coins} 
                         xp={Math.floor(resources.stars * 1000)} 
+                    />
+
+                    {/* Icon Dock (bottom right) */}
+                    <IconDock 
+                        onTerminalClick={handleTerminalToggle}
+                        terminalOpen={showCownsole}
                     />
 
                     {/* Bottom dock - Tools */}
@@ -275,4 +290,3 @@ ${'||='.repeat(Math.ceil(window.innerWidth / 10))}`
         </>
     );
 }
-

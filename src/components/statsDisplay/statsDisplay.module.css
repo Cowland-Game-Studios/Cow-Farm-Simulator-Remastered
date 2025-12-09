@@ -4,16 +4,15 @@
     border-radius: 20px;
     backdrop-filter: blur(10px);
     
+    /* Position to the left of the icon dock */
     bottom: 25px;
-    right: 25px;
+    right: 60px;
     
     text-align: right;
 }
 
 .statsContainer {
-    padding: 10px;
-    padding-left: 25px;
-    padding-right: 25px;
+    padding: 10px 15px;
 }
 
 .statTitle {
