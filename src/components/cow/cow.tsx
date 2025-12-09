@@ -45,6 +45,10 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
     const pickupPositionRef = useRef<Position | null>(null);
     const breedCheckThrottleRef = useRef<number>(0); // Timestamp of last breed target check
     
+    // Store cows in ref to avoid stale closure in breed detection effect
+    const cowsRef = useRef(state.cows);
+    cowsRef.current = state.cows;
+    
     // ---- Get facing direction from cow data ----
     const facingRight = cow?.facingRight ?? false;
 
@@ -156,7 +160,8 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
     }, [cowImpulse, cowId, clearCowImpulse]);
 
     // ---- Check if this cow is a breed target (another full cow is being dragged near) ----
-    // Throttled to 60ms (~16fps) to reduce DOM query overhead during rapid mouse movements
+    // Throttled to reduce DOM query overhead during rapid mouse movements
+    // Uses cowsRef to always access current cows data (avoids stale closure)
     useEffect(() => {
         if (!cow || !draggingCow.cowId || !draggingCow.position) {
             setIsBreedTarget(false);
@@ -175,8 +180,8 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
             return;
         }
 
-        // Check if the dragging cow is also full
-        const draggingCowData = state.cows.find(c => c.id === draggingCow.cowId);
+        // Check if the dragging cow is also full (use ref for current data)
+        const draggingCowData = cowsRef.current.find(c => c.id === draggingCow.cowId);
         if (!draggingCowData || draggingCowData.state !== 'full') {
             setIsBreedTarget(false);
             return;
@@ -201,14 +206,15 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
             y: myRect.y + myRect.height / 2,
         };
 
-        const distance = Math.sqrt(
-            Math.pow(draggingCow.position.x - myCenter.x, 2) +
-            Math.pow(draggingCow.position.y - myCenter.y, 2)
-        );
+        // Use squared distance to avoid sqrt (optimization)
+        const dx = draggingCow.position.x - myCenter.x;
+        const dy = draggingCow.position.y - myCenter.y;
+        const distanceSquared = dx * dx + dy * dy;
+        const thresholdSquared = Math.pow(COW_CONFIG.TOUCH_DISTANCE_THRESHOLD * COW_CONFIG.BREED_TARGET_DISTANCE_MULTIPLIER, 2);
 
         // Show hover effect when within breeding threshold
-        setIsBreedTarget(distance < COW_CONFIG.TOUCH_DISTANCE_THRESHOLD * COW_CONFIG.BREED_TARGET_DISTANCE_MULTIPLIER);
-    }, [cow, cowId, draggingCow, state.cows]);
+        setIsBreedTarget(distanceSquared < thresholdSquared);
+    }, [cow, cowId, draggingCow]);
 
     // ---- Handle pickup (track starting position) ----
     const onPickup = useCallback(() => {
@@ -234,6 +240,7 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
     }, [cow, cowId, setDraggingCow, isBeingDragged]);
 
     // ---- Handle drop (breeding check) ----
+    // Uses cowsRef to always access current cows data (avoids stale closure)
     const onDrop = useCallback((dropPosition: Position) => {
         if (!cow) return;
         
@@ -254,8 +261,8 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
         const now = Date.now();
         if (now - cow.lastBredAt < COW_CONFIG.BREEDING_COOLDOWN_MS) return;
 
-        // Check for collisions with other full cows using DOM
-        for (const otherCow of state.cows) {
+        // Check for collisions with other full cows using DOM (use ref for current data)
+        for (const otherCow of cowsRef.current) {
             if (otherCow.id === cowId) continue;
             if (otherCow.state !== 'full') continue;
             
@@ -276,7 +283,7 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
                 }
             }
         }
-    }, [cowId, cow, state.cows, breedCows, updateCowPosition, isTouchingCow, clearDraggingCow]);
+    }, [cowId, cow, breedCows, updateCowPosition, isTouchingCow, clearDraggingCow]);
 
     // ---- Early return AFTER all hooks ----
     if (!cow) return null;

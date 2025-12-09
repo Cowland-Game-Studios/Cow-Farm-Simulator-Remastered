@@ -90,6 +90,11 @@ export default function DraggableSwinging({
     const throwVelocityRef = useRef<Position>({ x: 0, y: 0 }); // Track actual throw velocity from mouse movement
     const draggingRef = useRef<boolean>(false); // Ref to track dragging state for event handlers (avoids stale closure)
     const hasInteractedRef = useRef<boolean>(false); // Track if user has interacted (to avoid drop effect on mount)
+    
+    // Collision detection optimization: cache element positions
+    const cachedPositionsRef = useRef<Map<string, Position>>(new Map());
+    const lastCacheUpdateRef = useRef<number>(0);
+    const CACHE_UPDATE_INTERVAL = 100; // Update cached positions every 100ms
 
     const isControlled = isActive !== null;
 
@@ -99,34 +104,63 @@ export default function DraggableSwinging({
     onDropRef.current = onDrop;
     onPositionChangeRef.current = onPositionChange;
 
-    // Check collision with target elements using DOM
+    // Update cached element positions (throttled)
+    const updateCachedPositions = useCallback(() => {
+        const now = Date.now();
+        if (now - lastCacheUpdateRef.current < CACHE_UPDATE_INTERVAL) {
+            return; // Skip update, use cached positions
+        }
+        lastCacheUpdateRef.current = now;
+        
+        // Update cached positions for all collision targets
+        for (const targetId of collisionTargets) {
+            const element = document.getElementById(targetId);
+            if (element) {
+                const rect = element.getBoundingClientRect();
+                cachedPositionsRef.current.set(targetId, {
+                    x: rect.x + rect.width / 2,
+                    y: rect.y + rect.height / 2,
+                });
+            }
+        }
+    }, [collisionTargets]);
+
+    // Check collision with target elements using cached positions
     const checkCollisions = useCallback((position: Position) => {
         if (!onCollide || !collisionTargets || collisionTargets.length === 0) return;
+
+        // Update cache if needed
+        updateCachedPositions();
 
         for (const targetId of collisionTargets) {
             // Skip already-collided targets
             if (collidedTargetsRef.current.has(targetId)) continue;
 
-            const targetElement = document.getElementById(targetId);
-            if (!targetElement) continue;
+            // Use cached position if available, otherwise get from DOM
+            let targetCenter = cachedPositionsRef.current.get(targetId);
+            if (!targetCenter) {
+                const targetElement = document.getElementById(targetId);
+                if (!targetElement) continue;
+                const targetRect = targetElement.getBoundingClientRect();
+                targetCenter = {
+                    x: targetRect.x + targetRect.width / 2,
+                    y: targetRect.y + targetRect.height / 2,
+                };
+                cachedPositionsRef.current.set(targetId, targetCenter);
+            }
 
-            const targetRect = targetElement.getBoundingClientRect();
-            const targetCenter = {
-                x: targetRect.x + targetRect.width / 2,
-                y: targetRect.y + targetRect.height / 2,
-            };
+            const dx = position.x - targetCenter.x;
+            const dy = position.y - targetCenter.y;
+            const distanceSquared = dx * dx + dy * dy;
+            const thresholdSquared = collisionThreshold * collisionThreshold;
 
-            const distance = Math.sqrt(
-                Math.pow(position.x - targetCenter.x, 2) +
-                Math.pow(position.y - targetCenter.y, 2)
-            );
-
-            if (distance < collisionThreshold) {
+            // Compare squared distances to avoid sqrt
+            if (distanceSquared < thresholdSquared) {
                 collidedTargetsRef.current.add(targetId);
                 onCollide(targetId, position);
             }
         }
-    }, [onCollide, collisionTargets, collisionThreshold]);
+    }, [onCollide, collisionTargets, collisionThreshold, updateCachedPositions]);
 
     const isPositionBad = useCallback((x: number, y: number): boolean => {
         if (canGoOffScreen) {
@@ -192,6 +226,12 @@ export default function DraggableSwinging({
             onPositionChangeRef.current(initialPos);
         }
     }, [getInitialPosition]);
+
+    // Clear cached positions when collision targets change
+    useEffect(() => {
+        cachedPositionsRef.current.clear();
+        lastCacheUpdateRef.current = 0;
+    }, [collisionTargets]);
 
     // Handle external impulse (for chaos mode etc)
     useEffect(() => {
