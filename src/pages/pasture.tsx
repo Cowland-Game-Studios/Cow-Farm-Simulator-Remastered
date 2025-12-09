@@ -51,7 +51,7 @@ export default function Pasture(): React.ReactElement {
 
     // ---- Swipe/scroll state for opening crafting ----
     const swipeStartY = useRef<number | null>(null);
-    const SWIPE_UP_THRESHOLD = 80;
+    const SWIPE_UP_THRESHOLD = GAME_CONFIG.UI.SWIPE_UP_THRESHOLD_PX;
 
     // ---- Open crafting on scroll up ----
     useEffect(() => {

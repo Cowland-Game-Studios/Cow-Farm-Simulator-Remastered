@@ -3,6 +3,7 @@
  */
 
 import { Cow, GameResources, Inventory, CraftingQueueItem, ActiveBoardCraft } from '../engine/types';
+import { GAME_CONFIG } from '../config/gameConfig';
 
 // ============================================
 // SAVE DATA STRUCTURE
@@ -69,9 +70,9 @@ export interface SaveMigration {
 // ============================================
 
 export const SAVE_CONFIG = {
-    LOCAL_STORAGE_KEY: 'cow_farm_save',
-    CURRENT_VERSION: 1,
-    AUTO_SAVE_INTERVAL_MS: 30000,
-    MIN_SAVE_INTERVAL_MS: 5000,
-} as const;
+    LOCAL_STORAGE_KEY: GAME_CONFIG.SAVE.LOCAL_STORAGE_KEY,
+    CURRENT_VERSION: GAME_CONFIG.SAVE.SAVE_VERSION,
+    AUTO_SAVE_INTERVAL_MS: GAME_CONFIG.UI.AUTO_SAVE_INTERVAL_MS,
+    MIN_SAVE_INTERVAL_MS: GAME_CONFIG.UI.MIN_SAVE_INTERVAL_MS,
+};
 

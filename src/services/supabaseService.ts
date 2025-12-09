@@ -88,10 +88,13 @@ function loadFromLocalStorage(): SaveData | null {
         const data = JSON.parse(saved);
         return {
             cows: data.cows || [],
-            resources: data.resources || { coins: 10000, stars: 0 },
+            resources: data.resources || { 
+                coins: GAME_CONFIG.INITIAL_STATE.COINS, 
+                stars: GAME_CONFIG.INITIAL_STATE.STARS 
+            },
             inventory: data.inventory || {
                 milk: 0,
-                grass: 10,
+                grass: GAME_CONFIG.INITIAL_STATE.GRASS,
                 cream: 0,
                 butter: 0,
                 cheese: 0,

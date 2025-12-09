@@ -10,6 +10,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { actions } from './gameState';
 import { GameState, GameAction } from './types';
+import { GAME_CONFIG } from '../config/gameConfig';
 
 // ============================================
 // GAME LOOP HOOK
@@ -29,7 +30,7 @@ export function useGameLoop(state: GameState, dispatch: React.Dispatch<GameActio
     const lastTimeRef = useRef<number>(performance.now());
     const pausedRef = useRef<boolean>(state.ui.paused);
     
-    const MAX_DELTA = 100; // Cap delta to prevent spiral of death
+    const MAX_DELTA = GAME_CONFIG.GAME_LOOP.MAX_DELTA_MS;
 
     // Keep pausedRef in sync with state
     useEffect(() => {

@@ -53,6 +53,17 @@ export interface GameConfigType {
         PULSE_INITIAL_DELAY_MIN_MS: number;
         PULSE_INITIAL_DELAY_MAX_MS: number;
         DRAG_THRESHOLD: number;
+        // Breed detection
+        BREED_CHECK_THROTTLE_MS: number;
+        BREED_TARGET_DISTANCE_MULTIPLIER: number;
+        // Cow body clip bounds for fill animation
+        BODY_CLIP_MIN_Y: number;
+        BODY_CLIP_MAX_Y: number;
+        // HSL color generation for random cow colors
+        COLOR_SATURATION_MIN: number;
+        COLOR_SATURATION_RANGE: number;
+        COLOR_LIGHTNESS_MIN: number;
+        COLOR_LIGHTNESS_RANGE: number;
     };
     VISUAL: {
         COW_COLOR_OPACITY: number;
@@ -101,6 +112,10 @@ export interface GameConfigType {
         DRAGGING_Z_INDEX: number;
         DOUBLE_TAP_DELAY_MS: number;
         DOUBLE_CLICK_DELAY_MS: number;
+        // Swipe gesture thresholds
+        SWIPE_UP_THRESHOLD_PX: number;
+        SWIPE_CLOSE_THRESHOLD_PX: number;
+        BENCH_SLIDE_IN_DURATION_MS: number;
     };
     SAVE: {
         LOCAL_STORAGE_KEY: string;
@@ -162,6 +177,23 @@ export interface GameConfigType {
         GRASS_BUNDLE_SIZE: number;
         GRASS_BUNDLE_PRICE: number;
     };
+    GAME_LOOP: {
+        MAX_DELTA_MS: number;
+    };
+    CRAFTING: {
+        BENCH_PADDING_PX: number;
+        SIDEBAR_FALLBACK_X: number;
+    };
+    INITIAL_STATE: {
+        COW_POSITIONS: Array<{ x: number; y: number }>;
+        COINS: number;
+        GRASS: number;
+        STARS: number;
+    };
+    CHAOS: {
+        IMPULSE_STRENGTH: number;
+        UPWARD_BIAS: number;
+    };
 }
 
 export const GAME_CONFIG: GameConfigType = {
@@ -187,6 +219,17 @@ export const GAME_CONFIG: GameConfigType = {
         PULSE_INITIAL_DELAY_MIN_MS: 1000,    // Min delay before first pulse
         PULSE_INITIAL_DELAY_MAX_MS: 3000,    // Max delay before first pulse
         DRAG_THRESHOLD: 10,                  // Distance to consider a drag vs click
+        // Breed detection
+        BREED_CHECK_THROTTLE_MS: 60,         // Throttle breed target checks
+        BREED_TARGET_DISTANCE_MULTIPLIER: 1.5, // Multiplier for breed hover range
+        // Cow body clip bounds for fill animation
+        BODY_CLIP_MIN_Y: 27,                 // Top of cow body (percentage)
+        BODY_CLIP_MAX_Y: 70,                 // Bottom of cow body (percentage)
+        // HSL color generation for random cow colors
+        COLOR_SATURATION_MIN: 70,            // Minimum saturation (%)
+        COLOR_SATURATION_RANGE: 30,          // Saturation range (70-100%)
+        COLOR_LIGHTNESS_MIN: 45,             // Minimum lightness (%)
+        COLOR_LIGHTNESS_RANGE: 20,           // Lightness range (45-65%)
     },
 
     // Visual settings
@@ -243,6 +286,10 @@ export const GAME_CONFIG: GameConfigType = {
         DRAGGING_Z_INDEX: 1000,              // Z-index for dragging elements
         DOUBLE_TAP_DELAY_MS: 300,            // Time window for double-tap detection
         DOUBLE_CLICK_DELAY_MS: 250,          // Delay to wait for potential double-click
+        // Swipe gesture thresholds
+        SWIPE_UP_THRESHOLD_PX: 80,           // Pasture swipe to open crafting
+        SWIPE_CLOSE_THRESHOLD_PX: 100,       // Crafting swipe to close
+        BENCH_SLIDE_IN_DURATION_MS: 600,     // Crafting bench slide-in animation
     },
 
     // Save/Load settings
@@ -423,6 +470,34 @@ export const GAME_CONFIG: GameConfigType = {
     SHOP: {
         GRASS_BUNDLE_SIZE: 5,                // How much grass per purchase
         GRASS_BUNDLE_PRICE: 50,              // Price for grass bundle
+    },
+
+    // Game loop settings
+    GAME_LOOP: {
+        MAX_DELTA_MS: 100,                   // Cap delta to prevent spiral of death
+    },
+
+    // Crafting UI settings
+    CRAFTING: {
+        BENCH_PADDING_PX: 60,                // Stay away from edges
+        SIDEBAR_FALLBACK_X: 100,             // Fallback X position for sidebar items
+    },
+
+    // Initial game state values
+    INITIAL_STATE: {
+        COW_POSITIONS: [
+            { x: 300, y: 300 },
+            { x: 500, y: 300 },
+        ],
+        COINS: 10000,
+        GRASS: 10,
+        STARS: 5.2,
+    },
+
+    // Chaos mode settings
+    CHAOS: {
+        IMPULSE_STRENGTH: 30,                // Velocity magnitude for chaos impulse
+        UPWARD_BIAS: 15,                     // Slight upward bias on chaos impulse
     },
 };
 

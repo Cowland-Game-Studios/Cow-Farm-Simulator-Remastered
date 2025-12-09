@@ -222,8 +222,8 @@ const commands: Record<string, CommandHandler> = {
         
         const WARNING_BANNER = '\n\n⚠️  WARNING: Modifying game state and config can have\n    unforeseen consequences and may corrupt your save.';
         
-        // ls --game-config: Show game config magic numbers
-        if (flag === '--game-config') {
+        // ls --config: Show game config magic numbers
+        if (flag === '--config') {
             const path = args[1];
             const target = path ? getByPath(GAME_CONFIG, path) : GAME_CONFIG;
             
@@ -256,14 +256,14 @@ const commands: Record<string, CommandHandler> = {
             
             flattenConfig(target as Record<string, unknown>, path || '');
             lines.push('');
-            lines.push('Use: set --game-config <path> <value>');
+            lines.push('Use: set --config <path> <value>');
             lines.push(WARNING_BANNER);
             
             return { success: true, output: lines.join('\n'), warning: true };
         }
         
-        // ls --game-state: Full state dump
-        if (flag === '--game-state') {
+        // ls --state: Full state dump
+        if (flag === '--state') {
             const path = args[1];
             const target = path ? getByPath(state, path) : state;
             
@@ -366,13 +366,13 @@ const commands: Record<string, CommandHandler> = {
     set: (args, state, dispatch) => {
         const WARNING_BANNER = '\n\n⚠️  WARNING: Modifying game state and config can have\n    unforeseen consequences and may corrupt your save.';
         
-        // Handle --game-config flag for config overrides
-        if (args[0] === '--game-config') {
+        // Handle --config flag for config overrides
+        if (args[0] === '--config') {
             const [, configPath, ...valueParts] = args;
             const valueStr = valueParts.join(' ');
             
             if (!configPath || valueStr === '') {
-                return { success: false, output: 'Usage: set --game-config <path> <value>\nExample: set --game-config COW.MILK_PRODUCTION_TIME_MS 10000' };
+                return { success: false, output: 'Usage: set --config <path> <value>\nExample: set --config COW.MILK_PRODUCTION_TIME_MS 10000' };
             }
             
             // Verify the config path exists
@@ -505,11 +505,11 @@ const commands: Record<string, CommandHandler> = {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   ls [path]              List state keys
-  ls --game-state [p]    Full state dump
-  ls --game-config [p]   Show game config
+  ls --state [p]    Full state dump
+  ls --config [p]   Show game config
   get <path>             Get value at path
   set <path> <val>       Set value at path
-  set --game-config <p> <v>  Override config
+  set --config <p> <v>  Override config
   add <path> <num>       Add to numeric value
   mkMoo [state]          Spawn a new cow 🐄
   rmMoo [index]          Remove a cow 🐄💀
@@ -522,8 +522,8 @@ const commands: Record<string, CommandHandler> = {
 
 Examples:
   ls inventory
-  ls --game-config COW
-  set --game-config COW.MILK_PRODUCTION_TIME_MS 5000
+  ls --config COW
+  set --config COW.MILK_PRODUCTION_TIME_MS 5000
   mkMoo full
   rmMoo 0
   cowsay Hello World!
@@ -554,16 +554,16 @@ Examples:
         if (subcommand?.toLowerCase() === 'chaos') {
             // Generate random impulses for each cow
             const impulses: Record<string, Position> = {};
-            const chaosStrength = 30; // Velocity magnitude
+            const { IMPULSE_STRENGTH, UPWARD_BIAS } = GAME_CONFIG.CHAOS;
             
             state.cows.forEach(cow => {
                 // Random direction
                 const angle = Math.random() * Math.PI * 2;
-                const speed = chaosStrength + Math.random() * chaosStrength;
+                const speed = IMPULSE_STRENGTH + Math.random() * IMPULSE_STRENGTH;
                 
                 impulses[cow.id] = {
                     x: Math.cos(angle) * speed,
-                    y: Math.sin(angle) * speed - 15, // Slight upward bias
+                    y: Math.sin(angle) * speed - UPWARD_BIAS,
                 };
             });
             

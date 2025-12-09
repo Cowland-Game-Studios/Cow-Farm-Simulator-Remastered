@@ -40,9 +40,10 @@ export const averageColors = (c1: Color, c2: Color): Color => ({
  */
 export const randomColor = (): Color => {
     // Generate vibrant colors by using high saturation
+    const { COLOR_SATURATION_MIN, COLOR_SATURATION_RANGE, COLOR_LIGHTNESS_MIN, COLOR_LIGHTNESS_RANGE } = GAME_CONFIG.COW;
     const hue = Math.random() * 360;
-    const saturation = 70 + Math.random() * 30; // 70-100%
-    const lightness = 45 + Math.random() * 20;  // 45-65%
+    const saturation = COLOR_SATURATION_MIN + Math.random() * COLOR_SATURATION_RANGE;
+    const lightness = COLOR_LIGHTNESS_MIN + Math.random() * COLOR_LIGHTNESS_RANGE;
     
     // Convert HSL to RGB
     const c = (1 - Math.abs(2 * lightness / 100 - 1)) * saturation / 100;
@@ -101,7 +102,7 @@ export const createInitialState = (): GameState => ({
             color: randomColor(),
             state: 'full',
             fullness: 1,
-            position: { x: 300, y: 300 },
+            position: GAME_CONFIG.INITIAL_STATE.COW_POSITIONS[0],
             facingRight: false,
             lastFedAt: null,
             lastBredAt: 0,
@@ -112,7 +113,7 @@ export const createInitialState = (): GameState => ({
             color: randomColor(),
             state: 'full',
             fullness: 1,
-            position: { x: 500, y: 300 },
+            position: GAME_CONFIG.INITIAL_STATE.COW_POSITIONS[1],
             facingRight: true,
             lastFedAt: null,
             lastBredAt: 0,
@@ -121,15 +122,15 @@ export const createInitialState = (): GameState => ({
     ],
 
     resources: {
-        coins: 10000,
-        stars: 5.2,
+        coins: GAME_CONFIG.INITIAL_STATE.COINS,
+        stars: GAME_CONFIG.INITIAL_STATE.STARS,
     },
 
     // Inventory system - tracks all items
     inventory: {
         // Raw resources
         milk: 0,
-        grass: 10, // Starting grass for feeding cows
+        grass: GAME_CONFIG.INITIAL_STATE.GRASS,
         
         // Crafted products
         cream: 0,

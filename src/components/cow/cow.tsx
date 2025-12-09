@@ -182,9 +182,9 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
             return;
         }
 
-        // Throttle DOM queries to ~60ms intervals (reduces layout thrashing)
+        // Throttle DOM queries to reduce layout thrashing
         const now = Date.now();
-        if (now - breedCheckThrottleRef.current < 60) {
+        if (now - breedCheckThrottleRef.current < COW_CONFIG.BREED_CHECK_THROTTLE_MS) {
             return; // Skip this update, keeping previous isBreedTarget state
         }
         breedCheckThrottleRef.current = now;
@@ -207,7 +207,7 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
         );
 
         // Show hover effect when within breeding threshold
-        setIsBreedTarget(distance < COW_CONFIG.TOUCH_DISTANCE_THRESHOLD * 1.5);
+        setIsBreedTarget(distance < COW_CONFIG.TOUCH_DISTANCE_THRESHOLD * COW_CONFIG.BREED_TARGET_DISTANCE_MULTIPLIER);
     }, [cow, cowId, draggingCow, state.cows]);
 
     // ---- Handle pickup (track starting position) ----

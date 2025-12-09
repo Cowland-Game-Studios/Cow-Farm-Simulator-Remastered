@@ -26,7 +26,7 @@ export interface IngredientCounts {
 // CONSTANTS
 // ============================================
 
-export const SWIPE_THRESHOLD = 100; // pixels to swipe up before closing
+export const SWIPE_THRESHOLD = GAME_CONFIG.UI.SWIPE_CLOSE_THRESHOLD_PX;
 export const SWIPE_RESISTANCE = 0.5; // resistance when swiping down (opposite direction)
 
 // Build product list from config items (filter to show useful items in crafting)
@@ -106,7 +106,7 @@ export function getRandomBenchPosition(): { x: number; y: number } {
     const benchSize = Math.min(window.innerHeight * 0.7, window.innerWidth * 0.5);
     const centerX = window.innerWidth / 2;
     const centerY = window.innerHeight / 2;
-    const padding = 60; // Stay away from edges
+    const padding = GAME_CONFIG.CRAFTING.BENCH_PADDING_PX;
     const halfSize = (benchSize / 2) - padding;
     
     return {
@@ -124,7 +124,7 @@ export function getSidebarItemPosition(itemId: string): { x: number; y: number }
         const rect = element.getBoundingClientRect();
         return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     }
-    return { x: 100, y: window.innerHeight / 2 }; // Fallback
+    return { x: GAME_CONFIG.CRAFTING.SIDEBAR_FALLBACK_X, y: window.innerHeight / 2 }; // Fallback
 }
 
 /**

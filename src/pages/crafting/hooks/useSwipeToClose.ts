@@ -5,6 +5,7 @@
 
 import { useState, useRef, useCallback, useEffect, TouchEvent, MouseEvent } from 'react';
 import { SWIPE_THRESHOLD, SWIPE_RESISTANCE } from '../craftingUtils';
+import { GAME_CONFIG } from '../../../config/gameConfig';
 
 interface UseSwipeToCloseOptions {
     /** Callback when close is triggered */
@@ -42,7 +43,7 @@ export default function useSwipeToClose({
     useEffect(() => {
         const timer = setTimeout(() => {
             setAnimationComplete(true);
-        }, 600); // Match benchSlideIn animation duration
+        }, GAME_CONFIG.UI.BENCH_SLIDE_IN_DURATION_MS);
         return () => clearTimeout(timer);
     }, []);
 

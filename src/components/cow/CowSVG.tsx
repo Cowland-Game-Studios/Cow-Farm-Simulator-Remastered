@@ -1,4 +1,5 @@
 import React from 'react';
+import { GAME_CONFIG } from '../../config/gameConfig';
 
 interface CowSVGProps {
     color?: string;
@@ -10,11 +11,10 @@ interface CowSVGProps {
 export function CowSVG({ color = "white", fullness = 0, pollInterval = 1000 }: CowSVGProps): React.ReactElement {
     // The cow body occupies roughly y=27% to y=70% of the SVG
     // We use a clip-path approach: as fullness increases, we reveal more of the colored cow from bottom to top
-    // clipY represents where the "fill line" is - at fullness=0, it's at 70% (bottom of body visible)
-    // at fullness=1, it's at 27% (entire body visible)
-    const minY = 27; // top of cow body
-    const maxY = 70; // bottom of cow body  
-    const clipY = maxY - (fullness * (maxY - minY)); // Goes from 70 to 27 as fullness goes 0 to 1
+    // clipY represents where the "fill line" is - at fullness=0, it's at maxY (bottom of body visible)
+    // at fullness=1, it's at minY (entire body visible)
+    const { BODY_CLIP_MIN_Y: minY, BODY_CLIP_MAX_Y: maxY } = GAME_CONFIG.COW;
+    const clipY = maxY - (fullness * (maxY - minY)); // Goes from maxY to minY as fullness goes 0 to 1
 
     return (
         <div style={{ position: 'relative', width: 100, height: 100 }}>
