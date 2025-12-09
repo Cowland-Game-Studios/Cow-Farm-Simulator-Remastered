@@ -197,7 +197,12 @@ export default function Cownsole({ onClose, onMinimize }: CownsoleProps): React.
         const handleKeyDown = (e: globalThis.KeyboardEvent) => {
             if (e.key === 'Escape') {
                 e.preventDefault();
-                handleClose();
+                // If maximized, restore to original size first
+                if (isMaximized) {
+                    setIsMaximized(false);
+                } else {
+                    handleClose();
+                }
             }
             if (e.key === '/' && e.target !== inputRef.current) {
                 e.preventDefault();
@@ -207,7 +212,7 @@ export default function Cownsole({ onClose, onMinimize }: CownsoleProps): React.
         
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleClose]);
+    }, [handleClose, isMaximized]);
     
     // Drag handling
     const handleDragStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {

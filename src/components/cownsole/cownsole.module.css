@@ -115,10 +115,12 @@
 .terminal.dragging {
     cursor: grabbing;
     user-select: none;
+    transition: none !important;
 }
 
 .terminal.resizing {
     user-select: none;
+    transition: none !important;
 }
 
 /* Header bar - macOS style */
