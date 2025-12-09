@@ -387,7 +387,7 @@ export default function Cownsole({ onClose, onMinimize }: CownsoleProps): React.
         
         if (e.key === 'Tab') {
             e.preventDefault();
-            const commands = ['ls', 'dir', 'get', 'set', 'add', 'clear', 'cow', 'cowsay'];
+            const commands = ['ls', 'dir', 'get', 'set', 'clear', 'cow', 'cowsay', 'udder'];
             const match = commands.find(cmd => cmd.startsWith(input.toLowerCase()));
             if (match) {
                 setInput(match + ' ');

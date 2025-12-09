@@ -4,7 +4,7 @@
  * Handles parsing and executing console commands for the developer console.
  */
 
-import { actions, createCow, randomColor } from '../../engine/gameState';
+import { actions } from '../../engine/gameState';
 import { GAME_CONFIG } from '../../config/gameConfig';
 import { GameState, GameAction, Position } from '../../engine/types';
 
@@ -469,27 +469,6 @@ const commands: Record<string, CommandHandler> = {
     },
 
     /**
-     * Add to a numeric value
-     */
-    add: (args, state, dispatch) => {
-        const [path, amountStr] = args;
-        const amount = Number(amountStr);
-        
-        if (!path || isNaN(amount)) {
-            return { success: false, output: 'Usage: add <path> <amount>\nExample: add resources.coins 1000' };
-        }
-        
-        const currentValue = getByPath(state, path);
-        
-        if (typeof currentValue !== 'number') {
-            return { success: false, output: `Error: ${path} is not a number (${typeof currentValue})` };
-        }
-        
-        // Use set command to handle the actual update
-        return commands.set([path, String(currentValue + amount)], state, dispatch);
-    },
-
-    /**
      * Clear the console
      */
     clear: () => {
@@ -513,9 +492,6 @@ const commands: Record<string, CommandHandler> = {
   get <path>             Get value at path
   set <path> <val>       Set value at path
   set --config <p> <v>   Override config
-  add <path> <num>       Add to numeric value
-  mkMoo [state]          Spawn a new cow 🐄
-  rmMoo [index]          Remove a cow 🐄💀
   clear                  Clear console output
   cow halp               Show this help
   cowsay [msg]           🐄
@@ -527,8 +503,6 @@ Examples:
   ls inventory
   ls --config COW
   set --config COW.MILK_PRODUCTION_TIME_MS 5000
-  mkMoo full
-  rmMoo 0
   cowsay Hello World!
             `.trim();
             
@@ -609,78 +583,6 @@ Examples:
         `.trim();
         
         return { success: true, output: cow };
-    },
-
-    /**
-     * mkMoo - spawn a new cow 🐄
-     */
-    mkMoo: (args, state, dispatch) => {
-        // Random position within safe bounds
-        const safeArea = GAME_CONFIG.PHYSICS.DEFAULT_SAFE_AREA || 50;
-        const bottomSafe = GAME_CONFIG.PHYSICS.DEFAULT_BOTTOM_SAFE_AREA || 200;
-        const x = safeArea + Math.random() * (window.innerWidth - safeArea * 2);
-        const y = safeArea + Math.random() * (window.innerHeight - safeArea - bottomSafe);
-        
-        // Create new cow with random color
-        const newCow = createCow(randomColor(), { x, y });
-        
-        // Optionally set cow state from args (case-insensitive)
-        const stateArg = args[0]?.toLowerCase();
-        if (stateArg === 'full') {
-            newCow.state = 'full';
-            newCow.fullness = 1;
-        } else if (stateArg === 'producing') {
-            newCow.state = 'producing';
-            newCow.fullness = 0.5;
-        }
-        // Default is 'hungry' from createCow
-        
-        // Dispatch add cow action
-        dispatch(actions.addCow(newCow));
-        
-        // Play moo sound
-        const mooSound = new Audio('./sounds/cow/moo.wav');
-        mooSound.volume = 0.5;
-        mooSound.play().catch(() => {});
-        
-        const cowCount = state.cows.length + 1;
-        return { 
-            success: true, 
-            output: `🐄 New cow spawned! (${cowCount} total)\n   State: ${newCow.state}\n   Position: (${Math.round(x)}, ${Math.round(y)})`,
-            closeConsole: true
-        };
-    },
-
-    /**
-     * rmMoo - remove a cow (by index or last) 🐄💀
-     */
-    rmMoo: (args, state, dispatch) => {
-        if (state.cows.length === 0) {
-            return { success: false, output: 'No cows to remove!' };
-        }
-        
-        if (state.cows.length === 1) {
-            return { success: false, output: '🐄 Cannot remove the last cow! Every farm needs at least one moo.' };
-        }
-        
-        let cowIndex = state.cows.length - 1; // Default: last cow
-        
-        if (args[0]) {
-            const idx = parseInt(args[0], 10);
-            if (isNaN(idx) || idx < 0 || idx >= state.cows.length) {
-                return { success: false, output: `Invalid index. Use 0-${state.cows.length - 1}` };
-            }
-            cowIndex = idx;
-        }
-        
-        const cowToRemove = state.cows[cowIndex];
-        dispatch(actions.removeCow(cowToRemove.id));
-        
-        return { 
-            success: true, 
-            output: `🐄💀 Cow ${cowIndex} removed. (${state.cows.length - 1} remaining)`,
-            closeConsole: true
-        };
     },
 
     /**
