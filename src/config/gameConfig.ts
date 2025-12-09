@@ -1,23 +1,11 @@
 // Centralized game configuration
 // All game constants should be defined here for easy tuning and consistency
 
-export interface RecipeInput {
-    item: string;
-    qty: number;
-}
+// Import shared types from engine (single source of truth)
+import type { Recipe, RecipeInput, RecipeOutput } from '../engine/types';
 
-export interface RecipeOutput {
-    item: string;
-    qty: number;
-}
-
-export interface Recipe {
-    id: string;
-    name: string;
-    time: number; // 0 = instant, > 0 = timed in seconds
-    inputs: RecipeInput[];
-    outputs: RecipeOutput[];
-}
+// Re-export for backwards compatibility
+export type { Recipe, RecipeInput, RecipeOutput };
 
 export interface ItemDefinition {
     name: string;
@@ -183,6 +171,17 @@ export interface GameConfigType {
     CRAFTING: {
         BENCH_PADDING_PX: number;
         SIDEBAR_FALLBACK_X: number;
+        // Animation timing (ms)
+        CONVERGE_TO_SPIN_MS: number;
+        SPAWN_COMPLETE_MS: number;
+        REMOVE_FLYOUT_MS: number;
+        TIMED_OUTPUT_DELAY_MS: number;
+        TIMED_PARTICLE_DELAY_MS: number;
+        INSTANT_OUTPUT_DELAY_MS: number;
+        INSTANT_FLYOUT_DELAY_MS: number;
+        INSTANT_RESET_DELAY_MS: number;
+        PULSE_DURATION_MS: number;
+        TIMER_UPDATE_INTERVAL_MS: number;
     };
     INITIAL_STATE: {
         COW_POSITIONS: Array<{ x: number; y: number }>;
@@ -481,6 +480,17 @@ export const GAME_CONFIG: GameConfigType = {
     CRAFTING: {
         BENCH_PADDING_PX: 60,                // Stay away from edges
         SIDEBAR_FALLBACK_X: 100,             // Fallback X position for sidebar items
+        // Animation timing (ms)
+        CONVERGE_TO_SPIN_MS: 400,            // Time for ingredients to converge before spinning
+        SPAWN_COMPLETE_MS: 500,              // Time for spawn animation to complete
+        REMOVE_FLYOUT_MS: 450,               // Time for ingredient remove animation
+        TIMED_OUTPUT_DELAY_MS: 400,          // Delay before showing output (timed recipes)
+        TIMED_PARTICLE_DELAY_MS: 1000,       // Delay before spawning particle (timed recipes)
+        INSTANT_OUTPUT_DELAY_MS: 1200,       // Delay before showing output (instant recipes)
+        INSTANT_FLYOUT_DELAY_MS: 1600,       // Delay before flyout animation (instant recipes)
+        INSTANT_RESET_DELAY_MS: 2200,        // Delay before resetting state (instant recipes)
+        PULSE_DURATION_MS: 400,              // Duration of recipe pulse animation
+        TIMER_UPDATE_INTERVAL_MS: 500,       // How often to update crafting timer display
     },
 
     // Initial game state values

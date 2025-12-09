@@ -39,7 +39,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
     
     // No reducer handled this action
-    console.warn(`Unknown action type: ${action.type}`);
+    if (process.env.NODE_ENV === 'development') {
+        console.warn(`Unknown action type: ${action.type}`);
+    }
     return state;
 }
 

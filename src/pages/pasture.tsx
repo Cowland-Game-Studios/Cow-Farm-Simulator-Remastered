@@ -18,10 +18,30 @@ import ParticleRenderer from "../components/particles/ParticleRenderer";
 import Crafting from "./crafting";
 import Cownsole from "../components/cownsole/cownsole";
 import IconDock from "../components/iconDock";
-import { useGame, useMousePosition, useInventory, particleSystem } from "../engine";
-import React, { useEffect, useCallback, useMemo, useState, useRef } from "react";
+import { useGame, useMousePosition, useInventory, particleSystem, useCowsById } from "../engine";
+import React, { useEffect, useCallback, useMemo, useState, useRef, memo } from "react";
 import { GAME_CONFIG } from "../config/gameConfig";
 import { Position } from "../engine/types";
+
+// Fence component that responds to window resize
+const Fence = memo(function Fence() {
+    const [fenceWidth, setFenceWidth] = useState(window.innerWidth);
+    
+    useEffect(() => {
+        const handleResize = () => setFenceWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+    
+    const repeatCount = Math.ceil(fenceWidth / 10);
+    return (
+        <pre className={styles.fence}>
+{`${'/\\ '.repeat(repeatCount)}
+${'||='.repeat(repeatCount)}
+${'||='.repeat(repeatCount)}`}
+        </pre>
+    );
+});
 
 export default function Pasture(): React.ReactElement {
     // ---- Get state and actions from context ----
@@ -38,6 +58,7 @@ export default function Pasture(): React.ReactElement {
     
     const mousePosition = useMousePosition();
     const { inventory } = useInventory();
+    const cowsById = useCowsById();
     
     // ---- Grass availability ----
     const grassCount = inventory.grass || 0;
@@ -161,24 +182,24 @@ export default function Pasture(): React.ReactElement {
 
     // ---- Collision handler for milking (bucket collides with full cow) ----
     const handleMilkCollide = useCallback((cowId: string, position: Position) => {
-        const cow = cows.find(c => c.id === cowId);
+        const cow = cowsById.get(cowId);
         if (cow && cow.state === 'full') {
             milkCow(cowId);
             // Spawn +1 particle at collision position
             particleSystem.spawnMilkParticle(position.x, position.y - 30);
         }
-    }, [cows, milkCow]);
+    }, [cowsById, milkCow]);
 
     // ---- Collision handler for feeding (feed collides with hungry cow) ----
     const handleFeedCollide = useCallback((cowId: string, position: Position) => {
-        const cow = cows.find(c => c.id === cowId);
+        const cow = cowsById.get(cowId);
         // Check if cow is hungry AND we have grass (reducer also validates)
         if (cow && cow.state === 'hungry' && hasGrass) {
             feedCow(cowId);
             // Spawn -1 grass particle that floats up and falls with gravity
             particleSystem.spawnFeedParticle(position.x, position.y - 30);
         }
-    }, [cows, feedCow, hasGrass]);
+    }, [cowsById, feedCow, hasGrass]);
 
     // ---- Update tool position when dragging ----
     useEffect(() => {
@@ -247,11 +268,7 @@ export default function Pasture(): React.ReactElement {
                     </DraggableSwinging>
 
                     {/* Fence row at bottom */}
-                    <pre className={styles.fence}>{
-`${'/\\ '.repeat(Math.ceil(window.innerWidth / 10))}
-${'||='.repeat(Math.ceil(window.innerWidth / 10))}
-${'||='.repeat(Math.ceil(window.innerWidth / 10))}`
-                    }</pre>
+                    <Fence />
 
                     {/* Quest Menu (bottom left) */}
                     <QuestMenu />

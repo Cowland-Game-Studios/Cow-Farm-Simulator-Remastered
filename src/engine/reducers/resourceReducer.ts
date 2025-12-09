@@ -26,10 +26,7 @@ export function resourceReducer(state: GameState, action: GameAction): GameState
 
         case ActionTypes.ADD_ITEM: {
             const { itemType, amount = 1 } = action.payload as { itemType: string; amount?: number };
-            if (!(itemType in state.inventory)) {
-                console.warn(`Unknown item type: ${itemType}`);
-                return state;
-            }
+            if (!(itemType in state.inventory)) return state;
             return {
                 ...state,
                 inventory: {
@@ -41,13 +38,8 @@ export function resourceReducer(state: GameState, action: GameAction): GameState
 
         case ActionTypes.REMOVE_ITEM: {
             const { itemType, amount = 1 } = action.payload as { itemType: string; amount?: number };
-            if (!(itemType in state.inventory)) {
-                console.warn(`Unknown item type: ${itemType}`);
-                return state;
-            }
-            if (state.inventory[itemType] < amount) {
-                return state;
-            }
+            if (!(itemType in state.inventory)) return state;
+            if (state.inventory[itemType] < amount) return state;
             return {
                 ...state,
                 inventory: {
@@ -59,10 +51,7 @@ export function resourceReducer(state: GameState, action: GameAction): GameState
 
         case ActionTypes.SET_ITEM: {
             const { itemType, amount } = action.payload as { itemType: string; amount: number };
-            if (!(itemType in state.inventory)) {
-                console.warn(`Unknown item type: ${itemType}`);
-                return state;
-            }
+            if (!(itemType in state.inventory)) return state;
             return {
                 ...state,
                 inventory: {

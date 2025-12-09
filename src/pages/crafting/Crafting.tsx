@@ -96,6 +96,9 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
     const componentMountedRef = useRef(true);
     const timedCraftingCompletedRef = useRef(false);
     const hasRestoredCraftingRef = useRef(false);
+    
+    // Refs for timeout cleanup (prevents memory leaks on unmount)
+    const craftingTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
 
     // Keep refs in sync with state
     useEffect(() => {
@@ -114,6 +117,9 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
         componentMountedRef.current = true;
         return () => {
             componentMountedRef.current = false;
+            // Clean up all pending timeouts
+            craftingTimeoutsRef.current.forEach(clearTimeout);
+            craftingTimeoutsRef.current = [];
         };
     }, []);
 
@@ -235,14 +241,15 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
                 setTimedCrafting(null);
                 setCraftingPhase('output');
                 
-                // Cosmetic animations
-                setTimeout(() => {
+                // Cosmetic animations (tracked for cleanup)
+                const flyoutTimeout = setTimeout(() => {
                     if (!componentMountedRef.current) return;
                     setCraftingPhase('flyout');
-                }, 400);
+                }, GAME_CONFIG.CRAFTING.TIMED_OUTPUT_DELAY_MS);
+                craftingTimeoutsRef.current.push(flyoutTimeout);
                 
                 const recipeForParticle = timedCrafting.recipe;
-                setTimeout(() => {
+                const particleTimeout = setTimeout(() => {
                     if (!componentMountedRef.current) return;
                     const output = recipeForParticle.outputs[0];
                     const pos = getSidebarItemPosition(output.item);
@@ -254,12 +261,13 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
                     setCraftingPhase('idle');
                     setCraftingRecipe(null);
                     setCraftingIngredientIds([]);
-                }, 1000);
+                }, GAME_CONFIG.CRAFTING.TIMED_PARTICLE_DELAY_MS);
+                craftingTimeoutsRef.current.push(particleTimeout);
             }
         };
         
         updateTimer();
-        const interval = setInterval(updateTimer, 100);
+        const interval = setInterval(updateTimer, GAME_CONFIG.CRAFTING.TIMER_UPDATE_INTERVAL_MS);
         return () => clearInterval(interval);
     }, [timedCrafting, addItem, clearBoardCraft]);
 
@@ -296,7 +304,7 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
         
         if (newlyEnabled.size > 0) {
             setPulsingRecipes(newlyEnabled);
-            const timeout = setTimeout(() => setPulsingRecipes(new Set()), 400);
+            const timeout = setTimeout(() => setPulsingRecipes(new Set()), GAME_CONFIG.CRAFTING.PULSE_DURATION_MS);
             return () => clearTimeout(timeout);
         }
         
@@ -335,18 +343,20 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
         
         setIngredientsPlaced(prev => [...prev, ...newIngredients]);
         
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                setIngredientsPlaced(prev => 
-                    prev.map(ing => {
-                        if (ing.spawnPhase === 'starting') {
-                            return { ...ing, currentX: ing.x, currentY: ing.y, spawnPhase: 'animating' };
-                        }
-                        return ing;
-                    })
-                );
-            });
-        });
+        // Wait for DOM to commit the new elements before starting animation
+        // Using setTimeout(0) instead of double RAF for clearer intent
+        const animateTimeout = setTimeout(() => {
+            if (!componentMountedRef.current) return;
+            setIngredientsPlaced(prev => 
+                prev.map(ing => {
+                    if (ing.spawnPhase === 'starting') {
+                        return { ...ing, currentX: ing.x, currentY: ing.y, spawnPhase: 'animating' };
+                    }
+                    return ing;
+                })
+            );
+        }, 0);
+        craftingTimeoutsRef.current.push(animateTimeout);
         
         setTimeout(() => {
             setIngredientsPlaced(prev => 
@@ -358,7 +368,7 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
                     return ing;
                 })
             );
-        }, 500);
+        }, GAME_CONFIG.CRAFTING.SPAWN_COMPLETE_MS);
     }, [inventory, removeItem]);
 
     // ============================================
@@ -405,7 +415,7 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
             
             const isTimedRecipe = recipe.time > 0;
             
-            // Phase 2: Spinning
+            // Phase 2: Spinning (after converge animation)
             setTimeout(() => {
                 setCraftingPhase('spinning');
                 
@@ -436,7 +446,7 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
                         ingredients: craftingIngredients,
                     });
                 }
-            }, 400);
+            }, GAME_CONFIG.CRAFTING.CONVERGE_TO_SPIN_MS);
             
             // Instant recipe animation
             if (!isTimedRecipe) {
@@ -447,12 +457,12 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
                 setTimeout(() => {
                     if (!componentMountedRef.current) return;
                     setCraftingPhase('output');
-                }, 1200);
+                }, GAME_CONFIG.CRAFTING.INSTANT_OUTPUT_DELAY_MS);
                 
                 setTimeout(() => {
                     if (!componentMountedRef.current) return;
                     setCraftingPhase('flyout');
-                }, 1600);
+                }, GAME_CONFIG.CRAFTING.INSTANT_FLYOUT_DELAY_MS);
                 
                 setTimeout(() => {
                     if (!componentMountedRef.current) return;
@@ -467,7 +477,7 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
                     setCraftingPhase('idle');
                     setCraftingRecipe(null);
                     setCraftingIngredientIds([]);
-                }, 2200);
+                }, GAME_CONFIG.CRAFTING.INSTANT_RESET_DELAY_MS);
             }
         } else {
             spawnIngredientsOnBoard(recipe);
@@ -535,7 +545,7 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
                 `+1 ${ITEMS[ingredient.name]?.name || ingredient.name}`
             );
             setRemovingIngredients(prev => prev.filter(r => r.id !== removeId));
-        }, 450);
+        }, GAME_CONFIG.CRAFTING.REMOVE_FLYOUT_MS);
     }, [addItem]);
 
     const handlePlacedIngredientClick = useCallback((e: MouseEvent, ingredient: PlacedIngredientData) => {

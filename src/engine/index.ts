@@ -60,6 +60,7 @@ export {
     useGameDispatch,
     useMousePosition,
     useCows,
+    useCowsById,
     useCow,
     useTools,
     useResources,

@@ -12,17 +12,11 @@ export function craftingReducer(state: GameState, action: GameAction): GameState
             const { recipeId } = action.payload as { recipeId: string };
             const recipe = GAME_CONFIG.RECIPES?.find(r => r.id === recipeId);
             
-            if (!recipe) {
-                console.warn(`Unknown recipe: ${recipeId}`);
-                return state;
-            }
+            if (!recipe) return state;
 
             // Check if we have enough inputs
             for (const input of recipe.inputs) {
-                if (state.inventory[input.item] < input.qty) {
-                    console.warn(`Not enough ${input.item} for recipe ${recipeId}`);
-                    return state;
-                }
+                if (state.inventory[input.item] < input.qty) return state;
             }
 
             // Consume inputs and produce outputs
@@ -46,17 +40,11 @@ export function craftingReducer(state: GameState, action: GameAction): GameState
             const { recipeId } = action.payload as { recipeId: string };
             const recipe = GAME_CONFIG.RECIPES?.find(r => r.id === recipeId);
             
-            if (!recipe) {
-                console.warn(`Unknown recipe: ${recipeId}`);
-                return state;
-            }
+            if (!recipe) return state;
 
             // Check if we have enough inputs
             for (const input of recipe.inputs) {
-                if (state.inventory[input.item] < input.qty) {
-                    console.warn(`Not enough ${input.item} for recipe ${recipeId}`);
-                    return state;
-                }
+                if (state.inventory[input.item] < input.qty) return state;
             }
 
             // Consume inputs immediately

@@ -49,12 +49,11 @@ function runMigrations(data: SaveData): SaveData {
     while (currentVersion < SAVE_CONFIG.CURRENT_VERSION) {
         const versionToMigrate = currentVersion;
         const migration = migrations.find(m => m.fromVersion === versionToMigrate);
-        if (!migration) {
-            console.warn(`No migration found for version ${versionToMigrate}`);
-            break;
-        }
+        if (!migration) break;
         
-        console.log(`Migrating save from v${migration.fromVersion} to v${migration.toVersion}`);
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`Migrating save from v${migration.fromVersion} to v${migration.toVersion}`);
+        }
         currentData = migration.migrate(currentData) as SaveData;
         currentVersion = migration.toVersion;
     }
@@ -108,7 +107,9 @@ export function saveToLocalStorage(
         
         return { success: true, saveId: 'local', source: 'local' };
     } catch (error) {
-        console.error('Failed to save to localStorage:', error);
+        if (process.env.NODE_ENV === 'development') {
+            console.error('Failed to save to localStorage:', error);
+        }
         return { success: false, error, source: 'local' };
     }
 }
@@ -135,26 +136,25 @@ export function loadFromLocalStorage(): LoadResult {
             );
         }
         
-        // Warn if save is from future version
-        if (data.version > SAVE_CONFIG.CURRENT_VERSION) {
+        // Warn if save is from future version (dev only)
+        if (process.env.NODE_ENV === 'development' && data.version > SAVE_CONFIG.CURRENT_VERSION) {
             console.warn(
                 `Save data is from a newer version (${data.version} > ${SAVE_CONFIG.CURRENT_VERSION}). ` +
                 'Some features may not work correctly.'
             );
         }
         
-        // Validate config overrides
+        // Silently remove invalid config overrides
         const invalidPaths = validateOverrides(data.configOverrides || {});
-        if (invalidPaths.length > 0) {
-            console.warn('Removing invalid config overrides:', invalidPaths);
-            for (const path of invalidPaths) {
-                delete data.configOverrides[path];
-            }
+        for (const path of invalidPaths) {
+            delete data.configOverrides[path];
         }
         
         return { success: true, data, source: 'local' };
     } catch (error) {
-        console.error('Failed to load from localStorage:', error);
+        if (process.env.NODE_ENV === 'development') {
+            console.error('Failed to load from localStorage:', error);
+        }
         return { success: false, error, source: 'local' };
     }
 }
@@ -174,7 +174,9 @@ export function deleteSave(): SaveResult {
         localStorage.removeItem(SAVE_CONFIG.LOCAL_STORAGE_KEY);
         return { success: true, source: 'local' };
     } catch (error) {
-        console.error('Failed to delete save:', error);
+        if (process.env.NODE_ENV === 'development') {
+            console.error('Failed to delete save:', error);
+        }
         return { success: false, error, source: 'local' };
     }
 }

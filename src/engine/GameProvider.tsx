@@ -1,12 +1,12 @@
 /**
  * GameProvider - Central game context
  * 
- * Provides:
- * - Game state via useReducer
- * - Game loop integration
- * - Collision engine integration
- * - Mouse/Touch position tracking
- * - Save/Load functionality with auto-save
+ * Split into multiple contexts to prevent unnecessary re-renders:
+ * - StateContext: Game state (changes frequently)
+ * - DispatchContext: Dispatch function (stable)
+ * - ActionsContext: Pre-bound action creators (stable)
+ * - MouseContext: Mouse position (changes frequently, separate)
+ * - SaveContext: Save state (changes rarely)
  */
 
 import React, { createContext, useContext, useReducer, useEffect, useState, useCallback, useRef, useMemo, ReactNode } from 'react';
@@ -31,23 +31,14 @@ interface SaveLoadState {
     error: string | null;
 }
 
-interface GameContextValue {
-    // State
-    state: GameState;
-    dispatch: React.Dispatch<GameAction>;
-    
-    // Convenience getters
-    cows: Cow[];
-    resources: GameResources;
-    inventory: Inventory;
-    craftingQueue: CraftingQueueItem[];
-    tools: ToolState;
-    ui: UIState;
-    draggingCow: DraggingCow;
-    chaosImpulses: ChaosImpulses;
-    activeBoardCraft: ActiveBoardCraft | null;
-    
-    // Actions (pre-bound for convenience)
+interface GameLoopControls {
+    pause: () => void;
+    resume: () => void;
+    isPaused: boolean;
+}
+
+interface ActionsContextValue {
+    // Actions (pre-bound, stable references)
     startMilking: () => void;
     stopMilking: () => void;
     startFeeding: () => void;
@@ -75,47 +66,63 @@ interface GameContextValue {
     triggerChaos: (impulses: ChaosImpulses) => void;
     clearCowImpulse: (cowId: string) => void;
     setCraftingDrag: (isDragging: boolean) => void;
-    
-    // Game control
-    pause: () => void;
-    resume: () => void;
-    isPaused: boolean;
-    
-    // Save/Load with loading states
+}
+
+interface SaveContextValue {
     saveGame: () => { success: boolean; error?: unknown };
     resetGame: () => void;
     isSaving: boolean;
     isLoading: boolean;
     lastSavedAt: number;
     saveLoadError: string | null;
-    
-    // Utilities
+}
+
+// Legacy combined interface for backwards compatibility
+interface GameContextValue extends ActionsContextValue, SaveContextValue {
+    state: GameState;
+    dispatch: React.Dispatch<GameAction>;
+    cows: Cow[];
+    resources: GameResources;
+    inventory: Inventory;
+    craftingQueue: CraftingQueueItem[];
+    tools: ToolState;
+    ui: UIState;
+    draggingCow: DraggingCow;
+    chaosImpulses: ChaosImpulses;
+    activeBoardCraft: ActiveBoardCraft | null;
+    pause: () => void;
+    resume: () => void;
+    isPaused: boolean;
     colorToString: (color: Color) => string;
     mousePosition: Position;
 }
 
 // ============================================
-// CONTEXT
+// CONTEXTS (Split for performance)
 // ============================================
 
-const GameContext = createContext<GameContextValue | null>(null);
+const StateContext = createContext<GameState | null>(null);
+const DispatchContext = createContext<React.Dispatch<GameAction> | null>(null);
+const ActionsContext = createContext<ActionsContextValue | null>(null);
 const MouseContext = createContext<Position>({ x: 0, y: 0 });
+const SaveContext = createContext<SaveContextValue | null>(null);
+const GameLoopContext = createContext<GameLoopControls | null>(null);
+
+// Legacy combined context (for backwards compatibility with useGame)
+const GameContext = createContext<GameContextValue | null>(null);
 
 // ============================================
 // INITIAL STATE WITH LOAD
 // ============================================
 
-/**
- * Create initial state, loading from save if available
- */
 function createInitialStateWithLoad(): GameState {
-    // Try to load saved game
     const savedState = loadGameFromStorage();
     
     if (savedState) {
-        console.log('Loaded save data, play time:', Math.round(savedState.playTime), 'seconds');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('Loaded save data, play time:', Math.round(savedState.playTime), 'seconds');
+        }
         
-        // Merge saved state with fresh initial state (to get any new fields)
         const freshState = createInitialState();
         return {
             ...freshState,
@@ -152,7 +159,7 @@ export function GameProvider({ children }: GameProviderProps): React.ReactElemen
     const stateRef = useRef<GameState>(state);
     const lastSaveTimeRef = useRef<number>(0);
 
-    // Keep stateRef updated to avoid stale closures in auto-save
+    // Keep stateRef updated
     useEffect(() => {
         stateRef.current = state;
     }, [state]);
@@ -161,7 +168,6 @@ export function GameProvider({ children }: GameProviderProps): React.ReactElemen
     const performSave = useCallback(() => {
         const now = Date.now();
         
-        // Debounce saves
         if (now - lastSaveTimeRef.current < SAVE_CONFIG.MIN_SAVE_INTERVAL_MS) {
             return { success: true };
         }
@@ -226,13 +232,13 @@ export function GameProvider({ children }: GameProviderProps): React.ReactElemen
     // ---- Game Loop ----
     const gameLoop = useGameLoop(state, dispatch);
 
-    // ---- Tool Release Handler (mouse and touch) ----
+    // ---- Tool Release Handler ----
     useEffect(() => {
         const handleRelease = () => {
-            if (state.tools.milking) {
+            if (stateRef.current.tools.milking) {
                 dispatch(actions.stopMilking());
             }
-            if (state.tools.feeding) {
+            if (stateRef.current.tools.feeding) {
                 dispatch(actions.stopFeeding());
             }
         };
@@ -246,11 +252,10 @@ export function GameProvider({ children }: GameProviderProps): React.ReactElemen
             window.removeEventListener('touchend', handleRelease);
             window.removeEventListener('touchcancel', handleRelease);
         };
-    }, [state.tools.milking, state.tools.feeding]);
+    }, []); // Empty deps - uses stateRef to avoid re-registering
 
     // ---- Auto-Save Interval ----
     useEffect(() => {
-        // Auto-save every 30 seconds
         autoSaveIntervalRef.current = setInterval(() => {
             performSave();
         }, SAVE_CONFIG.AUTO_SAVE_INTERVAL_MS);
@@ -265,7 +270,6 @@ export function GameProvider({ children }: GameProviderProps): React.ReactElemen
     // ---- Save on Page Unload ----
     useEffect(() => {
         const handleBeforeUnload = () => {
-            // Synchronous save on page close
             saveGameToStorage(stateRef.current);
         };
 
@@ -279,12 +283,11 @@ export function GameProvider({ children }: GameProviderProps): React.ReactElemen
     // ---- Reset Game ----
     const resetGame = useCallback(() => {
         deleteSave();
-        // Reload the page to reset everything
         window.location.reload();
     }, []);
 
-    // ---- Memoized Action Creators ----
-    const actionCreators = useMemo(() => ({
+    // ---- Memoized Action Creators (STABLE - never changes) ----
+    const actionCreators = useMemo((): ActionsContextValue => ({
         startMilking: () => dispatch(actions.startMilking()),
         stopMilking: () => dispatch(actions.stopMilking()),
         startFeeding: () => dispatch(actions.startFeeding()),
@@ -298,35 +301,43 @@ export function GameProvider({ children }: GameProviderProps): React.ReactElemen
         updateCowPosition: (id: string, pos: Position) => dispatch(actions.updateCowPosition(id, pos)),
         setDraggingCow: (id: string, pos: Position) => dispatch(actions.setDraggingCow(id, pos)),
         clearDraggingCow: () => dispatch(actions.clearDraggingCow()),
-        // Inventory actions
         addItem: (itemType: string, amount?: number) => dispatch(actions.addItem(itemType, amount)),
         removeItem: (itemType: string, amount?: number) => dispatch(actions.removeItem(itemType, amount)),
         setItem: (itemType: string, amount: number) => dispatch(actions.setItem(itemType, amount)),
-        // Crafting actions
         craftInstant: (recipeId: string) => dispatch(actions.craftInstant(recipeId)),
         startCrafting: (recipeId: string) => dispatch(actions.startCrafting(recipeId)),
         completeCrafting: (craftingId: string) => dispatch(actions.completeCrafting(craftingId)),
         cancelCrafting: (craftingId: string) => dispatch(actions.cancelCrafting(craftingId)),
-        // Board crafting (timed crafting on table)
         setBoardCraft: (craftData: ActiveBoardCraft | null) => dispatch(actions.setBoardCraft(craftData)),
         clearBoardCraft: () => dispatch(actions.clearBoardCraft()),
-        // Resource actions
         addCoins: (amount: number) => dispatch(actions.addCoins(amount)),
         spendCoins: (amount: number) => dispatch(actions.spendCoins(amount)),
-        // Chaos mode
         triggerChaos: (impulses: ChaosImpulses) => dispatch(actions.triggerChaos(impulses)),
         clearCowImpulse: (cowId: string) => dispatch(actions.clearCowImpulse(cowId)),
-        // Crafting drag
         setCraftingDrag: (isDragging: boolean) => dispatch(actions.setCraftingDrag(isDragging)),
     }), []);
 
-    // ---- Context Value ----
-    const contextValue = useMemo((): GameContextValue => ({
-        // State
+    // ---- Memoized Save Context (changes rarely) ----
+    const saveContextValue = useMemo((): SaveContextValue => ({
+        saveGame: performSave,
+        resetGame,
+        isSaving: saveLoadState.saving,
+        isLoading: saveLoadState.loading,
+        lastSavedAt: saveLoadState.lastSavedAt,
+        saveLoadError: saveLoadState.error,
+    }), [performSave, resetGame, saveLoadState]);
+
+    // ---- Memoized Game Loop Controls (stable) ----
+    const gameLoopControls = useMemo((): GameLoopControls => ({
+        pause: gameLoop.pause,
+        resume: gameLoop.resume,
+        isPaused: gameLoop.isPaused,
+    }), [gameLoop.pause, gameLoop.resume, gameLoop.isPaused]);
+
+    // ---- Legacy Combined Context (for backwards compatibility) ----
+    const legacyContextValue = useMemo((): GameContextValue => ({
         state,
         dispatch,
-        
-        // Convenience getters
         cows: state.cows,
         resources: state.resources,
         inventory: state.inventory,
@@ -336,66 +347,70 @@ export function GameProvider({ children }: GameProviderProps): React.ReactElemen
         draggingCow: state.draggingCow,
         chaosImpulses: state.chaosImpulses,
         activeBoardCraft: state.activeBoardCraft,
-        
-        // Actions (pre-bound for convenience)
         ...actionCreators,
-        
-        // Game control
-        pause: gameLoop.pause,
-        resume: gameLoop.resume,
-        isPaused: gameLoop.isPaused,
-        
-        // Save/Load with loading states
-        saveGame: performSave,
-        resetGame,
-        isSaving: saveLoadState.saving,
-        isLoading: saveLoadState.loading,
-        lastSavedAt: saveLoadState.lastSavedAt,
-        saveLoadError: saveLoadState.error,
-        
-        // Utilities
+        ...saveContextValue,
+        pause: gameLoopControls.pause,
+        resume: gameLoopControls.resume,
+        isPaused: gameLoopControls.isPaused,
         colorToString,
         mousePosition,
-    }), [state, actionCreators, gameLoop.pause, gameLoop.resume, gameLoop.isPaused, performSave, resetGame, saveLoadState, mousePosition]);
+    }), [state, actionCreators, saveContextValue, gameLoopControls, mousePosition]);
 
     return (
-        <GameContext.Provider value={contextValue}>
-            <MouseContext.Provider value={mousePosition}>
-                {children}
-            </MouseContext.Provider>
-        </GameContext.Provider>
+        <StateContext.Provider value={state}>
+            <DispatchContext.Provider value={dispatch}>
+                <ActionsContext.Provider value={actionCreators}>
+                    <SaveContext.Provider value={saveContextValue}>
+                        <GameLoopContext.Provider value={gameLoopControls}>
+                            <MouseContext.Provider value={mousePosition}>
+                                <GameContext.Provider value={legacyContextValue}>
+                                    {children}
+                                </GameContext.Provider>
+                            </MouseContext.Provider>
+                        </GameLoopContext.Provider>
+                    </SaveContext.Provider>
+                </ActionsContext.Provider>
+            </DispatchContext.Provider>
+        </StateContext.Provider>
     );
 }
 
 // ============================================
-// HOOKS
+// OPTIMIZED HOOKS (Use these for better performance)
 // ============================================
 
 /**
- * Access the full game context
- */
-export function useGame(): GameContextValue {
-    const context = useContext(GameContext);
-    if (!context) {
-        throw new Error('useGame must be used within a GameProvider');
-    }
-    return context;
-}
-
-/**
- * Access just the game state (optimized for frequent reads)
+ * Access just the game state
+ * NOTE: Component will re-render on ANY state change
  */
 export function useGameState(): GameState {
-    const { state } = useGame();
+    const state = useContext(StateContext);
+    if (!state) {
+        throw new Error('useGameState must be used within a GameProvider');
+    }
     return state;
 }
 
 /**
- * Access just the dispatch function
+ * Access just the dispatch function (stable, never causes re-render)
  */
 export function useGameDispatch(): React.Dispatch<GameAction> {
-    const { dispatch } = useGame();
+    const dispatch = useContext(DispatchContext);
+    if (!dispatch) {
+        throw new Error('useGameDispatch must be used within a GameProvider');
+    }
     return dispatch;
+}
+
+/**
+ * Access pre-bound actions (stable, never causes re-render)
+ */
+export function useGameActions(): ActionsContextValue {
+    const actions = useContext(ActionsContext);
+    if (!actions) {
+        throw new Error('useGameActions must be used within a GameProvider');
+    }
+    return actions;
 }
 
 /**
@@ -406,56 +421,110 @@ export function useMousePosition(): Position {
 }
 
 /**
+ * Access save state and functions
+ */
+export function useSaveState(): SaveContextValue {
+    const save = useContext(SaveContext);
+    if (!save) {
+        throw new Error('useSaveState must be used within a GameProvider');
+    }
+    return save;
+}
+
+/**
+ * Access game loop controls
+ */
+export function useGameLoopControls(): GameLoopControls {
+    const controls = useContext(GameLoopContext);
+    if (!controls) {
+        throw new Error('useGameLoopControls must be used within a GameProvider');
+    }
+    return controls;
+}
+
+// ============================================
+// LEGACY HOOKS (Backwards compatibility)
+// ============================================
+
+/**
+ * Access the full game context (LEGACY - causes re-render on any change)
+ * Prefer using specific hooks like useGameState, useGameActions, etc.
+ */
+export function useGame(): GameContextValue {
+    const context = useContext(GameContext);
+    if (!context) {
+        throw new Error('useGame must be used within a GameProvider');
+    }
+    return context;
+}
+
+/**
  * Access cows list
  */
 export function useCows(): Cow[] {
-    const { cows } = useGame();
-    return cows;
+    const state = useGameState();
+    return state.cows;
 }
 
 /**
- * Access a single cow by ID
+ * Access cows as a Map for O(1) lookups
+ */
+export function useCowsById(): Map<string, Cow> {
+    const state = useGameState();
+    return useMemo(() => {
+        const map = new Map<string, Cow>();
+        for (const cow of state.cows) {
+            map.set(cow.id, cow);
+        }
+        return map;
+    }, [state.cows]);
+}
+
+/**
+ * Access a single cow by ID (O(1) lookup)
  */
 export function useCow(cowId: string): Cow | undefined {
-    const { cows } = useGame();
-    return cows.find(c => c.id === cowId);
+    const cowsById = useCowsById();
+    return cowsById.get(cowId);
 }
 
 /**
- * Access tools state
+ * Access tools state with actions
  */
 export function useTools() {
-    const { tools, startMilking, stopMilking, startFeeding, stopFeeding, updateToolPosition } = useGame();
-    return { ...tools, startMilking, stopMilking, startFeeding, stopFeeding, updateToolPosition };
+    const state = useGameState();
+    const actions = useGameActions();
+    return { 
+        ...state.tools, 
+        startMilking: actions.startMilking, 
+        stopMilking: actions.stopMilking, 
+        startFeeding: actions.startFeeding, 
+        stopFeeding: actions.stopFeeding, 
+        updateToolPosition: actions.updateToolPosition 
+    };
 }
 
 /**
  * Access resources
  */
 export function useResources(): GameResources {
-    const { resources } = useGame();
-    return resources;
+    const state = useGameState();
+    return state.resources;
 }
 
 /**
  * Access inventory state and actions
  */
 export function useInventory() {
-    const { 
-        inventory, 
-        addItem, 
-        removeItem, 
-        setItem,
-    } = useGame();
+    const state = useGameState();
+    const actions = useGameActions();
     return { 
-        inventory, 
-        addItem, 
-        removeItem, 
-        setItem,
-        // Helper to check if player has enough of an item
-        hasItem: (itemType: string, amount: number = 1) => (inventory[itemType] || 0) >= amount,
-        // Helper to get item count
-        getItemCount: (itemType: string) => inventory[itemType] || 0,
+        inventory: state.inventory, 
+        addItem: actions.addItem, 
+        removeItem: actions.removeItem, 
+        setItem: actions.setItem,
+        hasItem: (itemType: string, amount: number = 1) => (state.inventory[itemType] || 0) >= amount,
+        getItemCount: (itemType: string) => state.inventory[itemType] || 0,
     };
 }
 
@@ -463,37 +532,22 @@ export function useInventory() {
  * Access crafting queue state and actions
  */
 export function useCrafting() {
-    const { 
-        inventory,
-        craftingQueue, 
-        craftInstant, 
-        startCrafting, 
-        completeCrafting, 
-        cancelCrafting,
-    } = useGame();
+    const state = useGameState();
+    const actions = useGameActions();
     return { 
-        inventory,
-        craftingQueue, 
-        craftInstant, 
-        startCrafting, 
-        completeCrafting, 
-        cancelCrafting,
-        // Helper to check if a recipe can be crafted
+        inventory: state.inventory,
+        craftingQueue: state.craftingQueue, 
+        craftInstant: actions.craftInstant, 
+        startCrafting: actions.startCrafting, 
+        completeCrafting: actions.completeCrafting, 
+        cancelCrafting: actions.cancelCrafting,
         canCraft: (recipe: Recipe | null | undefined): boolean => {
             if (!recipe) return false;
             return recipe.inputs.every(input => 
-                (inventory[input.item] || 0) >= input.qty
+                (state.inventory[input.item] || 0) >= input.qty
             );
         },
     };
-}
-
-/**
- * Access save state
- */
-export function useSaveState() {
-    const { isSaving, isLoading, lastSavedAt, saveLoadError, saveGame, resetGame } = useGame();
-    return { isSaving, isLoading, lastSavedAt, saveLoadError, saveGame, resetGame };
 }
 
 export default GameProvider;

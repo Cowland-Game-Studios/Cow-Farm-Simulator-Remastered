@@ -116,7 +116,6 @@ export function cowReducer(state: GameState, action: GameAction): GameState | nu
             const { cowId } = action.payload as { cowId: string };
             
             if (state.inventory.grass < 1) {
-                console.warn('Not enough grass to feed cow');
                 return state;
             }
             
