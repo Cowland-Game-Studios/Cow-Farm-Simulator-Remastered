@@ -27,12 +27,12 @@ function calculateLevelProgress(totalXp: number): number {
 }
 
 /**
- * Generate text-based progress bar like ████░░░░ 5,200/10,000
+ * Generate text-based progress bar like ████░░░░
  */
 function generateProgressBar(current: number, max: number): string {
     const filledCount = Math.floor((current / max) * STATS.PROGRESS_BAR_LENGTH);
     const emptyCount = STATS.PROGRESS_BAR_LENGTH - filledCount;
-    return `${'█'.repeat(filledCount)}${'░'.repeat(emptyCount)} ${current.toLocaleString()}/${max.toLocaleString()}`;
+    return `${'█'.repeat(filledCount)}${'░'.repeat(emptyCount)}`;
 }
 
 export default function StatsDisplay({ coins = 0, xp = 0, ...props }: StatsDisplayProps): React.ReactElement {
