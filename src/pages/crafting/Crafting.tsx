@@ -358,17 +358,28 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
         }, 0);
         craftingTimeoutsRef.current.push(animateTimeout);
         
-        setTimeout(() => {
+        const spawnCompleteTimeout = setTimeout(() => {
+            if (!componentMountedRef.current) return;
+            
+            // First, spawn particles for animating ingredients (read current state via ref)
+            const currentIngredients = ingredientsPlacedRef.current;
+            currentIngredients.forEach(ing => {
+                if (ing.spawnPhase === 'animating') {
+                    particleSystem.spawnCraftingPlaceParticle(ing.x, ing.y, `-1 ${ITEMS[ing.name]?.name || ing.name}`);
+                }
+            });
+            
+            // Then update state (separate from particle side effect)
             setIngredientsPlaced(prev => 
                 prev.map(ing => {
                     if (ing.spawnPhase === 'animating') {
-                        particleSystem.spawnCraftingPlaceParticle(ing.x, ing.y, `-1 ${ITEMS[ing.name]?.name || ing.name}`);
                         return { ...ing, spawnPhase: 'done', currentX: undefined, currentY: undefined };
                     }
                     return ing;
                 })
             );
         }, GAME_CONFIG.CRAFTING.SPAWN_COMPLETE_MS);
+        craftingTimeoutsRef.current.push(spawnCompleteTimeout);
     }, [inventory, removeItem]);
 
     // ============================================
@@ -416,7 +427,8 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
             const isTimedRecipe = recipe.time > 0;
             
             // Phase 2: Spinning (after converge animation)
-            setTimeout(() => {
+            const spinTimeout = setTimeout(() => {
+                if (!componentMountedRef.current) return;
                 setCraftingPhase('spinning');
                 
                 if (isTimedRecipe) {
@@ -447,6 +459,7 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
                     });
                 }
             }, GAME_CONFIG.CRAFTING.CONVERGE_TO_SPIN_MS);
+            craftingTimeoutsRef.current.push(spinTimeout);
             
             // Instant recipe animation
             if (!isTimedRecipe) {
@@ -454,17 +467,19 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
                     addItem(output.item, output.qty);
                 }
                 
-                setTimeout(() => {
+                const outputTimeout = setTimeout(() => {
                     if (!componentMountedRef.current) return;
                     setCraftingPhase('output');
                 }, GAME_CONFIG.CRAFTING.INSTANT_OUTPUT_DELAY_MS);
+                craftingTimeoutsRef.current.push(outputTimeout);
                 
-                setTimeout(() => {
+                const flyoutTimeout = setTimeout(() => {
                     if (!componentMountedRef.current) return;
                     setCraftingPhase('flyout');
                 }, GAME_CONFIG.CRAFTING.INSTANT_FLYOUT_DELAY_MS);
+                craftingTimeoutsRef.current.push(flyoutTimeout);
                 
-                setTimeout(() => {
+                const resetTimeout = setTimeout(() => {
                     if (!componentMountedRef.current) return;
                     const output = recipe.outputs[0];
                     const pos = getSidebarItemPosition(output.item);
@@ -478,6 +493,7 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
                     setCraftingRecipe(null);
                     setCraftingIngredientIds([]);
                 }, GAME_CONFIG.CRAFTING.INSTANT_RESET_DELAY_MS);
+                craftingTimeoutsRef.current.push(resetTimeout);
             }
         } else {
             spawnIngredientsOnBoard(recipe);
@@ -491,17 +507,42 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
     const handleIngredientDrop = useCallback(({ x, y }: { x: number; y: number }) => {
         if (!selectedIngredient) return;
         
+        // Check if drop is on the crafting bench
+        const bench = document.getElementById('craftingBench');
+        if (!bench) {
+            // Bench not found, return item to inventory
+            setSelectedIngredient(null);
+            setCraftingDrag(false); // Ensure cursor reappears
+            return;
+        }
+        
+        const benchRect = bench.getBoundingClientRect();
+        const isOnBench = (
+            x >= benchRect.left &&
+            x <= benchRect.right &&
+            y >= benchRect.top &&
+            y <= benchRect.bottom
+        );
+        
+        if (!isOnBench) {
+            // Dropped outside bench - return item to inventory (already there, just clear selection)
+            setSelectedIngredient(null);
+            setCraftingDrag(false); // Ensure cursor reappears
+            return;
+        }
+        
         const ingredientName = selectedIngredient.name;
         
         removeItem(ingredientName, 1);
         particleSystem.spawnCraftingPlaceParticle(x, y, `-1 ${ITEMS[ingredientName]?.name || ingredientName}`);
         
         setSelectedIngredient(null);
+        setCraftingDrag(false); // Ensure cursor reappears
         setIngredientsPlaced(prev => [
             ...prev,
             { name: ingredientName, image: selectedIngredient.image, x, y }
         ]);
-    }, [selectedIngredient, removeItem]);
+    }, [selectedIngredient, removeItem, setCraftingDrag]);
 
     // ============================================
     // REMOVE PLACED INGREDIENT

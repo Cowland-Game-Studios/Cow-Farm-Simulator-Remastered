@@ -43,7 +43,8 @@ const CURSOR_CONFIG = {
  */
 function detectIsMobile(): boolean {
     // 1. Check user agent for mobile devices
-    const userAgent = navigator.userAgent || (navigator as any).vendor || (window as any).opera;
+    // Note: navigator.vendor exists on Navigator, window.opera is legacy Opera-specific
+    const userAgent = navigator.userAgent || navigator.vendor || '';
     const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|CriOS/i;
     const isMobileUA = mobileRegex.test(userAgent);
     

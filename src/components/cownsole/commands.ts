@@ -238,7 +238,7 @@ const commands: Record<string, CommandHandler> = {
             }
             
             const lines = [`📊 GAME_CONFIG${path ? '.' + path : ''}`];
-            lines.push('━'.repeat(40));
+            lines.push('━'.repeat(GAME_CONFIG.COWNSOLE.SEPARATOR_LENGTH));
             
             const flattenConfig = (obj: Record<string, unknown>, prefix: string = '') => {
                 for (const [key, value] of Object.entries(obj)) {
@@ -272,7 +272,7 @@ const commands: Record<string, CommandHandler> = {
             }
             
             const lines = [`🎮 Game State${path ? ': ' + path : ''}`];
-            lines.push('━'.repeat(40));
+            lines.push('━'.repeat(GAME_CONFIG.COWNSOLE.SEPARATOR_LENGTH));
             
             try {
                 const json = JSON.stringify(target, (key, value) => {

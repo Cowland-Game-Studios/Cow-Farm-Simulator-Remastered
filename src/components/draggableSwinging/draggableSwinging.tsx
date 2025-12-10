@@ -89,7 +89,7 @@ export default function DraggableSwinging({
     const mousePositionRef = useRef<Position>({ x: 0, y: 0 }); // Ref for animation loop to read current mouse position
     const throwVelocityRef = useRef<Position>({ x: 0, y: 0 }); // Track actual throw velocity from mouse movement
     const draggingRef = useRef<boolean>(false); // Ref to track dragging state for event handlers (avoids stale closure)
-    const hasInteractedRef = useRef<boolean>(false); // Track if user has interacted (to avoid drop effect on mount)
+    const hasInteractedRef = useRef<boolean>(initialDragging); // Track if user has interacted (true if initialDragging to allow immediate drop)
     
     // Collision detection optimization: cache element positions
     const cachedPositionsRef = useRef<Map<string, Position>>(new Map());

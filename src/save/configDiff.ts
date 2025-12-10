@@ -31,10 +31,10 @@ function deepFreeze<T>(obj: T): T {
 }
 
 /**
- * Deep clone an object
+ * Deep clone an object using structuredClone (faster, preserves more types)
  */
 function deepClone<T>(obj: T): T {
-    return JSON.parse(JSON.stringify(obj));
+    return structuredClone(obj);
 }
 
 /**

@@ -12,7 +12,10 @@ import styles from "./cow.module.css";
 import DraggableSwinging from "../draggableSwinging/draggableSwinging";
 import { CowSVG, CowMilkedSVG, CowToMilkSVG } from "./CowSVG";
 import { 
-    useGame, 
+    useGame,
+    useCow,
+    useCowsById,
+    useTools,
     colorToString,
     particleSystem,
     Position,
@@ -28,9 +31,11 @@ interface CowProps {
 }
 
 export default function Cow({ cowId }: CowProps): React.ReactElement | null {
-    // ---- Get cow data from central state ----
-    const { state, dispatch, breedCows, updateCowPosition, setDraggingCow, clearDraggingCow, draggingCow, chaosImpulses, clearCowImpulse } = useGame();
-    const cow = state.cows.find(c => c.id === cowId);
+    // ---- Get cow data from central state (O(1) lookup) ----
+    const { dispatch, breedCows, updateCowPosition, setDraggingCow, clearDraggingCow, draggingCow, chaosImpulses, clearCowImpulse } = useGame();
+    const cow = useCow(cowId);
+    const cowsById = useCowsById();
+    const { milking, feeding } = useTools();
     
     // ---- Chaos mode impulse ----
     const cowImpulse = chaosImpulses?.[cowId] || null;
@@ -45,9 +50,9 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
     const pickupPositionRef = useRef<Position | null>(null);
     const breedCheckThrottleRef = useRef<number>(0); // Timestamp of last breed target check
     
-    // Store cows in ref to avoid stale closure in breed detection effect
-    const cowsRef = useRef(state.cows);
-    cowsRef.current = state.cows;
+    // Store cowsById in ref to avoid stale closure in breed detection effect
+    const cowsByIdRef = useRef(cowsById);
+    cowsByIdRef.current = cowsById;
     
     // ---- Get facing direction from cow data ----
     const facingRight = cow?.facingRight ?? false;
@@ -154,14 +159,14 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
             // Small delay to ensure DraggableSwinging receives it
             const timeout = setTimeout(() => {
                 clearCowImpulse(cowId);
-            }, 100);
+            }, GAME_CONFIG.CHAOS.IMPULSE_CLEAR_DELAY_MS);
             return () => clearTimeout(timeout);
         }
     }, [cowImpulse, cowId, clearCowImpulse]);
 
     // ---- Check if this cow is a breed target (another full cow is being dragged near) ----
     // Throttled to reduce DOM query overhead during rapid mouse movements
-    // Uses cowsRef to always access current cows data (avoids stale closure)
+    // Uses cowsByIdRef to always access current cows data (avoids stale closure)
     useEffect(() => {
         if (!cow || !draggingCow.cowId || !draggingCow.position) {
             setIsBreedTarget(false);
@@ -180,8 +185,8 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
             return;
         }
 
-        // Check if the dragging cow is also full (use ref for current data)
-        const draggingCowData = cowsRef.current.find(c => c.id === draggingCow.cowId);
+        // Check if the dragging cow is also full (use ref for current data, O(1) lookup)
+        const draggingCowData = cowsByIdRef.current.get(draggingCow.cowId);
         if (!draggingCowData || draggingCowData.state !== 'full') {
             setIsBreedTarget(false);
             return;
@@ -240,7 +245,7 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
     }, [cow, cowId, setDraggingCow, isBeingDragged]);
 
     // ---- Handle drop (breeding check) ----
-    // Uses cowsRef to always access current cows data (avoids stale closure)
+    // Uses cowsByIdRef to always access current cows data (avoids stale closure)
     const onDrop = useCallback((dropPosition: Position) => {
         if (!cow) return;
         
@@ -262,7 +267,7 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
         if (now - cow.lastBredAt < COW_CONFIG.BREEDING_COOLDOWN_MS) return;
 
         // Check for collisions with other full cows using DOM (use ref for current data)
-        for (const otherCow of cowsRef.current) {
+        for (const otherCow of cowsByIdRef.current.values()) {
             if (otherCow.id === cowId) continue;
             if (otherCow.state !== 'full') continue;
             
@@ -326,10 +331,10 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
                         left: 50,
                         transition: "all 1s ease-in-out",
                     }}>
-                        {state.tools.milking && cowState === 'full' && (
+                        {milking && cowState === 'full' && (
                             <img src="./images/cows/thinkMilk.svg" draggable={false} className={styles.bucket} style={{ marginTop: -45 }} alt="Thinking about milk" />
                         )}
-                        {state.tools.feeding && cowState === 'hungry' && (
+                        {feeding && cowState === 'hungry' && (
                             <img src="./images/cows/thinkFood.svg" draggable={false} className={styles.bucket} style={{ marginTop: -5}} alt="Thinking about food" />
                         )}
                     </div>

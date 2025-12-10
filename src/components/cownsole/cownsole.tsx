@@ -9,6 +9,7 @@ import React, { useState, useRef, useEffect, useCallback, FormEvent, KeyboardEve
 import styles from './cownsole.module.css';
 import { executeCommand } from './commands';
 import { useGame } from '../../engine';
+import { GAME_CONFIG } from '../../config/gameConfig';
 
 interface OutputEntry {
     command: string;
@@ -171,7 +172,7 @@ export default function Cownsole({ onClose, onMinimize }: CownsoleProps): React.
         setIsClosing(true);
         setTimeout(() => {
             onClose();
-        }, 150);
+        }, GAME_CONFIG.COWNSOLE.CLOSE_ANIMATION_MS);
     }, [onClose, output]);
     
     // Handle minimize with animation (preserves output for next boot)
@@ -181,7 +182,7 @@ export default function Cownsole({ onClose, onMinimize }: CownsoleProps): React.
         setTimeout(() => {
             onMinimize?.();
             onClose();
-        }, 300);
+        }, GAME_CONFIG.COWNSOLE.MINIMIZE_ANIMATION_MS);
     }, [onMinimize, onClose, output]);
     
     // Handle maximize toggle
@@ -288,18 +289,18 @@ export default function Cownsole({ onClose, onMinimize }: CownsoleProps): React.
             let newY = start.posY;
             
             if (resizeDirection.includes('e')) {
-                newWidth = Math.max(320, start.width + deltaX);
+                newWidth = Math.max(GAME_CONFIG.COWNSOLE.MIN_WIDTH, start.width + deltaX);
             }
             if (resizeDirection.includes('w')) {
-                const widthDelta = Math.min(deltaX, start.width - 320);
+                const widthDelta = Math.min(deltaX, start.width - GAME_CONFIG.COWNSOLE.MIN_WIDTH);
                 newWidth = start.width - widthDelta;
                 newX = start.posX + widthDelta;
             }
             if (resizeDirection.includes('s')) {
-                newHeight = Math.max(200, start.height + deltaY);
+                newHeight = Math.max(GAME_CONFIG.COWNSOLE.MIN_HEIGHT, start.height + deltaY);
             }
             if (resizeDirection.includes('n')) {
-                const heightDelta = Math.min(deltaY, start.height - 200);
+                const heightDelta = Math.min(deltaY, start.height - GAME_CONFIG.COWNSOLE.MIN_HEIGHT);
                 newHeight = start.height - heightDelta;
                 newY = start.posY + heightDelta;
             }
@@ -346,7 +347,7 @@ export default function Cownsole({ onClose, onMinimize }: CownsoleProps): React.
         }
         
         if (result.closeConsole) {
-            setTimeout(() => handleClose(), 300);
+            setTimeout(() => handleClose(), GAME_CONFIG.COWNSOLE.COMMAND_CLOSE_DELAY_MS);
         }
         
         if (history[history.length - 1] !== trimmedInput) {

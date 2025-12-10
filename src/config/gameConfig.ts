@@ -192,6 +192,15 @@ export interface GameConfigType {
     CHAOS: {
         IMPULSE_STRENGTH: number;
         UPWARD_BIAS: number;
+        IMPULSE_CLEAR_DELAY_MS: number;
+    };
+    COWNSOLE: {
+        CLOSE_ANIMATION_MS: number;
+        MINIMIZE_ANIMATION_MS: number;
+        COMMAND_CLOSE_DELAY_MS: number;
+        MIN_WIDTH: number;
+        MIN_HEIGHT: number;
+        SEPARATOR_LENGTH: number;
     };
 }
 
@@ -508,6 +517,17 @@ export const GAME_CONFIG: GameConfigType = {
     CHAOS: {
         IMPULSE_STRENGTH: 30,                // Velocity magnitude for chaos impulse
         UPWARD_BIAS: 15,                     // Slight upward bias on chaos impulse
+        IMPULSE_CLEAR_DELAY_MS: 100,         // Delay before clearing impulse after applying
+    },
+
+    // Moo.sh console settings
+    COWNSOLE: {
+        CLOSE_ANIMATION_MS: 150,             // Close animation duration
+        MINIMIZE_ANIMATION_MS: 300,          // Minimize animation duration
+        COMMAND_CLOSE_DELAY_MS: 300,         // Delay before closing after 'exit' command
+        MIN_WIDTH: 320,                      // Minimum window width
+        MIN_HEIGHT: 200,                     // Minimum window height
+        SEPARATOR_LENGTH: 40,                // Length of separator lines (━)
     },
 };
 
