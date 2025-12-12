@@ -87,7 +87,38 @@
     user-select: none;
 }
 
+.progressText {
+    cursor: pointer;
+    transition: color 0.15s ease-out, transform 0.15s ease-out;
+}
+
+.progressText:hover {
+    color: rgba(0, 0, 0, 0.7);
+}
+
+/* Pulse animation when number is rolling */
+.pulse {
+    animation: pulseIn 0.3s ease-out;
+}
+
+@keyframes pulseIn {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.15);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
 .xp {
+    color: rgba(0, 0, 0, 0.50);
+    font-weight: 400;
+}
+
+.progress {
     color: rgba(0, 0, 0, 0.50);
     font-weight: 400;
 }

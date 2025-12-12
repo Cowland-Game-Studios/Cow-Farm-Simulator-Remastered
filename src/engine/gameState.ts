@@ -149,14 +149,15 @@ export const createInitialState = (): GameState => ({
         yogurtSold: 0,
         iceCreamSold: 0,
         cheesecakeSold: 0,
+        
+        // XP tracking
+        totalXpEarned: 0,
     },
 
     // Achievement system
     achievements: {
         unlocked: {},
     },
-    level: 1,
-    xp: 0,
 });
 
 // ============================================

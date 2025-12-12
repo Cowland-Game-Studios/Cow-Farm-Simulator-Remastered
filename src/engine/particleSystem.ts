@@ -243,11 +243,11 @@ class ParticleSystem {
     }
 
     /**
-     * Spawn a "+1 milk" collection particle
+     * Spawn a "+milk" collection particle
      */
     spawnMilkParticle(x: number, y: number): string {
         return this.spawn({
-            text: '+1 milk',
+            text: '++milk;',
             x,
             y,
             vx: (Math.random() - 0.5) * PARTICLES.MILK_VX_RANGE,
@@ -260,11 +260,11 @@ class ParticleSystem {
     }
 
     /**
-     * Spawn a "-1 grass" feed consumption particle (floats up, then falls)
+     * Spawn a "-grass" feed consumption particle (floats up, then falls)
      */
     spawnFeedParticle(x: number, y: number): string {
         return this.spawn({
-            text: '-1 grass',
+            text: '--grass;',
             x,
             y,
             vx: (Math.random() - 0.5) * PARTICLES.MILK_VX_RANGE,
@@ -277,11 +277,11 @@ class ParticleSystem {
     }
 
     /**
-     * Spawn a "+1 cow" breeding particle
+     * Spawn a "+cow" breeding particle
      */
     spawnBreedParticle(x: number, y: number): string {
         return this.spawn({
-            text: '+1 cow',
+            text: '++cow;',
             x,
             y,
             vx: (Math.random() - 0.5) * PARTICLES.MILK_VX_RANGE,
@@ -294,7 +294,7 @@ class ParticleSystem {
     }
 
     /**
-     * Spawn a crafting particle (e.g., "-1 Cream", "+1 Butter")
+     * Spawn a crafting particle (e.g., "-Cream", "+Butter", "+2 Butter")
      */
     spawnCraftingPlaceParticle(x: number, y: number, text: string): string {
         return this.spawn({

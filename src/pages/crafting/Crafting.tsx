@@ -256,7 +256,9 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
                     particleSystem.spawnCraftingPlaceParticle(
                         pos.x,
                         pos.y - 20,
-                        `+${output.qty} ${ITEMS[output.item]?.name || output.item}`
+                        output.qty === 1 
+                            ? `++${ITEMS[output.item]?.name || output.item};`
+                            : `+${output.qty} ${ITEMS[output.item]?.name || output.item}`
                     );
                     setCraftingPhase('idle');
                     setCraftingRecipe(null);
@@ -365,7 +367,7 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
             const currentIngredients = ingredientsPlacedRef.current;
             currentIngredients.forEach(ing => {
                 if (ing.spawnPhase === 'animating') {
-                    particleSystem.spawnCraftingPlaceParticle(ing.x, ing.y, `-1 ${ITEMS[ing.name]?.name || ing.name}`);
+                    particleSystem.spawnCraftingPlaceParticle(ing.x, ing.y, `--${ITEMS[ing.name]?.name || ing.name};`);
                 }
             });
             
@@ -486,7 +488,9 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
                     particleSystem.spawnCraftingPlaceParticle(
                         pos.x,
                         pos.y - 20,
-                        `+${output.qty} ${ITEMS[output.item]?.name || output.item}`
+                        output.qty === 1 
+                            ? `++${ITEMS[output.item]?.name || output.item};`
+                            : `+${output.qty} ${ITEMS[output.item]?.name || output.item}`
                     );
                     setIngredientsPlaced(prev => prev.filter((_, idx) => !usedIndices.includes(idx)));
                     setCraftingPhase('idle');
@@ -534,7 +538,7 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
         const ingredientName = selectedIngredient.name;
         
         removeItem(ingredientName, 1);
-        particleSystem.spawnCraftingPlaceParticle(x, y, `-1 ${ITEMS[ingredientName]?.name || ingredientName}`);
+        particleSystem.spawnCraftingPlaceParticle(x, y, `--${ITEMS[ingredientName]?.name || ingredientName};`);
         
         setSelectedIngredient(null);
         setCraftingDrag(false); // Ensure cursor reappears
@@ -583,7 +587,7 @@ export default function Crafting({ onClose = () => {} }: CraftingProps): React.R
             particleSystem.spawnCraftingPlaceParticle(
                 targetPos.x,
                 targetPos.y - 20,
-                `+1 ${ITEMS[ingredient.name]?.name || ingredient.name}`
+                `++${ITEMS[ingredient.name]?.name || ingredient.name};`
             );
             setRemovingIngredients(prev => prev.filter(r => r.id !== removeId));
         }, GAME_CONFIG.CRAFTING.REMOVE_FLYOUT_MS);

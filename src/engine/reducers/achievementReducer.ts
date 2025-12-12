@@ -4,11 +4,7 @@
  */
 
 import { ActionTypes, GameState, GameAction } from '../types';
-import { 
-    checkAchievements, 
-    applyAchievementResults,
-    getLevelFromXp 
-} from '../achievements';
+import { checkAchievements } from '../achievements';
 
 export function achievementReducer(state: GameState, action: GameAction): GameState | null {
     switch (action.type) {
@@ -21,21 +17,24 @@ export function achievementReducer(state: GameState, action: GameAction): GameSt
                 return state;
             }
             
-            // Apply the results
-            const { achievements, xp } = applyAchievementResults(
-                state.achievements,
-                state.xp,
-                results
-            );
-            
-            // Calculate new level from total XP
-            const levelInfo = getLevelFromXp(xp);
+            // Record newly unlocked achievements and add XP to stats
+            const now = Date.now();
+            const newUnlocked = { ...state.achievements.unlocked };
+            for (const achievement of results.newlyUnlocked) {
+                const key = `${achievement.categoryId}:${achievement.tier}`;
+                newUnlocked[key] = now;
+            }
             
             return {
                 ...state,
-                achievements,
-                xp,
-                level: levelInfo.level,
+                achievements: {
+                    ...state.achievements,
+                    unlocked: newUnlocked,
+                },
+                stats: {
+                    ...state.stats,
+                    totalXpEarned: state.stats.totalXpEarned + results.totalXpAwarded,
+                },
             };
         }
 

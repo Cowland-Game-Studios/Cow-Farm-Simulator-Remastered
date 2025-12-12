@@ -3,7 +3,7 @@
  * Core logic for checking, unlocking, and tracking achievements
  */
 
-import { GameStats, AchievementState } from '../types';
+import { GameStats } from '../types';
 import { 
     Achievement, 
     AchievementProgress, 
@@ -37,7 +37,7 @@ export function generateAchievement(categoryId: string, tier: number): Achieveme
     return {
         id: getAchievementId(categoryId, tier),
         categoryId,
-        name: `${category.baseName} ${toRomanNumeral(tier).toLowerCase()}`,
+        name: `[${toRomanNumeral(tier).toLowerCase()}] ${category.baseName}`,
         tier,
         threshold: getThreshold(tier, thresholds),
         xpReward: getXpForTier(tier, category.baseXp),
@@ -184,34 +184,6 @@ export function checkAchievements(
     return {
         newlyUnlocked,
         totalXpAwarded,
-    };
-}
-
-/**
- * Apply achievement check results to state
- */
-export function applyAchievementResults(
-    currentState: AchievementState,
-    currentXp: number,
-    results: AchievementCheckResult
-): { achievements: AchievementState; xp: number } {
-    if (results.newlyUnlocked.length === 0) {
-        return { achievements: currentState, xp: currentXp };
-    }
-    
-    const now = Date.now();
-    const newUnlocked = { ...currentState.unlocked };
-    
-    for (const achievement of results.newlyUnlocked) {
-        newUnlocked[achievement.id] = now;
-    }
-    
-    return {
-        achievements: {
-            ...currentState,
-            unlocked: newUnlocked,
-        },
-        xp: currentXp + results.totalXpAwarded,
     };
 }
 

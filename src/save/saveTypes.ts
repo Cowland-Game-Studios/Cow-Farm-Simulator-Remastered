@@ -11,6 +11,7 @@ import { GAME_CONFIG } from '../config/gameConfig';
 
 /**
  * Game state data that is always saved
+ * Note: level is computed from stats.totalXpEarned, not stored separately
  */
 export interface SavedGameState {
     cows: Cow[];
@@ -20,8 +21,6 @@ export interface SavedGameState {
     activeBoardCraft: ActiveBoardCraft | null;
     stats: GameStats;
     achievements: AchievementState;
-    level: number;
-    xp: number;
     playTime: number;
 }
 

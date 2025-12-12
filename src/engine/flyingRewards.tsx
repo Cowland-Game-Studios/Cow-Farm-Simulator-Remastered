@@ -49,11 +49,11 @@ function quadraticBezier(t: number, p0: number, p1: number, p2: number): number 
 }
 
 /**
- * Strong ease-out: starts fast, ends very slow
- * Using quintic (power of 5) for more dramatic slowdown
+ * Strong ease-in: starts slow, ends very fast
+ * Using quintic (power of 5) for exponential acceleration
  */
-function easeOutQuint(t: number): number {
-    return 1 - Math.pow(1 - t, 5);
+function easeInQuint(t: number): number {
+    return Math.pow(t, 5);
 }
 
 // ============================================
@@ -74,7 +74,8 @@ export function FlyingRewardsProvider({ children }: FlyingRewardsProviderProps):
     const [particles, setParticles] = useState<FlyingParticle[]>([]);
     const [pulsingTargets, setPulsingTargets] = useState<Set<RewardType>>(new Set());
     const targetsRef = useRef<Map<RewardType, HTMLElement>>(new Map());
-    const nextIdRef = useRef(0);
+    // nextIdRef kept for future use when particles are re-enabled
+    // const nextIdRef = useRef(0);
     const animationFrameRef = useRef<number | null>(null);
     const lastTickRef = useRef(performance.now());
 
@@ -97,38 +98,10 @@ export function FlyingRewardsProvider({ children }: FlyingRewardsProviderProps):
         }, 300);
     }, []);
 
-    const spawnReward = useCallback((type: RewardType, text: string, sourceX: number, sourceY: number) => {
-        const target = targetsRef.current.get(type);
-        if (!target) return;
-
-        const rect = target.getBoundingClientRect();
-        const targetX = rect.left + rect.width / 2;
-        const targetY = rect.top + rect.height / 2;
-
-        // Calculate control point for bezier curve
-        // Arc upward and to the side for a nice swooping motion
-        const midX = (sourceX + targetX) / 2;
-        
-        // Offset the control point upward and slightly toward the start
-        // This creates a nice arc that goes up first then curves down to target
-        const controlX = midX - (targetX - sourceX) * 0.3;
-        const controlY = Math.min(sourceY, targetY) - 100; // Arc upward
-
-        const particle: FlyingParticle = {
-            id: `flying-${nextIdRef.current++}`,
-            type,
-            text,
-            startX: sourceX,
-            startY: sourceY,
-            controlX,
-            controlY,
-            targetX,
-            targetY,
-            progress: 0,
-        };
-
-        setParticles(prev => [...prev, particle]);
-    }, []);
+    const spawnReward = useCallback((type: RewardType, _text: string, _sourceX: number, _sourceY: number) => {
+        // Just trigger the pulse immediately without spawning visible particles
+        triggerPulse(type);
+    }, [triggerPulse]);
 
     // Track which particles have already triggered pulse (to avoid double-triggering)
     const pulsedParticlesRef = useRef<Set<string>>(new Set());
@@ -149,8 +122,8 @@ export function FlyingRewardsProvider({ children }: FlyingRewardsProviderProps):
                     // Slower flight: ~800ms total (delta * 1.25)
                     const newProgress = particle.progress + delta * 1.25;
 
-                    // Trigger pulse when particle is ~50% of the way there
-                    if (newProgress >= 0.5 && !pulsedParticlesRef.current.has(particle.id)) {
+                    // Trigger pulse when particle is ~80% of the way there (since it accelerates)
+                    if (newProgress >= 0.8 && !pulsedParticlesRef.current.has(particle.id)) {
                         pulsedParticlesRef.current.add(particle.id);
                         triggerPulse(particle.type);
                     }
@@ -240,22 +213,21 @@ export function FlyingRewardsRenderer(): React.ReactElement | null {
             zIndex: 9999,
         }}>
             {particles.map(particle => {
-                // Apply easing to progress (start fast, end slow)
-                const eased = easeOutQuint(particle.progress);
+                // Apply easing to progress (start slow, end fast - exponential acceleration)
+                const eased = easeInQuint(particle.progress);
                 
                 // Calculate position along bezier curve
                 const x = quadraticBezier(eased, particle.startX, particle.controlX, particle.targetX);
                 const y = quadraticBezier(eased, particle.startY, particle.controlY, particle.targetY);
                 
-                // Scale shrinks as it approaches target
-                const scale = 1 - eased * 0.4;
+                // Scale shrinks exponentially as it approaches target
+                const scale = 1 - Math.pow(eased, 2) * 0.6;
                 
-                // Opacity fades out exponentially after 50% progress
-                // Stays fully visible until 50%, then fades out exponentially
-                const opacity = eased < 0.5 ? 1 : 1 - Math.pow((eased - 0.5) / 0.5, 3);
+                // Opacity fades out exponentially - accelerates fade towards the end
+                const opacity = 1 - Math.pow(eased, 3);
 
                 return (
-                    <div
+                    <p
                         key={particle.id}
                         style={{
                             position: 'absolute',
@@ -263,16 +235,17 @@ export function FlyingRewardsRenderer(): React.ReactElement | null {
                             top: y,
                             transform: `translate(-50%, -50%) scale(${scale})`,
                             opacity,
+                            margin: 0,
                             fontFamily: 'Lexend, sans-serif',
-                            fontSize: '14px',
-                            fontWeight: 700,
+                            fontSize: '8px',
+                            fontWeight: 400,
+                            letterSpacing: '0.7px',
                             color: '#000',
-                            textShadow: '0 1px 3px rgba(0,0,0,0.2)',
                             whiteSpace: 'nowrap',
                         }}
                     >
                         {particle.text}
-                    </div>
+                    </p>
                 );
             })}
         </div>

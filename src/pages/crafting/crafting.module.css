@@ -55,6 +55,14 @@
     margin: 0;
     color: black;
     text-align: center;
+    
+    /* Match button text styling */
+    font-family: Lexend, sans-serif;
+    font-size: 8px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: normal;
+    letter-spacing: 0.7px;
 }
 
 @keyframes blurFadeOut {
@@ -516,7 +524,13 @@
     bottom: 20%;
     transform: translateX(-50%);
     
-    font-size: 12px;
+    /* Match button text styling */
+    font-family: Lexend, sans-serif;
+    font-size: 8px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: normal;
+    letter-spacing: 0.7px;
     color: #aaa;
     margin: 0;
     

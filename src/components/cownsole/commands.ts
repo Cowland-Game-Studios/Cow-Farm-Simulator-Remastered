@@ -495,6 +495,7 @@ const commands: Record<string, CommandHandler> = {
   clear                  Clear console output
   cow halp               Show this help
   cowsay [msg]           🐄
+  cowable                Reset all cows
   udder chaos            ???
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -583,6 +584,33 @@ Examples:
         `.trim();
         
         return { success: true, output: cow };
+    },
+
+    /**
+     * cowable - Reset all cows to be ready for milking and breeding
+     */
+    cowable: (args, state, dispatch) => {
+        if (state.cows.length === 0) {
+            return { success: false, output: 'No cows to reset!' };
+        }
+        
+        // Reset all cows' timestamps
+        const resetCows = state.cows.map(cow => ({
+            ...cow,
+            lastFedAt: null,
+            lastBredAt: 0,
+            state: 'full' as const,  // Make them ready to milk
+            fullness: 1,
+        }));
+        
+        // Use LOAD_SAVE to update state
+        const newState = { ...state, cows: resetCows };
+        dispatch({ type: 'LOAD_SAVE', payload: { saveData: newState } });
+        
+        return { 
+            success: true, 
+            output: `🐄 Reset ${state.cows.length} cow(s)!\n\n  ✓ All cows ready to milk\n  ✓ All breeding cooldowns cleared`,
+        };
     },
 
     /**

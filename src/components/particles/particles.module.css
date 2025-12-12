@@ -22,4 +22,12 @@
     transform-origin: center center;
     margin-left: -0.5em;
     margin-top: -0.5em;
+    
+    /* Match button text styling */
+    font-family: Lexend, sans-serif;
+    font-size: 8px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: normal;
+    letter-spacing: 0.7px;
 }

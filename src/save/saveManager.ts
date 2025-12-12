@@ -79,8 +79,6 @@ export function extractSaveableState(state: GameState): SavedGameState {
         activeBoardCraft: state.activeBoardCraft,
         stats: state.stats,
         achievements: state.achievements,
-        level: state.level,
-        xp: state.xp,
         playTime: state.playTime,
     };
 }

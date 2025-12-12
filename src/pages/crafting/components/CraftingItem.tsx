@@ -60,7 +60,14 @@ export default function CraftingItem({
                     src="./images/crafting/time.svg" 
                     alt="Time icon" 
                 />
-                <p style={{ color: "black", marginTop: 5, fontSize: 12 }}>
+                <p style={{ 
+                    color: "black", 
+                    margin: 0,
+                    fontFamily: 'Lexend, sans-serif',
+                    fontSize: '8px',
+                    fontWeight: 400,
+                    letterSpacing: '0.7px',
+                }}>
                     {timeDisplay}
                 </p>
             </div>
@@ -77,16 +84,38 @@ export default function CraftingItem({
                         alt={input.item} 
                         style={{ width: 40, height: 40 }} 
                     />
-                    <p style={{ color: "black", marginTop: 0 }}>{input.qty}x</p>
+                    <p style={{ 
+                        color: "black", 
+                        margin: 0,
+                        fontFamily: 'Lexend, sans-serif',
+                        fontSize: '8px',
+                        fontWeight: 400,
+                        letterSpacing: '0.7px',
+                    }}>{input.qty}x</p>
                 </div>
-                <p style={{ color: "black", fontSize: 20, marginTop: -20 }}>=</p>
+                <p style={{ 
+                    color: "black", 
+                    margin: 0,
+                    marginTop: -20,
+                    fontFamily: 'Lexend, sans-serif',
+                    fontSize: '12px',
+                    fontWeight: 400,
+                    letterSpacing: '0.7px',
+                }}>=</p>
                 <div>
                     <img 
                         src={getProductImage(output.item)} 
                         alt={output.item} 
                         style={{ width: 40, height: 40 }} 
                     />
-                    <p style={{ color: "black", marginTop: 0 }}>{output.qty}x</p>
+                    <p style={{ 
+                        color: "black", 
+                        margin: 0,
+                        fontFamily: 'Lexend, sans-serif',
+                        fontSize: '8px',
+                        fontWeight: 400,
+                        letterSpacing: '0.7px',
+                    }}>{output.qty}x</p>
                 </div>
             </div>
         </button>

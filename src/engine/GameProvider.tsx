@@ -88,7 +88,6 @@ interface GameContextValue extends ActionsContextValue, SaveContextValue {
     craftingQueue: CraftingQueueItem[];
     stats: GameStats;
     achievements: AchievementState;
-    level: number;
     xp: number;
     tools: ToolState;
     ui: UIState;
@@ -155,8 +154,6 @@ function createInitialStateWithLoad(): GameState {
             activeBoardCraft: savedState.activeBoardCraft,
             stats: mergedStats,
             achievements: mergedAchievements,
-            level: savedState.level ?? freshState.level,
-            xp: savedState.xp ?? freshState.xp,
             playTime: savedState.playTime,
         };
     }
@@ -371,8 +368,7 @@ export function GameProvider({ children }: GameProviderProps): React.ReactElemen
         craftingQueue: state.craftingQueue,
         stats: state.stats,
         achievements: state.achievements,
-        level: state.level,
-        xp: state.xp,
+        xp: state.stats.totalXpEarned,
         tools: state.tools,
         ui: state.ui,
         draggingCow: state.draggingCow,
@@ -597,8 +593,7 @@ export function useAchievements() {
     const actions = useGameActions();
     return {
         achievements: state.achievements,
-        level: state.level,
-        xp: state.xp,
+        xp: state.stats.totalXpEarned,
         checkAchievements: actions.checkAchievements,
     };
 }

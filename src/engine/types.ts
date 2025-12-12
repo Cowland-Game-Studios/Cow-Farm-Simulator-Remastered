@@ -123,6 +123,9 @@ export interface GameStats {
     iceCreamSold: number;
     cheesecakeSold: number;
     
+    // XP tracking
+    totalXpEarned: number;
+    
     // Allow dynamic access for per-item stats
     [key: string]: number;
 }
@@ -141,8 +144,6 @@ export interface GameState {
     craftingQueue: CraftingQueueItem[];
     stats: GameStats;
     achievements: AchievementState;
-    level: number;
-    xp: number;
     tools: ToolState;
     ui: UIState;
     draggingCow: DraggingCow;
