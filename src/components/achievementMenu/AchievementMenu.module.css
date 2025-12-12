@@ -1,7 +1,7 @@
 .achievementMenu {
     position: absolute;
     bottom: 25px;
-    left: 25px;
+    /* left: 20px; */
     
     display: flex;
     flex-direction: column;
