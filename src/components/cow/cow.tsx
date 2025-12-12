@@ -21,6 +21,7 @@ import {
     Position,
     actions,
 } from "../../engine";
+import { useFlyingRewards } from "../../engine/flyingRewards";
 import { GAME_CONFIG } from "../../config/gameConfig";
 
 const COW_CONFIG = GAME_CONFIG.COW;
@@ -33,6 +34,7 @@ interface CowProps {
 export default function Cow({ cowId }: CowProps): React.ReactElement | null {
     // ---- Get cow data from central state (O(1) lookup) ----
     const { dispatch, breedCows, updateCowPosition, setDraggingCow, clearDraggingCow, draggingCow, chaosImpulses, clearCowImpulse } = useGame();
+    const { spawnReward } = useFlyingRewards();
     const cow = useCow(cowId);
     const cowsById = useCowsById();
     const { milking, feeding } = useTools();
@@ -284,11 +286,13 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
                     breedCows(cowId, otherCow.id, spawnPosition);
                     // Spawn "+1 cow" particle at breed location
                     particleSystem.spawnBreedParticle(spawnPosition.x, spawnPosition.y - 30);
+                    // Spawn flying XP reward for breeding
+                    spawnReward('xp', '+5xp', spawnPosition.x, spawnPosition.y - 50);
                     return; // Only breed once
                 }
             }
         }
-    }, [cowId, cow, breedCows, updateCowPosition, isTouchingCow, clearDraggingCow]);
+    }, [cowId, cow, breedCows, updateCowPosition, isTouchingCow, clearDraggingCow, spawnReward]);
 
     // ---- Early return AFTER all hooks ----
     if (!cow) return null;

@@ -109,6 +109,12 @@ export function cowReducer(state: GameState, action: GameAction): GameState | nu
                     ...state.inventory,
                     milk: state.inventory.milk + 1,
                 },
+                stats: {
+                    ...state.stats,
+                    cowsMilked: state.stats.cowsMilked + 1,
+                    milkCollected: state.stats.milkCollected + 1,
+                    totalXpEarned: state.stats.totalXpEarned + 1,
+                },
             };
         }
 
@@ -139,6 +145,11 @@ export function cowReducer(state: GameState, action: GameAction): GameState | nu
                 inventory: {
                     ...state.inventory,
                     grass: state.inventory.grass - 1,
+                },
+                stats: {
+                    ...state.stats,
+                    cowsFed: state.stats.cowsFed + 1,
+                    totalXpEarned: state.stats.totalXpEarned + 1,
                 },
             };
         }
@@ -178,6 +189,11 @@ export function cowReducer(state: GameState, action: GameAction): GameState | nu
                     }),
                     newCow,
                 ],
+                stats: {
+                    ...state.stats,
+                    cowsBred: state.stats.cowsBred + 1,
+                    totalXpEarned: state.stats.totalXpEarned + 5,
+                },
             };
         }
 

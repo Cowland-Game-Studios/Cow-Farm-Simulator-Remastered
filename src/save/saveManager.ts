@@ -77,6 +77,10 @@ export function extractSaveableState(state: GameState): SavedGameState {
         inventory: state.inventory,
         craftingQueue: state.craftingQueue,
         activeBoardCraft: state.activeBoardCraft,
+        stats: state.stats,
+        achievements: state.achievements,
+        level: state.level,
+        xp: state.xp,
         playTime: state.playTime,
     };
 }

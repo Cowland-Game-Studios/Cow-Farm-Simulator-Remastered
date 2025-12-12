@@ -12,13 +12,14 @@ import Dock from "../components/dock/dock";
 import Button from "../components/button/button";
 import Cow from "../components/cow/cow";
 import DraggableSwinging from "../components/draggableSwinging/draggableSwinging";
-import QuestMenu from "../components/questMenu/questMenu";
+import { AchievementMenu } from "../components/achievementMenu";
 import StatsDisplay from "../components/statsDisplay";
 import ParticleRenderer from "../components/particles/ParticleRenderer";
 import Crafting from "./crafting";
 import Cownsole from "../components/cownsole/cownsole";
 import IconDock from "../components/iconDock";
 import { useGame, useMousePosition, useInventory, particleSystem, useCowsById } from "../engine";
+import { useFlyingRewards } from "../engine/flyingRewards";
 import React, { useEffect, useCallback, useMemo, useState, useRef, memo } from "react";
 import { GAME_CONFIG } from "../config/gameConfig";
 import { Position } from "../engine/types";
@@ -49,6 +50,7 @@ export default function Pasture(): React.ReactElement {
         cows,
         tools,
         resources,
+        xp,
         startMilking,
         startFeeding,
         updateToolPosition,
@@ -59,6 +61,7 @@ export default function Pasture(): React.ReactElement {
     const mousePosition = useMousePosition();
     const { inventory } = useInventory();
     const cowsById = useCowsById();
+    const { spawnReward } = useFlyingRewards();
     
     // ---- Grass availability ----
     const grassCount = inventory.grass || 0;
@@ -187,8 +190,10 @@ export default function Pasture(): React.ReactElement {
             milkCow(cowId);
             // Spawn +1 particle at collision position
             particleSystem.spawnMilkParticle(position.x, position.y - 30);
+            // Spawn flying XP reward
+            spawnReward('xp', '+1xp', position.x, position.y - 50);
         }
-    }, [cowsById, milkCow]);
+    }, [cowsById, milkCow, spawnReward]);
 
     // ---- Collision handler for feeding (feed collides with hungry cow) ----
     const handleFeedCollide = useCallback((cowId: string, position: Position) => {
@@ -198,8 +203,10 @@ export default function Pasture(): React.ReactElement {
             feedCow(cowId);
             // Spawn -1 grass particle that floats up and falls with gravity
             particleSystem.spawnFeedParticle(position.x, position.y - 30);
+            // Spawn flying XP reward
+            spawnReward('xp', '+1xp', position.x, position.y - 50);
         }
-    }, [cowsById, feedCow, hasGrass]);
+    }, [cowsById, feedCow, hasGrass, spawnReward]);
 
     // ---- Update tool position when dragging ----
     useEffect(() => {
@@ -271,12 +278,12 @@ export default function Pasture(): React.ReactElement {
                     <Fence />
 
                     {/* Quest Menu (bottom left) */}
-                    <QuestMenu />
+                    <AchievementMenu />
 
                     {/* Stats Display (bottom right, above icon dock) */}
                     <StatsDisplay 
                         coins={resources.coins} 
-                        xp={Math.floor(resources.stars * 1000)} 
+                        xp={xp} 
                     />
 
                     {/* Icon Dock (bottom right) */}

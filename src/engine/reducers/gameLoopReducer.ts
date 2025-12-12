@@ -3,7 +3,7 @@
  * Handles time-based updates: cow fullness, crafting completion, playtime
  */
 
-import { ActionTypes, GameState, GameAction, CowState } from '../types';
+import { ActionTypes, GameState, GameAction, CowState, GameStats } from '../types';
 import { GAME_CONFIG } from '../../config/gameConfig';
 
 export function gameLoopReducer(state: GameState, action: GameAction): GameState | null {
@@ -34,15 +34,22 @@ export function gameLoopReducer(state: GameState, action: GameAction): GameState
             const completedCrafts = state.craftingQueue.filter(craft => now >= craft.completesAt);
             const remainingCrafts = state.craftingQueue.filter(craft => now < craft.completesAt);
 
-            // If there are completed crafts, produce their outputs
+            // If there are completed crafts, produce their outputs and update stats
             let newInventory = state.inventory;
+            let newStats: GameStats = state.stats;
             if (completedCrafts.length > 0) {
                 newInventory = { ...state.inventory };
+                newStats = { ...state.stats, itemsCrafted: state.stats.itemsCrafted + completedCrafts.length };
                 for (const craft of completedCrafts) {
                     const recipe = GAME_CONFIG.RECIPES?.find(r => r.id === craft.recipeId);
                     if (recipe) {
                         for (const output of recipe.outputs) {
                             newInventory[output.item] = (newInventory[output.item] || 0) + output.qty;
+                            // Update per-item crafting stats
+                            const statKey = `${output.item}Crafted`;
+                            if (statKey in newStats) {
+                                newStats[statKey] = (newStats[statKey] || 0) + output.qty;
+                            }
                         }
                     }
                 }
@@ -54,6 +61,7 @@ export function gameLoopReducer(state: GameState, action: GameAction): GameState
                 cows: updatedCows,
                 inventory: newInventory,
                 craftingQueue: remainingCrafts,
+                stats: newStats,
             };
         }
 

@@ -2,7 +2,7 @@
  * Save System Type Definitions
  */
 
-import { Cow, GameResources, Inventory, CraftingQueueItem, ActiveBoardCraft } from '../engine/types';
+import { Cow, GameResources, Inventory, CraftingQueueItem, ActiveBoardCraft, GameStats, AchievementState } from '../engine/types';
 import { GAME_CONFIG } from '../config/gameConfig';
 
 // ============================================
@@ -18,6 +18,10 @@ export interface SavedGameState {
     inventory: Inventory;
     craftingQueue: CraftingQueueItem[];
     activeBoardCraft: ActiveBoardCraft | null;
+    stats: GameStats;
+    achievements: AchievementState;
+    level: number;
+    xp: number;
     playTime: number;
 }
 

@@ -18,7 +18,7 @@ import {
     deleteSave,
     SAVE_CONFIG,
 } from '../save';
-import { GameState, GameAction, Position, Cow, GameResources, Inventory, CraftingQueueItem, ToolState, UIState, DraggingCow, ChaosImpulses, ActiveBoardCraft, Color, Recipe } from './types';
+import { GameState, GameAction, Position, Cow, GameResources, Inventory, CraftingQueueItem, ToolState, UIState, DraggingCow, ChaosImpulses, ActiveBoardCraft, Color, Recipe, GameStats, AchievementState } from './types';
 
 // ============================================
 // CONTEXT TYPES
@@ -66,6 +66,7 @@ interface ActionsContextValue {
     triggerChaos: (impulses: ChaosImpulses) => void;
     clearCowImpulse: (cowId: string) => void;
     setCraftingDrag: (isDragging: boolean) => void;
+    checkAchievements: () => void;
 }
 
 interface SaveContextValue {
@@ -85,6 +86,10 @@ interface GameContextValue extends ActionsContextValue, SaveContextValue {
     resources: GameResources;
     inventory: Inventory;
     craftingQueue: CraftingQueueItem[];
+    stats: GameStats;
+    achievements: AchievementState;
+    level: number;
+    xp: number;
     tools: ToolState;
     ui: UIState;
     draggingCow: DraggingCow;
@@ -124,6 +129,23 @@ function createInitialStateWithLoad(): GameState {
         }
         
         const freshState = createInitialState();
+        
+        // Merge saved stats with default stats (handles migration for saves without stats)
+        const mergedStats: GameStats = {
+            ...freshState.stats,
+            ...(savedState.stats || {}),
+        };
+        
+        // Merge achievements (handles migration for saves without achievements)
+        const mergedAchievements: AchievementState = {
+            ...freshState.achievements,
+            ...(savedState.achievements || {}),
+            unlocked: {
+                ...freshState.achievements.unlocked,
+                ...(savedState.achievements?.unlocked || {}),
+            },
+        };
+        
         return {
             ...freshState,
             cows: savedState.cows,
@@ -131,6 +153,10 @@ function createInitialStateWithLoad(): GameState {
             inventory: savedState.inventory,
             craftingQueue: savedState.craftingQueue,
             activeBoardCraft: savedState.activeBoardCraft,
+            stats: mergedStats,
+            achievements: mergedAchievements,
+            level: savedState.level ?? freshState.level,
+            xp: savedState.xp ?? freshState.xp,
             playTime: savedState.playTime,
         };
     }
@@ -315,6 +341,7 @@ export function GameProvider({ children }: GameProviderProps): React.ReactElemen
         triggerChaos: (impulses: ChaosImpulses) => dispatch(actions.triggerChaos(impulses)),
         clearCowImpulse: (cowId: string) => dispatch(actions.clearCowImpulse(cowId)),
         setCraftingDrag: (isDragging: boolean) => dispatch(actions.setCraftingDrag(isDragging)),
+        checkAchievements: () => dispatch(actions.checkAchievements()),
     }), []);
 
     // ---- Memoized Save Context (changes rarely) ----
@@ -342,6 +369,10 @@ export function GameProvider({ children }: GameProviderProps): React.ReactElemen
         resources: state.resources,
         inventory: state.inventory,
         craftingQueue: state.craftingQueue,
+        stats: state.stats,
+        achievements: state.achievements,
+        level: state.level,
+        xp: state.xp,
         tools: state.tools,
         ui: state.ui,
         draggingCow: state.draggingCow,
@@ -547,6 +578,28 @@ export function useCrafting() {
                 (state.inventory[input.item] || 0) >= input.qty
             );
         },
+    };
+}
+
+/**
+ * Access game statistics for achievements
+ */
+export function useStats(): GameStats {
+    const state = useGameState();
+    return state.stats;
+}
+
+/**
+ * Access achievement state and actions
+ */
+export function useAchievements() {
+    const state = useGameState();
+    const actions = useGameActions();
+    return {
+        achievements: state.achievements,
+        level: state.level,
+        xp: state.xp,
+        checkAchievements: actions.checkAchievements,
     };
 }
 

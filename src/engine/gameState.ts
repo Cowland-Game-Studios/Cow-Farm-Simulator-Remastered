@@ -118,6 +118,45 @@ export const createInitialState = (): GameState => ({
     
     // Active board crafting (timed recipes in progress on the crafting table)
     activeBoardCraft: null,
+
+    // Statistics tracking for achievements
+    stats: {
+        // Cow actions
+        cowsBred: 0,
+        cowsFed: 0,
+        cowsMilked: 0,
+        
+        // Production
+        milkCollected: 0,
+        itemsCrafted: 0,
+        creamCrafted: 0,
+        butterCrafted: 0,
+        cheeseCrafted: 0,
+        yogurtCrafted: 0,
+        iceCreamCrafted: 0,
+        cheesecakeCrafted: 0,
+        
+        // Economy
+        coinsSpent: 0,
+        coinsEarned: 0,
+        grassPurchased: 0,
+        
+        // Selling (for future)
+        itemsSold: 0,
+        creamSold: 0,
+        butterSold: 0,
+        cheeseSold: 0,
+        yogurtSold: 0,
+        iceCreamSold: 0,
+        cheesecakeSold: 0,
+    },
+
+    // Achievement system
+    achievements: {
+        unlocked: {},
+    },
+    level: 1,
+    xp: 0,
 });
 
 // ============================================
@@ -230,6 +269,9 @@ export const actions = {
     // Chaos mode
     triggerChaos: (impulses: { [cowId: string]: Position }): GameAction => ({ type: ActionTypes.TRIGGER_CHAOS, payload: { impulses } }),
     clearCowImpulse: (cowId: string): GameAction => ({ type: ActionTypes.CLEAR_COW_IMPULSE, payload: { cowId } }),
+
+    // Achievements
+    checkAchievements: (): GameAction => ({ type: ActionTypes.CHECK_ACHIEVEMENTS }),
 };
 
 export default gameReducer;

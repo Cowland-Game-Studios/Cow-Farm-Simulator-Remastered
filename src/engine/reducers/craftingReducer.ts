@@ -3,7 +3,7 @@
  * Handles: CRAFT_INSTANT, START_CRAFTING, COMPLETE_CRAFTING, CANCEL_CRAFTING, BOARD_CRAFT
  */
 
-import { ActionTypes, GameState, GameAction } from '../types';
+import { ActionTypes, GameState, GameAction, GameStats } from '../types';
 import { GAME_CONFIG } from '../../config/gameConfig';
 
 export function craftingReducer(state: GameState, action: GameAction): GameState | null {
@@ -30,9 +30,19 @@ export function craftingReducer(state: GameState, action: GameAction): GameState
                 newInventory[output.item] += output.qty;
             }
 
+            // Update crafting stats
+            const newStats: GameStats = { ...state.stats, itemsCrafted: state.stats.itemsCrafted + 1 };
+            for (const output of recipe.outputs) {
+                const statKey = `${output.item}Crafted`;
+                if (statKey in newStats) {
+                    newStats[statKey] = (newStats[statKey] || 0) + output.qty;
+                }
+            }
+
             return {
                 ...state,
                 inventory: newInventory,
+                stats: newStats,
             };
         }
 
@@ -91,10 +101,20 @@ export function craftingReducer(state: GameState, action: GameAction): GameState
                 newInventory[output.item] += output.qty;
             }
 
+            // Update crafting stats
+            const newStats: GameStats = { ...state.stats, itemsCrafted: state.stats.itemsCrafted + 1 };
+            for (const output of recipe.outputs) {
+                const statKey = `${output.item}Crafted`;
+                if (statKey in newStats) {
+                    newStats[statKey] = (newStats[statKey] || 0) + output.qty;
+                }
+            }
+
             return {
                 ...state,
                 inventory: newInventory,
                 craftingQueue: state.craftingQueue.filter(c => c.id !== craftingId),
+                stats: newStats,
             };
         }
 

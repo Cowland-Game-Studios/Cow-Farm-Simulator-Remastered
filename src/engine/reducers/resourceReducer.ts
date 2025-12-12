@@ -12,6 +12,10 @@ export function resourceReducer(state: GameState, action: GameAction): GameState
             return {
                 ...state,
                 resources: { ...state.resources, coins: state.resources.coins + amount },
+                stats: {
+                    ...state.stats,
+                    coinsEarned: state.stats.coinsEarned + amount,
+                },
             };
         }
 
@@ -21,6 +25,10 @@ export function resourceReducer(state: GameState, action: GameAction): GameState
             return {
                 ...state,
                 resources: { ...state.resources, coins: state.resources.coins - amount },
+                stats: {
+                    ...state.stats,
+                    coinsSpent: state.stats.coinsSpent + amount,
+                },
             };
         }
 

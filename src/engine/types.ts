@@ -93,6 +93,45 @@ export interface ActiveBoardCraft {
     }>;
 }
 
+export interface GameStats {
+    // Cow actions
+    cowsBred: number;
+    cowsFed: number;
+    cowsMilked: number;
+    
+    // Production
+    milkCollected: number;
+    itemsCrafted: number;
+    creamCrafted: number;
+    butterCrafted: number;
+    cheeseCrafted: number;
+    yogurtCrafted: number;
+    iceCreamCrafted: number;
+    cheesecakeCrafted: number;
+    
+    // Economy
+    coinsSpent: number;
+    coinsEarned: number;
+    grassPurchased: number;
+    
+    // Selling (for future)
+    itemsSold: number;
+    creamSold: number;
+    butterSold: number;
+    cheeseSold: number;
+    yogurtSold: number;
+    iceCreamSold: number;
+    cheesecakeSold: number;
+    
+    // Allow dynamic access for per-item stats
+    [key: string]: number;
+}
+
+export interface AchievementState {
+    // Map of "achievementId:tier" -> timestamp unlocked
+    unlocked: Record<string, number>;
+}
+
 export interface GameState {
     userId: string | null;
     saveId: string | null;
@@ -100,6 +139,10 @@ export interface GameState {
     resources: GameResources;
     inventory: Inventory;
     craftingQueue: CraftingQueueItem[];
+    stats: GameStats;
+    achievements: AchievementState;
+    level: number;
+    xp: number;
     tools: ToolState;
     ui: UIState;
     draggingCow: DraggingCow;
@@ -201,6 +244,9 @@ export const ActionTypes = {
     // Chaos mode
     TRIGGER_CHAOS: 'TRIGGER_CHAOS',
     CLEAR_COW_IMPULSE: 'CLEAR_COW_IMPULSE',
+
+    // Achievements
+    CHECK_ACHIEVEMENTS: 'CHECK_ACHIEVEMENTS',
 } as const;
 
 export type ActionType = typeof ActionTypes[keyof typeof ActionTypes];
@@ -394,6 +440,11 @@ export interface ClearCowImpulseAction {
     payload: { cowId: string };
 }
 
+// Achievement actions
+export interface CheckAchievementsAction {
+    type: typeof ActionTypes.CHECK_ACHIEVEMENTS;
+}
+
 // ============================================
 // DISCRIMINATED UNION OF ALL ACTIONS
 // ============================================
@@ -449,7 +500,9 @@ export type GameAction =
     | SetUserAction
     // Chaos mode
     | TriggerChaosAction
-    | ClearCowImpulseAction;
+    | ClearCowImpulseAction
+    // Achievements
+    | CheckAchievementsAction;
 
 export default ActionTypes;
 

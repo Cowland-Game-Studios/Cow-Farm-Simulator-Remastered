@@ -1,0 +1,93 @@
+.achievementMenu {
+    position: absolute;
+    bottom: 25px;
+    left: 25px;
+    
+    display: flex;
+    flex-direction: column;
+    max-height: 90px;
+    width: 180px;
+    
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.scrollContainer {
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1;
+    
+    /* Hide scrollbar but keep functionality */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    
+    /* Prevent touch scroll from bubbling */
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+}
+
+.scrollContainer::-webkit-scrollbar {
+    display: none;
+}
+
+.fadeTop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.9), transparent);
+    border-radius: 20px 20px 0 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.fadeBottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: linear-gradient(to top, rgba(255, 255, 255, 0.9), transparent);
+    border-radius: 0 0 20px 20px;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.achievementItem {
+    padding-left: 25px;
+    padding-right: 25px;
+}
+
+.achievementItem h3 {
+    color: #000;
+    font-family: Lexend;
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+    letter-spacing: 0.75px;
+
+    user-select: none;
+}
+
+.achievementItem p {
+    margin-top: -5px;
+
+    color: rgba(0, 0, 0, 0.50);
+    font-family: Lexend;
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: normal;
+    letter-spacing: 0.75px;
+
+    margin-bottom: 5px;
+
+    user-select: none;
+}
+
+.xp {
+    color: rgba(0, 0, 0, 0.50);
+    font-weight: 400;
+}

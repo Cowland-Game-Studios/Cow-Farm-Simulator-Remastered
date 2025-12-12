@@ -10,6 +10,7 @@
  */
 
 import { GameProvider, useMousePosition, useTools, useGame, useSaveState } from "./engine";
+import { FlyingRewardsProvider, FlyingRewardsRenderer } from "./engine/flyingRewards";
 import Pasture from "./pages/pasture";
 import BlobCursor from "./components/cursor/BlobCursor";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -40,11 +41,14 @@ function App(): React.ReactElement {
     return (
         <ErrorBoundary>
         <GameProvider>
+        <FlyingRewardsProvider>
             <main className="canvas">
                 <CursorWrapper />
                 <AutosaveWrapper />
                 <Pasture />
+                <FlyingRewardsRenderer />
             </main>
+        </FlyingRewardsProvider>
         </GameProvider>
         </ErrorBoundary>
     );

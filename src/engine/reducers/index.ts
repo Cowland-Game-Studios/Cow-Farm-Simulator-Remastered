@@ -10,6 +10,7 @@ import { craftingReducer } from './craftingReducer';
 import { uiReducer } from './uiReducer';
 import { gameLoopReducer } from './gameLoopReducer';
 import { saveReducer } from './saveReducer';
+import { achievementReducer } from './achievementReducer';
 
 // Re-export helper functions
 export { createColor, colorToString, averageColors, randomColor, createCow };
@@ -23,6 +24,7 @@ const subReducers = [
     uiReducer,
     gameLoopReducer,
     saveReducer,
+    achievementReducer,
 ];
 
 /**
