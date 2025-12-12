@@ -182,41 +182,16 @@ export const createMockGameContext = () => ({
 // MOCK PROVIDERS
 // ============================================
 
-// Mock ResizeObserver
+// Mock ResizeObserver (not in setupTests.ts)
 class MockResizeObserver {
     observe = jest.fn();
     unobserve = jest.fn();
     disconnect = jest.fn();
 }
 
-// Setup global mocks
+// Setup additional mocks not covered by setupTests.ts
 beforeAll(() => {
     global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
-    
-    // Mock matchMedia
-    Object.defineProperty(window, 'matchMedia', {
-        writable: true,
-        value: jest.fn().mockImplementation(query => ({
-            matches: false,
-            media: query,
-            onchange: null,
-            addListener: jest.fn(),
-            removeListener: jest.fn(),
-            addEventListener: jest.fn(),
-            removeEventListener: jest.fn(),
-            dispatchEvent: jest.fn(),
-        })),
-    });
-    
-    // Mock requestAnimationFrame
-    global.requestAnimationFrame = jest.fn((cb) => {
-        setTimeout(cb, 16);
-        return 1;
-    });
-    global.cancelAnimationFrame = jest.fn();
-    
-    // Mock performance.now
-    jest.spyOn(performance, 'now').mockReturnValue(1000);
 });
 
 // ============================================

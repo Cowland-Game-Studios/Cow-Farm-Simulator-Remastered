@@ -137,24 +137,16 @@ describe('AchievementMenu', () => {
     });
 
     describe('scroll behavior', () => {
-        it('stops wheel event propagation', () => {
+        it('has scroll container for achievements', () => {
             render(<AchievementMenu />);
-            const menu = document.querySelector('[class*="achievementMenu"]');
-            
-            const wheelEvent = new WheelEvent('wheel', { bubbles: true });
-            const stopPropagationSpy = jest.spyOn(wheelEvent, 'stopPropagation');
-            
-            menu?.dispatchEvent(wheelEvent);
-            
-            // The event listener should stop propagation
-            expect(menu).toBeInTheDocument();
+            const scrollContainer = document.querySelector('[class*="scrollContainer"]');
+            expect(scrollContainer).toBeInTheDocument();
         });
 
-        it('stops touch move propagation', () => {
+        it('menu container exists for wheel events', () => {
             render(<AchievementMenu />);
             const menu = document.querySelector('[class*="achievementMenu"]');
             expect(menu).toBeInTheDocument();
-            // Touch events are handled to prevent parent scrolling
         });
     });
 

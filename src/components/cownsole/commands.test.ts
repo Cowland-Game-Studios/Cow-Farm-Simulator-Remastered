@@ -11,13 +11,16 @@ import {
 } from './commands';
 import { GameState } from '../../engine/types';
 
-// Mock Audio
+// Mock Audio (needs to be a proper constructor)
 class MockAudio {
     volume = 1;
     playbackRate = 1;
     play = jest.fn().mockResolvedValue(undefined);
 }
-(global as any).Audio = MockAudio;
+Object.defineProperty(global, 'Audio', {
+    writable: true,
+    value: MockAudio,
+});
 
 // Mock window.location.reload
 const mockReload = jest.fn();

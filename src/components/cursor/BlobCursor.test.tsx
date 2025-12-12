@@ -7,12 +7,15 @@ import { render } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import BlobCursor from './BlobCursor';
 
-// Mock matchMedia for mobile detection
-const mockMatchMedia = (matches: boolean) => {
+/**
+ * Helper to mock matchMedia for mobile/desktop detection.
+ * Updates the global matchMedia mock from setupTests.ts.
+ */
+const mockMatchMedia = (isMobile: boolean): void => {
     Object.defineProperty(window, 'matchMedia', {
         writable: true,
-        value: jest.fn().mockImplementation(query => ({
-            matches,
+        value: jest.fn().mockImplementation((query: string) => ({
+            matches: isMobile,
             media: query,
             onchange: null,
             addListener: jest.fn(),

@@ -13,7 +13,8 @@ jest.mock('../../engine', () => ({
     Position: {},
 }));
 
-const mockUseMousePosition = require('../../engine').useMousePosition;
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const mockUseMousePosition = require('../../engine').useMousePosition as jest.Mock;
 
 describe('DraggableSwinging', () => {
     beforeEach(() => {

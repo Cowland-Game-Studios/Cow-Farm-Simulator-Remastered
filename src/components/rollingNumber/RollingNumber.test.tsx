@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import RollingNumber from './RollingNumber';
 
@@ -47,7 +47,7 @@ describe('RollingNumber', () => {
     });
 
     describe('animation', () => {
-        it('animates from old value to new value', async () => {
+        it('animates from old value to new value', () => {
             const { rerender } = render(<RollingNumber value={0} />);
             expect(screen.getByText('0')).toBeInTheDocument();
 
@@ -59,12 +59,10 @@ describe('RollingNumber', () => {
             });
 
             // Should reach final value
-            await waitFor(() => {
-                expect(screen.getByText('100')).toBeInTheDocument();
-            });
+            expect(screen.getByText('100')).toBeInTheDocument();
         });
 
-        it('calls onAnimating callback when animation starts', async () => {
+        it('calls onAnimating callback when animation starts', () => {
             const onAnimating = jest.fn();
             const { rerender } = render(
                 <RollingNumber value={0} onAnimating={onAnimating} />
@@ -73,12 +71,14 @@ describe('RollingNumber', () => {
             rerender(<RollingNumber value={100} onAnimating={onAnimating} />);
 
             // Animation should start
-            await waitFor(() => {
-                expect(onAnimating).toHaveBeenCalledWith(true);
+            act(() => {
+                jest.advanceTimersByTime(50);
             });
+            
+            expect(onAnimating).toHaveBeenCalledWith(true);
         });
 
-        it('calls onAnimating callback with false when animation ends', async () => {
+        it('calls onAnimating callback with false when animation ends', () => {
             const onAnimating = jest.fn();
             const { rerender } = render(
                 <RollingNumber value={0} onAnimating={onAnimating} />
@@ -91,18 +91,15 @@ describe('RollingNumber', () => {
                 jest.advanceTimersByTime(500);
             });
 
-            await waitFor(() => {
-                expect(onAnimating).toHaveBeenCalledWith(false);
-            });
+            expect(onAnimating).toHaveBeenCalledWith(false);
         });
 
-        it('respects custom duration', async () => {
-            const onAnimating = jest.fn();
+        it('respects custom duration', () => {
             const { rerender } = render(
-                <RollingNumber value={0} duration={1000} onAnimating={onAnimating} />
+                <RollingNumber value={0} duration={1000} />
             );
 
-            rerender(<RollingNumber value={100} duration={1000} onAnimating={onAnimating} />);
+            rerender(<RollingNumber value={100} duration={1000} />);
 
             // At 500ms, should still be animating (duration is 1000ms)
             act(() => {
@@ -114,9 +111,7 @@ describe('RollingNumber', () => {
                 jest.advanceTimersByTime(600);
             });
 
-            await waitFor(() => {
-                expect(screen.getByText('100')).toBeInTheDocument();
-            });
+            expect(screen.getByText('100')).toBeInTheDocument();
         });
     });
 
@@ -158,7 +153,7 @@ describe('RollingNumber', () => {
     });
 
     describe('rapid value changes', () => {
-        it('handles rapid value changes', async () => {
+        it('handles rapid value changes', () => {
             const { rerender } = render(<RollingNumber value={0} />);
 
             // Rapid changes
@@ -178,9 +173,7 @@ describe('RollingNumber', () => {
             });
 
             // Should eventually reach final value
-            await waitFor(() => {
-                expect(screen.getByText('200')).toBeInTheDocument();
-            });
+            expect(screen.getByText('200')).toBeInTheDocument();
         });
     });
 });
