@@ -28,59 +28,131 @@ function formatNumber(value: number): string {
 }
 
 /**
- * Generate text-based progress bar like ████░░░░
+ * Custom hook for animated progress bar
  */
-function generateProgressBar(current: number, max: number): string {
-    const progress = max > 0 ? current / max : 0;
-    const filledCount = Math.floor(progress * STATS.PROGRESS_BAR_LENGTH);
-    const emptyCount = STATS.PROGRESS_BAR_LENGTH - filledCount;
-    return `${'█'.repeat(filledCount)}${'░'.repeat(emptyCount)}`;
+function useAnimatedBar(targetFill: number, shouldAnimate: boolean) {
+    const [displayedFill, setDisplayedFill] = useState(0);
+    const [isAnimating, setIsAnimating] = useState(false);
+    const intervalRef = useRef<NodeJS.Timeout | null>(null);
+    const targetRef = useRef(targetFill);
+    
+    // Keep target ref updated
+    targetRef.current = targetFill;
+    
+    // Cleanup function
+    const cleanup = useCallback(() => {
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+    }, []);
+    
+    // Start animation from 0 to target
+    const startAnimation = useCallback(() => {
+        cleanup();
+        setDisplayedFill(0);
+        setIsAnimating(true);
+        
+        let currentFill = 0;
+        const stepDuration = 50;
+        
+        intervalRef.current = setInterval(() => {
+            currentFill++;
+            const target = targetRef.current;
+            
+            if (currentFill >= target) {
+                setDisplayedFill(target);
+                setIsAnimating(false);
+                cleanup();
+            } else {
+                setDisplayedFill(currentFill);
+            }
+        }, stepDuration);
+    }, [cleanup]);
+    
+    // When shouldAnimate becomes true, start animation
+    useEffect(() => {
+        if (shouldAnimate) {
+            startAnimation();
+        }
+        return cleanup;
+    }, [shouldAnimate, startAnimation, cleanup]);
+    
+    // When target changes and we're not animating, update immediately
+    useEffect(() => {
+        if (!isAnimating && !shouldAnimate) {
+            setDisplayedFill(targetFill);
+        }
+    }, [targetFill, isAnimating, shouldAnimate]);
+    
+    return { displayedFill, isAnimating, startAnimation };
 }
 
 export default function StatsDisplay({ coins = 0, xp = 0, ...props }: StatsDisplayProps): React.ReactElement {
     const levelInfo = getLevelFromXp(xp);
-    const progressBar = generateProgressBar(levelInfo.xpIntoLevel, levelInfo.xpForNextLevel);
     
     const { ref: xpRef, isPulsing: xpPulsing } = useRewardTarget('xp');
     const { ref: coinsRef, isPulsing: coinsPulsing } = useRewardTarget('coins');
     
     // Cycle through 3 display modes: progress, remaining, bar (start with bar)
     const [displayMode, setDisplayMode] = useState<XpDisplayMode>(2);
-    const prevDisplayModeRef = useRef<XpDisplayMode>(2);
     
-    // Track the displayed number value - starts at 0 when coming from bar mode
+    // Track the displayed number value for RollingNumber
     const [animatedValue, setAnimatedValue] = useState(0);
     
     // Track if rolling animation is active
     const [isRolling, setIsRolling] = useState(false);
     
-    // Calculate the target value based on mode
+    // Track click-triggered pulse
+    const [clickPulse, setClickPulse] = useState(false);
+    
+    // Track if we should trigger bar animation (increments to trigger)
+    const [barAnimationTrigger, setBarAnimationTrigger] = useState(1); // Start with 1 to animate on mount
+    
+    // Calculate values
     const xpRemaining = levelInfo.xpForNextLevel - levelInfo.xpIntoLevel;
     const targetValue = displayMode === 0 ? levelInfo.xpIntoLevel : xpRemaining;
+    const progress = levelInfo.xpForNextLevel > 0 ? levelInfo.xpIntoLevel / levelInfo.xpForNextLevel : 0;
+    const targetBarFill = Math.floor(progress * STATS.PROGRESS_BAR_LENGTH);
     
-    // When display mode changes, update animated value
+    // Use animated bar hook - animate when trigger changes and we're in bar mode
+    const shouldAnimateBar = displayMode === 2 && barAnimationTrigger > 0;
+    const { displayedFill, isAnimating: isBarAnimating } = useAnimatedBar(targetBarFill, shouldAnimateBar);
+    
+    // Generate progress bar string
+    const progressBar = `${'█'.repeat(displayedFill)}${'░'.repeat(STATS.PROGRESS_BAR_LENGTH - displayedFill)}`;
+    
+    // Previous display mode for detecting changes
+    const prevModeRef = useRef<XpDisplayMode>(2);
+    
+    // Handle display mode changes
     useEffect(() => {
-        const prevMode = prevDisplayModeRef.current;
+        const prevMode = prevModeRef.current;
+        
+        if (displayMode === prevMode) {
+            return;
+        }
+        
+        // Trigger pulse on any mode change
+        setClickPulse(true);
+        setTimeout(() => setClickPulse(false), 300);
         
         if (displayMode === 2) {
-            // Switching to bar mode - reset animated value to 0 for next time
-            setAnimatedValue(0);
+            // Entering bar mode - trigger animation
+            setBarAnimationTrigger(prev => prev + 1);
         } else if (prevMode === 2) {
-            // Coming FROM bar mode - animate from 0 to target
+            // Leaving bar mode - animate number from 0
             setAnimatedValue(0);
-            // Small delay to ensure RollingNumber picks up the change
-            setTimeout(() => {
-                setAnimatedValue(targetValue);
-            }, 50);
+            setTimeout(() => setAnimatedValue(targetValue), 50);
         } else {
-            // Switching between number modes - animate between values
+            // Switching between number modes
             setAnimatedValue(targetValue);
         }
         
-        prevDisplayModeRef.current = displayMode;
+        prevModeRef.current = displayMode;
     }, [displayMode, targetValue]);
     
-    // Also update when XP changes (while in a number mode)
+    // Update animated value when XP changes (while in number mode)
     useEffect(() => {
         if (displayMode !== 2) {
             setAnimatedValue(targetValue);
@@ -95,7 +167,7 @@ export default function StatsDisplay({ coins = 0, xp = 0, ...props }: StatsDispl
         setIsRolling(animating);
     }, []);
     
-    const shouldPulse = xpPulsing || isRolling;
+    const shouldPulse = xpPulsing || isRolling || clickPulse || isBarAnimating;
 
     // Render XP display based on mode
     const renderXpDisplay = () => {
