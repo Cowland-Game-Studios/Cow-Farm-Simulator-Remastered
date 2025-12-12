@@ -707,6 +707,7 @@ This will PERMANENTLY DELETE your save:
   • All stats will be erased
   • All achievements will be gone
   • All progress will be obliterated
+  • Console history will be cleared
 
         🐄💀 There is no undo! 💀🐄
 
@@ -721,7 +722,15 @@ To confirm, type:
         
         // User confirmed - nuke it!
         try {
+            // Delete main game save
             deleteSave();
+            
+            // Clear all game-related localStorage keys
+            localStorage.removeItem('moosh_history');
+            localStorage.removeItem('moosh_output');
+            
+            // Clear runtime config overrides
+            Object.keys(configOverrides).forEach(key => delete configOverrides[key]);
             
             // Play a sad moo before reloading
             const mooSound = new Audio('./sounds/cow/moo.wav');
