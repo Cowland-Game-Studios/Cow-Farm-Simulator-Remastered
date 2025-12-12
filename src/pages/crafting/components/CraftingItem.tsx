@@ -60,14 +60,7 @@ export default function CraftingItem({
                     src="./images/crafting/time.svg" 
                     alt="Time icon" 
                 />
-                <p style={{ 
-                    color: "black", 
-                    margin: 0,
-                    fontFamily: 'Lexend, sans-serif',
-                    fontSize: '8px',
-                    fontWeight: 400,
-                    letterSpacing: '0.7px',
-                }}>
+                <p className="text-small">
                     {timeDisplay}
                 </p>
             </div>
@@ -84,38 +77,16 @@ export default function CraftingItem({
                         alt={input.item} 
                         style={{ width: 40, height: 40 }} 
                     />
-                    <p style={{ 
-                        color: "black", 
-                        margin: 0,
-                        fontFamily: 'Lexend, sans-serif',
-                        fontSize: '8px',
-                        fontWeight: 400,
-                        letterSpacing: '0.7px',
-                    }}>{input.qty}x</p>
+                    <p className="text-small">{input.qty}x</p>
                 </div>
-                <p style={{ 
-                    color: "black", 
-                    margin: 0,
-                    marginTop: -20,
-                    fontFamily: 'Lexend, sans-serif',
-                    fontSize: '12px',
-                    fontWeight: 400,
-                    letterSpacing: '0.7px',
-                }}>=</p>
+                <p className="text-small" style={{ marginTop: -20, fontSize: '12px' }}>=</p>
                 <div>
                     <img 
                         src={getProductImage(output.item)} 
                         alt={output.item} 
                         style={{ width: 40, height: 40 }} 
                     />
-                    <p style={{ 
-                        color: "black", 
-                        margin: 0,
-                        fontFamily: 'Lexend, sans-serif',
-                        fontSize: '8px',
-                        fontWeight: 400,
-                        letterSpacing: '0.7px',
-                    }}>{output.qty}x</p>
+                    <p className="text-small">{output.qty}x</p>
                 </div>
             </div>
         </button>

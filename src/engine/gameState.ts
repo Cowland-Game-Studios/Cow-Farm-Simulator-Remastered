@@ -72,7 +72,6 @@ export const createInitialState = (): GameState => ({
 
     resources: {
         coins: GAME_CONFIG.INITIAL_STATE.COINS,
-        stars: GAME_CONFIG.INITIAL_STATE.STARS,
     },
 
     // Inventory system - tracks all items

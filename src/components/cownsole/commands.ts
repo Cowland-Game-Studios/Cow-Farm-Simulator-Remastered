@@ -7,6 +7,7 @@
 import { actions } from '../../engine/gameState';
 import { GAME_CONFIG } from '../../config/gameConfig';
 import { GameState, GameAction, Position } from '../../engine/types';
+import { deleteSave } from '../../save';
 
 // Runtime config overrides (allows changing magic numbers without restart)
 export const configOverrides: Record<string, unknown> = {};
@@ -94,7 +95,6 @@ interface PathConstraint {
 const SAFE_PATHS: Record<string, PathConstraint> = {
     // Resources - numeric values
     'resources.coins': { type: 'number', min: 0 },
-    'resources.stars': { type: 'number', min: 0 },
     
     // Inventory - all items are numeric
     'inventory.milk': { type: 'number', min: 0 },
@@ -361,7 +361,8 @@ const commands: Record<string, CommandHandler> = {
     },
 
     /**
-     * Set a value - TYPE-SAFE with whitelist validation
+     * Set a value - TYPE-SAFE with primitive type checking
+     * Use --force to bypass type checks and set any value
      */
     set: (args, state, dispatch) => {
         const WARNING_BANNER = '\n\n⚠️  WARNING: Modifying game state and config can have\n    unforeseen consequences and may corrupt your save.';
@@ -404,40 +405,86 @@ const commands: Record<string, CommandHandler> = {
             return { success: true, output: `✓ ${configPath}: ${currentValue} → ${value}\n⚠️ Changes apply at runtime but don't persist${WARNING_BANNER}`, warning: true };
         }
         
-        const [path, ...valueParts] = args;
+        // Check for --force flag
+        const forceIndex = args.indexOf('--force');
+        const isForced = forceIndex !== -1;
+        const filteredArgs = isForced ? args.filter((_, i) => i !== forceIndex) : args;
+        
+        const [path, ...valueParts] = filteredArgs;
         const valueStr = valueParts.join(' ');
         
         if (!path || valueStr === '') {
-            return { success: false, output: 'Usage: set <path> <value>\nExample: set inventory.milk 99' };
+            return { success: false, output: 'Usage: set <path> <value> [--force]\nExample: set inventory.milk 99\nExample: set stats.cowsBred 100\n\n--force bypasses type checking' };
         }
         
-        // Check if path is allowed
-        const constraint = getPathConstraint(path);
-        if (!constraint) {
-            return { 
-                success: false, 
-                output: `🚫 Path "${path}" is not settable.\n\nAllowed paths:\n  inventory.* (milk, grass, cream, etc.)\n  resources.coins, resources.stars\n  cows[n].fullness, cows[n].state\n  cows[n].color.r/g/b/a\n  cows[n].position.x/y` 
-            };
-        }
-        
-        // Verify the path exists (for array indices)
+        // Verify the path exists
         const currentValue = getByPath(state, path);
         if (currentValue === undefined) {
             return { success: false, output: `Error: Path "${path}" not found in state` };
         }
         
-        // Parse the value
+        // Parse the value (attempt JSON parse for --force, otherwise primitives only)
         let value: unknown;
-        if (valueStr === 'true') value = true;
-        else if (valueStr === 'false') value = false;
-        else if (valueStr === 'null') value = null;
-        else if (!isNaN(Number(valueStr)) && valueStr !== '') value = Number(valueStr);
-        else value = valueStr;
+        if (isForced) {
+            // With --force, try to parse as JSON first for complex values
+            try {
+                value = JSON.parse(valueStr);
+            } catch {
+                // If not valid JSON, treat as string or primitive
+                if (valueStr === 'true') value = true;
+                else if (valueStr === 'false') value = false;
+                else if (valueStr === 'null') value = null;
+                else if (!isNaN(Number(valueStr)) && valueStr !== '') value = Number(valueStr);
+                else value = valueStr;
+            }
+        } else {
+            // Normal parsing - primitives only
+            if (valueStr === 'true') value = true;
+            else if (valueStr === 'false') value = false;
+            else if (valueStr === 'null') value = null;
+            else if (!isNaN(Number(valueStr)) && valueStr !== '') value = Number(valueStr);
+            else value = valueStr;
+        }
         
-        // Validate value against constraints
-        const validation = validateValue(value, constraint);
-        if (!validation.valid) {
-            return { success: false, output: `Error: ${validation.error}` };
+        // Type-safe checks (unless --force is used)
+        if (!isForced) {
+            // Check that we're not trying to set an object
+            if (typeof currentValue === 'object' && currentValue !== null) {
+                return { success: false, output: `Error: Cannot set object values. Set individual properties.\nUse --force to override.` };
+            }
+            
+            // Check that the new value is a primitive
+            if (typeof value === 'object' && value !== null) {
+                return { success: false, output: `Error: Cannot set to object values. Only primitives (string, number, boolean) allowed.\nUse --force to override.` };
+            }
+            
+            // Check that types match (with some flexibility)
+            const currentType = typeof currentValue;
+            const newType = typeof value;
+            
+            // Allow null to be set to any type
+            if (value !== null && currentValue !== null) {
+                // Special case: both are numbers or currentValue is number and value is number
+                const isNumericMatch = currentType === 'number' && newType === 'number';
+                const isStringMatch = currentType === 'string' && newType === 'string';
+                const isBooleanMatch = currentType === 'boolean' && newType === 'boolean';
+                
+                if (!isNumericMatch && !isStringMatch && !isBooleanMatch) {
+                    return { 
+                        success: false, 
+                        output: `Error: Type mismatch. Expected ${currentType}, got ${newType}.\nCurrent value: ${JSON.stringify(currentValue)}\nUse --force to override.` 
+                    };
+                }
+            }
+            
+            // Validate against SAFE_PATHS constraints if they exist
+            const constraint = getPathConstraint(path);
+            if (constraint) {
+                const validation = validateValue(value, constraint);
+                if (!validation.valid) {
+                    return { success: false, output: `Error: ${validation.error}` };
+                }
+            }
         }
         
         // Handle known paths with proper actions
@@ -461,11 +508,12 @@ const commands: Record<string, CommandHandler> = {
             return { success: true, output: `✓ ${path} set to ${value}` };
         }
         
-        // For other validated paths, use LOAD_SAVE
+        // For all other paths, use LOAD_SAVE
         const newState = setByPath(state, path, value);
         dispatch({ type: 'LOAD_SAVE', payload: { saveData: newState } });
         
-        return { success: true, output: `✓ ${path} set to ${value}` };
+        const forceNote = isForced ? ' (forced)' : '';
+        return { success: true, output: `✓ ${path} set to ${value}${forceNote}` };
     },
 
     /**
@@ -490,7 +538,8 @@ const commands: Record<string, CommandHandler> = {
   ls --state [p]         Full state dump
   ls --config [p]        Show game config
   get <path>             Get value at path
-  set <path> <val>       Set value at path
+  set <path> <val>       Set value (type-safe)
+  set <p> <v> --force    Set value (bypass checks)
   set --config <p> <v>   Override config
   clear                  Clear console output
   cow halp               Show this help
@@ -638,6 +687,64 @@ Examples:
             output: `💰 CHEATS ACTIVATED 💰\n\n  coins: 1,000,000,000\n  All items: 1,000,000,000\n\n🐄 Moo-ney printer go brrr!`,
             closeConsole: true
         };
+    },
+
+    /**
+     * mooclear - Nuke your save entirely with confirmation
+     * Hidden command, not shown in help
+     */
+    mooclear: (args) => {
+        const hasConfirm = args.includes('--confirm');
+        
+        if (!hasConfirm) {
+            const warning = `
+☠️  MOOCLEAR - NUCLEAR OPTION ☠️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+This will PERMANENTLY DELETE your save:
+  • All cows will be lost
+  • All resources will be reset
+  • All stats will be erased
+  • All achievements will be gone
+  • All progress will be obliterated
+
+        🐄💀 There is no undo! 💀🐄
+
+To confirm, type:
+  mooclear --confirm
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            `.trim();
+            
+            return { success: true, output: warning, warning: true };
+        }
+        
+        // User confirmed - nuke it!
+        try {
+            deleteSave();
+            
+            // Play a sad moo before reloading
+            const mooSound = new Audio('./sounds/cow/moo.wav');
+            mooSound.volume = 0.3;
+            mooSound.playbackRate = 0.7; // Sad slow moo
+            mooSound.play().catch(() => {});
+            
+            // Slight delay to let the moo play
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+            
+            return { 
+                success: true, 
+                output: '💀 Save deleted. Goodbye, cows... 💀\n\nReloading...',
+                closeConsole: true
+            };
+        } catch (error) {
+            return { 
+                success: false, 
+                output: `Error deleting save: ${error instanceof Error ? error.message : 'Unknown error'}`
+            };
+        }
     },
 };
 

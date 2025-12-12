@@ -270,17 +270,10 @@ export default function Pasture(): React.ReactElement {
                     >
                         <div>
                             <img draggable={false} src="./images/pasture/grass.svg" alt="Cow feed" />
-                            <p style={{ 
-                                position: "absolute", 
-                                left: 30, 
-                                top: 35,
-                                margin: 0,
-                                fontFamily: 'Lexend, sans-serif',
-                                fontSize: '8px',
-                                fontWeight: 400,
-                                letterSpacing: '0.7px',
-                                color: '#000',
-                            }}>{grassCount}x</p>
+                            <p 
+                                className="text-small"
+                                style={{ position: "absolute", left: 30, top: 35 }}
+                            >{grassCount}x</p>
                         </div>
                     </DraggableSwinging>
 

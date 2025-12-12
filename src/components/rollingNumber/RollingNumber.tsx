@@ -82,6 +82,8 @@ export default function RollingNumber({
                 intervalRef.current = null;
             }
         };
+    // Deps intentionally exclude: displayValue (would cause infinite loop),
+    // onAnimating and formatFn (stable callbacks from parent)
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [value, duration]);
 

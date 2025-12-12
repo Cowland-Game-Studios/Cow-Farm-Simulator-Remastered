@@ -34,7 +34,6 @@ export interface Cow {
 
 export interface GameResources {
     coins: number;
-    stars: number;
 }
 
 export interface Inventory {

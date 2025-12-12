@@ -156,7 +156,6 @@ export interface GameConfigType {
         SPRAY_DEFAULT_FADE_DELAY_MS: number;
     };
     STATS: {
-        XP_PER_LEVEL: number;
         PROGRESS_BAR_LENGTH: number;
     };
     ITEMS: ItemsConfig;
@@ -187,7 +186,6 @@ export interface GameConfigType {
         COW_POSITIONS: Array<{ x: number; y: number }>;
         COINS: number;
         GRASS: number;
-        STARS: number;
     };
     CHAOS: {
         IMPULSE_STRENGTH: number;
@@ -364,7 +362,6 @@ export const GAME_CONFIG: GameConfigType = {
 
     // Stats display settings
     STATS: {
-        XP_PER_LEVEL: 10000,                 // XP required per level
         PROGRESS_BAR_LENGTH: 10,             // Number of characters in progress bar
     },
 
@@ -510,7 +507,6 @@ export const GAME_CONFIG: GameConfigType = {
         ],
         COINS: 10000,
         GRASS: 10,
-        STARS: 5.2,
     },
 
     // Chaos mode settings
