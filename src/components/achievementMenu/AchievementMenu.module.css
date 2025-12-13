@@ -121,3 +121,49 @@
     color: rgba(0, 0, 0, 0.50);
     font-weight: 400;
 }
+
+/* One-time achievement styling */
+.oneTime h3 {
+    color: #6B4C9A;
+}
+
+.oneTime .xp {
+    color: rgba(107, 76, 154, 0.6);
+}
+
+/* Hidden achievement styling (when revealed after unlock) */
+.hidden h3 {
+    color: #9B7B3A;
+}
+
+.hidden h3::before {
+    content: '★ ';
+    font-size: 8px;
+}
+
+.hidden .xp {
+    color: rgba(155, 123, 58, 0.6);
+}
+
+/* Achievement type badge */
+.typeBadge {
+    display: inline-block;
+    font-size: 7px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+.badgeOneTime {
+    background: rgba(107, 76, 154, 0.15);
+    color: #6B4C9A;
+}
+
+.badgeSecret {
+    background: rgba(155, 123, 58, 0.15);
+    color: #9B7B3A;
+}

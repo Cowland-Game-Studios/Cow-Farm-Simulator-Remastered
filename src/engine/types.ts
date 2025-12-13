@@ -125,6 +125,9 @@ export interface GameStats {
     // XP tracking
     totalXpEarned: number;
     
+    // Misc
+    chaosTriggered: number;
+    
     // Allow dynamic access for per-item stats
     [key: string]: number;
 }

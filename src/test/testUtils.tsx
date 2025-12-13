@@ -48,6 +48,7 @@ export const createMockGameStats = (overrides: Partial<GameStats> = {}): GameSta
     iceCreamSold: 0,
     cheesecakeSold: 0,
     totalXpEarned: 0,
+    chaosTriggered: 0,
     ...overrides,
 });
 

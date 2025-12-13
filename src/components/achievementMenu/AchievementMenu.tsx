@@ -31,9 +31,21 @@ function AchievementItem({ progress, showRemaining, onToggle }: AchievementItemP
         ? ` to be ${progress.achievement.actionText}`
         : `/${progress.tierMax} ${progress.achievement.actionText}`;
     
+    // Determine CSS classes based on achievement type
+    const itemClasses = [styles.achievementItem];
+    if (progress.achievement.type === 'one-time') {
+        itemClasses.push(styles.oneTime);
+    }
+    if (progress.achievement.hidden) {
+        itemClasses.push(styles.hidden);
+    }
+    
     return (
-        <div className={styles.achievementItem}>
-            <h3>{progress.achievement.name} <span className={styles.xp}>{progress.achievement.xpReward}xp</span></h3>
+        <div className={itemClasses.join(' ')}>
+            <h3>
+                {progress.achievement.name}
+                <span className={styles.xp}> {progress.achievement.xpReward}xp</span>
+            </h3>
             <p 
                 className={`${styles.progressText} ${isRolling ? styles.pulse : ''}`} 
                 onClick={onToggle}
@@ -64,8 +76,9 @@ export default function AchievementMenu({ ...props }: AchievementMenuProps): Rea
     }, [stats, checkAchievements]);
     
     // Get all achievements sorted by closest to completion
+    // Don't include hidden achievements (they'll show after unlock)
     const allAchievements = useMemo(() => {
-        return getClosestAchievements(stats, achievements.unlocked, 100);
+        return getClosestAchievements(stats, achievements.unlocked, 100, false);
     }, [stats, achievements.unlocked]);
     
     // Stop wheel/scroll events from bubbling to parent

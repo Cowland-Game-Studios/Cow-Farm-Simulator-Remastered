@@ -268,6 +268,10 @@ export function cowReducer(state: GameState, action: GameAction): GameState | nu
             return {
                 ...state,
                 chaosImpulses: impulses,
+                stats: {
+                    ...state.stats,
+                    chaosTriggered: state.stats.chaosTriggered + 1,
+                },
             };
         }
 

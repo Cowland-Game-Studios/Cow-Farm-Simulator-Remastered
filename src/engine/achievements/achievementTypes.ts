@@ -5,6 +5,11 @@
 import { GameStats } from '../types';
 
 /**
+ * Achievement type - determines progression behavior
+ */
+export type AchievementType = 'progressive' | 'one-time';
+
+/**
  * Achievement category - groups related achievements
  */
 export interface AchievementCategory {
@@ -15,20 +20,26 @@ export interface AchievementCategory {
     actionText: string;  // e.g., "cows bred", "milk collected"
     thresholds: number[] | 'standard' | 'coins';
     baseXp: number;
+    type: AchievementType;  // progressive = tiered, one-time = single unlock
+    hidden?: boolean;       // Hidden until unlocked
+    description?: string;   // Description for one-time achievements
 }
 
 /**
- * A specific achievement tier
+ * A specific achievement tier (for progressive) or single achievement (for one-time)
  */
 export interface Achievement {
-    id: string;           // e.g., "moo:1", "moo:2"
+    id: string;           // e.g., "moo:1", "moo:2" or "first-cow"
     categoryId: string;   // e.g., "moo"
     name: string;         // e.g., "Moo I", "Moo II"
-    tier: number;         // 1, 2, 3, ...
+    tier: number;         // 1, 2, 3, ... (always 1 for one-time)
     threshold: number;    // Value needed to unlock
     xpReward: number;     // XP awarded when unlocked
     statKey: keyof GameStats;
     actionText: string;   // e.g., "cows bred", "milk collected"
+    type: AchievementType;
+    hidden: boolean;
+    description?: string;
 }
 
 /**
@@ -51,4 +62,3 @@ export interface AchievementCheckResult {
     newlyUnlocked: Achievement[];
     totalXpAwarded: number;
 }
-

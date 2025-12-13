@@ -151,6 +151,9 @@ export const createInitialState = (): GameState => ({
         
         // XP tracking
         totalXpEarned: 0,
+        
+        // Misc
+        chaosTriggered: 0,
     },
 
     // Achievement system

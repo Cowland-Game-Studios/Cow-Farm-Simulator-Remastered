@@ -18,6 +18,11 @@ export const COIN_THRESHOLDS = [
     100000000, 1000000000
 ];
 
+// XP thresholds for meta-achievement
+export const XP_THRESHOLDS = [
+    100, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000
+];
+
 /**
  * Get threshold for a given tier
  */
@@ -75,106 +80,218 @@ export function getLevelFromXp(totalXp: number): { level: number; xpIntoLevel: n
 
 /**
  * All achievement categories
+ * 
+ * Types:
+ * - 'progressive': Tiered achievements (I, II, III, etc.) with increasing thresholds
+ * - 'one-time': Single unlock achievements (threshold is just the first value)
+ * 
+ * Hidden achievements are not shown until unlocked
  */
 export const ACHIEVEMENT_CATEGORIES: AchievementCategory[] = [
+    // ============================================
+    // ONE-TIME ACHIEVEMENTS - Core Gameplay
+    // ============================================
     {
         id: 'breeda',
         name: 'breeda',
         statKey: 'cowsBred',
         baseName: 'breeda',
-        actionText: 'bred',
-        thresholds: 'standard',
+        actionText: 'cow bred',
+        thresholds: [1],
         baseXp: 15,
+        type: 'one-time',
+        description: 'Breed your first cow',
     },
     {
         id: 'milkman',
         name: 'milkman',
         statKey: 'milkCollected',
         baseName: 'milkman',
-        actionText: 'collected',
-        thresholds: 'standard',
+        actionText: 'milk collected',
+        thresholds: [1],
         baseXp: 10,
+        type: 'one-time',
+        description: 'Collect your first milk',
     },
     {
-        id: 'buttah-is-bettah',
-        name: 'buttah is bettah',
-        statKey: 'butterCrafted',
-        baseName: 'buttah is bettah',
-        actionText: 'made',
-        thresholds: 'standard',
-        baseXp: 12,
-    },
-    {
-        id: 'lets-get-cheesy',
-        name: "let's get cheesy",
-        statKey: 'cheeseCrafted',
-        baseName: "let's get cheesy",
-        actionText: 'made',
-        thresholds: 'standard',
-        baseXp: 15,
-    },
-    {
-        id: 'creamy',
-        name: 'creamy ;)',
-        statKey: 'creamCrafted',
-        baseName: 'creamy ;)',
-        actionText: 'made',
-        thresholds: 'standard',
-        baseXp: 12,
-    },
-    {
-        id: 'my-gurt',
-        name: 'my-gurt',
-        statKey: 'yogurtCrafted',
-        baseName: 'my-gurt',
-        actionText: 'made',
-        thresholds: 'standard',
-        baseXp: 12,
-    },
-    {
-        id: 'cheesequake',
-        name: 'cheesequake factory',
-        statKey: 'cheesecakeCrafted',
-        baseName: 'cheesequake',
-        actionText: 'made',
-        thresholds: 'standard',
-        baseXp: 20,
-    },
-    {
-        id: 'ice-ice-baby',
-        name: 'ice ice baby',
-        statKey: 'iceCreamCrafted',
-        baseName: 'ice ice baby',
-        actionText: 'made',
-        thresholds: 'standard',
-        baseXp: 18,
-    },
-    {
-        id: 'cha-ching',
-        name: 'cha-ching',
-        statKey: 'coinsEarned',
-        baseName: 'cha-ching',
-        actionText: '@ earned',
-        thresholds: 'coins',
-        baseXp: 25,
-    },
-    {
-        id: 'stacks-from-8-sides',
-        name: 'stacks from 8 sides',
-        statKey: 'itemsSold',
-        baseName: 'stacks from 8 sides',
-        actionText: 'items sold',
-        thresholds: 'standard',
-        baseXp: 15,
+        id: 'hands-on',
+        name: 'hands on',
+        statKey: 'cowsMilked',
+        baseName: 'hands on',
+        actionText: 'cow milked',
+        thresholds: [1],
+        baseXp: 10,
+        type: 'one-time',
+        description: 'Milk your first cow',
     },
     {
         id: 'stuffer',
         name: 'stuffer',
         statKey: 'cowsFed',
         baseName: 'stuffer',
-        actionText: 'fed',
-        thresholds: 'standard',
+        actionText: 'cow fed',
+        thresholds: [1],
         baseXp: 10,
+        type: 'one-time',
+        description: 'Feed your first cow',
+    },
+
+    // ============================================
+    // ONE-TIME ACHIEVEMENTS - Crafting
+    // ============================================
+    {
+        id: 'buttah-is-bettah',
+        name: 'buttah is bettah',
+        statKey: 'butterCrafted',
+        baseName: 'buttah is bettah',
+        actionText: 'butter made',
+        thresholds: [1],
+        baseXp: 12,
+        type: 'one-time',
+        description: 'Craft your first butter',
+    },
+    {
+        id: 'lets-get-cheesy',
+        name: "let's get cheesy",
+        statKey: 'cheeseCrafted',
+        baseName: "let's get cheesy",
+        actionText: 'cheese made',
+        thresholds: [1],
+        baseXp: 15,
+        type: 'one-time',
+        description: 'Craft your first cheese',
+    },
+    {
+        id: 'creamy',
+        name: 'creamy ;)',
+        statKey: 'creamCrafted',
+        baseName: 'creamy ;)',
+        actionText: 'cream made',
+        thresholds: [1],
+        baseXp: 12,
+        type: 'one-time',
+        description: 'Craft your first cream',
+    },
+    {
+        id: 'my-gurt',
+        name: 'my-gurt',
+        statKey: 'yogurtCrafted',
+        baseName: 'my-gurt',
+        actionText: 'yogurt made',
+        thresholds: [1],
+        baseXp: 12,
+        type: 'one-time',
+        description: 'Craft your first yogurt',
+    },
+    {
+        id: 'cheesequake',
+        name: 'cheesequake factory',
+        statKey: 'cheesecakeCrafted',
+        baseName: 'cheesequake factory',
+        actionText: 'cheesecake made',
+        thresholds: [1],
+        baseXp: 20,
+        type: 'one-time',
+        description: 'Craft your first cheesecake',
+    },
+    {
+        id: 'ice-ice-baby',
+        name: 'ice ice baby',
+        statKey: 'iceCreamCrafted',
+        baseName: 'ice ice baby',
+        actionText: 'ice cream made',
+        thresholds: [1],
+        baseXp: 18,
+        type: 'one-time',
+        description: 'Craft your first ice cream',
+    },
+
+    // ============================================
+    // ONE-TIME ACHIEVEMENTS - Economy
+    // ============================================
+    {
+        id: 'cha-ching',
+        name: 'cha-ching',
+        statKey: 'coinsEarned',
+        baseName: 'cha-ching',
+        actionText: '@ earned',
+        thresholds: [1],
+        baseXp: 10,
+        type: 'one-time',
+        description: 'Earn your first coins',
+    },
+    {
+        id: 'big-spender',
+        name: 'big spender',
+        statKey: 'coinsSpent',
+        baseName: 'big spender',
+        actionText: '@ spent',
+        thresholds: [1],
+        baseXp: 10,
+        type: 'one-time',
+        description: 'Spend your first coins',
+    },
+    {
+        id: 'stacks-from-8-sides',
+        name: 'stacks from 8 sides',
+        statKey: 'itemsSold',
+        baseName: 'stacks from 8 sides',
+        actionText: 'item sold',
+        thresholds: [1],
+        baseXp: 15,
+        type: 'one-time',
+        description: 'Sell your first item',
+    },
+    {
+        id: 'big-money',
+        name: 'big money',
+        statKey: 'coinsEarned',
+        baseName: 'big money',
+        actionText: '@ earned',
+        thresholds: [1000],
+        baseXp: 50,
+        type: 'one-time',
+        description: 'Earn 1,000 coins',
+    },
+
+    // ============================================
+    // HIDDEN ACHIEVEMENTS
+    // ============================================
+    {
+        id: 'moo-natic',
+        name: 'moo-natic',
+        statKey: 'cowsBred',
+        baseName: 'moo-natic',
+        actionText: 'cows bred',
+        thresholds: [69],
+        baseXp: 69,
+        type: 'one-time',
+        hidden: true,
+        description: 'Nice.',
+    },
+    {
+        id: 'udder-chaos',
+        name: 'udder chaos',
+        statKey: 'chaosTriggered',
+        baseName: 'udder chaos',
+        actionText: 'chaos triggered',
+        thresholds: [1],
+        baseXp: 25,
+        type: 'one-time',
+        hidden: true,
+        description: 'Trigger chaos from the cownsole',
+    },
+    {
+        id: 'moolionaire',
+        name: 'moolionaire',
+        statKey: 'coinsEarned',
+        baseName: 'moolionaire',
+        actionText: '@ earned',
+        thresholds: [1000000],
+        baseXp: 500,
+        type: 'one-time',
+        hidden: true,
+        description: 'Earn 1,000,000 coins',
     },
 ];
 
@@ -202,4 +319,3 @@ export function toRomanNumeral(num: number): string {
     
     return result;
 }
-

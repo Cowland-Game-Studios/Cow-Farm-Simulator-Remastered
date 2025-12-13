@@ -104,6 +104,7 @@ const createMockState = (): GameState => ({
         iceCreamSold: 0,
         cheesecakeSold: 0,
         totalXpEarned: 0,
+        chaosTriggered: 0,
     },
     achievements: { unlocked: {} },
 });
