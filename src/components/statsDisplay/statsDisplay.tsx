@@ -29,12 +29,15 @@ function formatNumber(value: number): string {
 
 /**
  * Custom hook for animated progress bar
+ * @param targetFill - Target number of filled bars
+ * @param animationTrigger - Increment this to trigger animation from 0
  */
-function useAnimatedBar(targetFill: number, shouldAnimate: boolean) {
+function useAnimatedBar(targetFill: number, animationTrigger: number) {
     const [displayedFill, setDisplayedFill] = useState(0);
     const [isAnimating, setIsAnimating] = useState(false);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
     const targetRef = useRef(targetFill);
+    const lastTriggerRef = useRef(0);
     
     // Keep target ref updated
     targetRef.current = targetFill;
@@ -47,45 +50,42 @@ function useAnimatedBar(targetFill: number, shouldAnimate: boolean) {
         }
     }, []);
     
-    // Start animation from 0 to target
-    const startAnimation = useCallback(() => {
-        cleanup();
-        setDisplayedFill(0);
-        setIsAnimating(true);
-        
-        let currentFill = 0;
-        const stepDuration = 50;
-        
-        intervalRef.current = setInterval(() => {
-            currentFill++;
-            const target = targetRef.current;
-            
-            if (currentFill >= target) {
-                setDisplayedFill(target);
-                setIsAnimating(false);
-                cleanup();
-            } else {
-                setDisplayedFill(currentFill);
-            }
-        }, stepDuration);
-    }, [cleanup]);
-    
-    // When shouldAnimate becomes true, start animation
+    // When trigger changes, start animation from 0
     useEffect(() => {
-        if (shouldAnimate) {
-            startAnimation();
+        if (animationTrigger > 0 && animationTrigger !== lastTriggerRef.current) {
+            lastTriggerRef.current = animationTrigger;
+            cleanup();
+            setDisplayedFill(0);
+            setIsAnimating(true);
+            
+            let currentFill = 0;
+            const stepDuration = 50;
+            
+            intervalRef.current = setInterval(() => {
+                currentFill++;
+                const target = targetRef.current;
+                
+                if (currentFill >= target) {
+                    setDisplayedFill(target);
+                    setIsAnimating(false);
+                    cleanup();
+                } else {
+                    setDisplayedFill(currentFill);
+                }
+            }, stepDuration);
         }
+        
         return cleanup;
-    }, [shouldAnimate, startAnimation, cleanup]);
+    }, [animationTrigger, cleanup]);
     
     // When target changes and we're not animating, update immediately
     useEffect(() => {
-        if (!isAnimating && !shouldAnimate) {
+        if (!isAnimating) {
             setDisplayedFill(targetFill);
         }
-    }, [targetFill, isAnimating, shouldAnimate]);
+    }, [targetFill, isAnimating]);
     
-    return { displayedFill, isAnimating, startAnimation };
+    return { displayedFill, isAnimating };
 }
 
 export default function StatsDisplay({ coins = 0, xp = 0, ...props }: StatsDisplayProps): React.ReactElement {
@@ -115,9 +115,8 @@ export default function StatsDisplay({ coins = 0, xp = 0, ...props }: StatsDispl
     const progress = levelInfo.xpForNextLevel > 0 ? levelInfo.xpIntoLevel / levelInfo.xpForNextLevel : 0;
     const targetBarFill = Math.floor(progress * STATS.PROGRESS_BAR_LENGTH);
     
-    // Use animated bar hook - animate when trigger changes and we're in bar mode
-    const shouldAnimateBar = displayMode === 2 && barAnimationTrigger > 0;
-    const { displayedFill, isAnimating: isBarAnimating } = useAnimatedBar(targetBarFill, shouldAnimateBar);
+    // Use animated bar hook - pass trigger to start animation from 0
+    const { displayedFill, isAnimating: isBarAnimating } = useAnimatedBar(targetBarFill, barAnimationTrigger);
     
     // Generate progress bar string
     const progressBar = `${'█'.repeat(displayedFill)}${'░'.repeat(STATS.PROGRESS_BAR_LENGTH - displayedFill)}`;
