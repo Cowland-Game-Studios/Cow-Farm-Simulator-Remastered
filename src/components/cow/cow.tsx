@@ -357,7 +357,7 @@ export default function Cow({ cowId }: CowProps): React.ReactElement | null {
                                 <CowMilkedSVG color={colorString} />
                             )}
                             {cowState === 'producing' && (
-                                <CowSVG color={colorString} fullness={fullness} pollInterval={COW_CONFIG.FULLNESS_POLL_INTERVAL_MS} />
+                                <CowSVG color={colorString} fullness={fullness} />
                             )}
                             {cowState === 'full' && (
                                 <CowToMilkSVG color={colorString} />

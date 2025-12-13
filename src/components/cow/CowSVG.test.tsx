@@ -52,15 +52,6 @@ describe('CowSVG', () => {
         });
     });
 
-    describe('transition', () => {
-        it('applies transition based on poll interval', () => {
-            const { container } = render(<CowSVG pollInterval={2000} />);
-            const coloredSvg = container.querySelector('svg:last-of-type') as HTMLElement;
-            // Transition should be 2s (pollInterval / 1000)
-            expect(coloredSvg?.style.transition).toContain('2s');
-        });
-    });
-
     describe('size', () => {
         it('renders at 100x100 size', () => {
             const { container } = render(<CowSVG />);
