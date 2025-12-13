@@ -33,9 +33,6 @@ function AchievementItem({ progress, showRemaining, onToggle }: AchievementItemP
     
     // Determine CSS classes based on achievement type
     const itemClasses = [styles.achievementItem];
-    if (progress.achievement.type === 'one-time') {
-        itemClasses.push(styles.oneTime);
-    }
     if (progress.achievement.hidden) {
         itemClasses.push(styles.hidden);
     }
