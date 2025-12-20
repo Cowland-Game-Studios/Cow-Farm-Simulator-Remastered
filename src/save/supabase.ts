@@ -6,6 +6,7 @@
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { Database } from './database.types';
 
 // Environment variables
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
@@ -23,11 +24,14 @@ if (!isConfigured && process.env.NODE_ENV === 'development') {
     );
 }
 
+// Typed Supabase client
+export type TypedSupabaseClient = SupabaseClient<Database>;
+
 // Create client (or null if not configured)
-let supabase: SupabaseClient | null = null;
+let supabase: TypedSupabaseClient | null = null;
 
 if (isConfigured) {
-    supabase = createClient(supabaseUrl!, supabaseAnonKey!, {
+    supabase = createClient<Database>(supabaseUrl!, supabaseAnonKey!, {
         auth: {
             persistSession: true,
             autoRefreshToken: true,
@@ -43,7 +47,7 @@ if (isConfigured) {
  * Get the Supabase client instance
  * Returns null if Supabase is not configured
  */
-export function getSupabase(): SupabaseClient | null {
+export function getSupabase(): TypedSupabaseClient | null {
     return supabase;
 }
 

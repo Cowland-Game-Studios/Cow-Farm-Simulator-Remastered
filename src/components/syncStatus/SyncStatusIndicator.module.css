@@ -1,0 +1,119 @@
+/**
+ * SyncStatusIndicator Styles
+ */
+
+.container {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    cursor: default;
+    user-select: none;
+}
+
+.icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+}
+
+/* Status-specific styles */
+
+.idle {
+    background: rgba(128, 128, 128, 0.1);
+    color: #888;
+}
+
+.syncing {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+}
+
+.syncing .icon {
+    animation: spin 1s linear infinite;
+}
+
+.retrying {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+}
+
+.retrying .icon {
+    animation: spin 1s linear infinite;
+}
+
+.synced {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+}
+
+.offline {
+    background: rgba(156, 163, 175, 0.15);
+    color: #6b7280;
+}
+
+.error {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Hover state for more details */
+.container:hover {
+    opacity: 0.9;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .idle {
+        background: rgba(128, 128, 128, 0.2);
+        color: #aaa;
+    }
+
+    .syncing {
+        background: rgba(59, 130, 246, 0.25);
+        color: #60a5fa;
+    }
+
+    .retrying {
+        background: rgba(245, 158, 11, 0.25);
+        color: #fbbf24;
+    }
+
+    .synced {
+        background: rgba(34, 197, 94, 0.25);
+        color: #4ade80;
+    }
+
+    .offline {
+        background: rgba(156, 163, 175, 0.25);
+        color: #9ca3af;
+    }
+
+    .error {
+        background: rgba(239, 68, 68, 0.25);
+        color: #f87171;
+    }
+}
+

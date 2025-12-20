@@ -55,8 +55,12 @@ export {
 
 export type { LoadWithSyncResult } from './saveManager';
 
-// Sync types
+// Sync types and hooks
 export type { SyncStatus, SyncState, SyncResult } from './syncService';
+export { useSyncStatus, getSyncStatusMessage } from './syncService';
+
+// Database types
+export type { Database, GameSaveRow, GameSaveInsert, GameSaveUpdate } from './database.types';
 
 // Auth service
 export {

@@ -9,6 +9,7 @@ import { getCurrentUser } from './authService';
 import { SaveData, SavedGameState, ConfigOverrides, SAVE_CONFIG } from './saveTypes';
 import { extractSaveableState, getCurrentOverrides } from './saveManager';
 import { GameState } from '../engine/types';
+import { Json } from './database.types';
 
 // ============================================
 // TYPES
@@ -70,8 +71,8 @@ export async function saveToSupabase(state: GameState): Promise<SupabaseSaveResu
                 user_id: user.id,
                 saved_at: savedAt,
                 version: SAVE_CONFIG.CURRENT_VERSION,
-                game_state: gameState,
-                config_overrides: configOverrides,
+                game_state: gameState as unknown as Json,
+                config_overrides: configOverrides as unknown as Json,
             }, {
                 onConflict: 'user_id',
             });
@@ -130,8 +131,8 @@ export async function loadFromSupabase(): Promise<SupabaseLoadResult> {
         const saveData: SaveData = {
             version: data.version,
             savedAt: data.saved_at,
-            gameState: data.game_state as SavedGameState,
-            configOverrides: (data.config_overrides as ConfigOverrides) || {},
+            gameState: data.game_state as unknown as SavedGameState,
+            configOverrides: (data.config_overrides as unknown as ConfigOverrides) || {},
         };
 
         return { success: true, data: saveData };
