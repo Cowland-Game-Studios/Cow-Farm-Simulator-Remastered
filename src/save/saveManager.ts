@@ -2,7 +2,12 @@
  * Save Manager
  * 
  * Central orchestration for save/load operations.
- * Handles localStorage persistence with future Supabase preparation.
+ * Handles localStorage persistence with Supabase cloud sync.
+ * 
+ * Architecture: Offline-first
+ * - All saves go to localStorage first (instant, works offline)
+ * - Sync to Supabase happens in background when online
+ * - Timestamp-based conflict resolution (latest wins)
  */
 
 import { GameState } from '../engine/types';
@@ -21,6 +26,16 @@ import {
     applyConfigOverrides,
     validateOverrides,
 } from './configDiff';
+import { isSupabaseConfigured } from './supabase';
+import {
+    sync,
+    initializeSync,
+    getSyncState,
+    onSyncStateChange,
+    SyncState,
+    SyncResult,
+    cleanupSync,
+} from './syncService';
 
 // ============================================
 // MIGRATIONS
@@ -291,5 +306,142 @@ export function getSaveInfo(): { exists: boolean; savedAt?: number; playTime?: n
     } catch {
         return { exists: false };
     }
+}
+
+// ============================================
+// CLOUD SYNC
+// ============================================
+
+// Pending sync state for background sync
+let pendingSync: GameState | null = null;
+let syncTimeout: ReturnType<typeof setTimeout> | null = null;
+const SYNC_DEBOUNCE_MS = 2000; // Debounce cloud syncs to avoid excessive requests
+
+/**
+ * Initialize cloud sync
+ * Call this on app startup
+ */
+export async function initializeCloudSync(): Promise<void> {
+    if (!isSupabaseConfigured()) {
+        return;
+    }
+    await initializeSync();
+}
+
+/**
+ * Cleanup cloud sync
+ * Call this on app unmount
+ */
+export function cleanupCloudSync(): void {
+    if (syncTimeout) {
+        clearTimeout(syncTimeout);
+        syncTimeout = null;
+    }
+    cleanupSync();
+}
+
+/**
+ * Save game with cloud sync
+ * Saves to localStorage immediately, syncs to cloud in background
+ */
+export function saveGameWithSync(state: GameState): SaveResult {
+    // Always save to localStorage first (offline-first)
+    const localResult = saveToLocalStorage(state, currentOverrides);
+    
+    if (!localResult.success) {
+        return localResult;
+    }
+    
+    // Queue cloud sync (debounced)
+    if (isSupabaseConfigured()) {
+        pendingSync = state;
+        
+        if (syncTimeout) {
+            clearTimeout(syncTimeout);
+        }
+        
+        syncTimeout = setTimeout(() => {
+            if (pendingSync) {
+                syncToCloud(pendingSync);
+                pendingSync = null;
+            }
+        }, SYNC_DEBOUNCE_MS);
+    }
+    
+    return localResult;
+}
+
+/**
+ * Sync to cloud (internal)
+ */
+async function syncToCloud(state: GameState): Promise<SyncResult> {
+    return sync(state);
+}
+
+/**
+ * Manual sync trigger
+ * Forces an immediate sync with the cloud
+ */
+export async function syncNow(state: GameState): Promise<SyncResult> {
+    if (!isSupabaseConfigured()) {
+        return { success: false, error: 'Supabase not configured' };
+    }
+    
+    // Clear any pending sync
+    if (syncTimeout) {
+        clearTimeout(syncTimeout);
+        syncTimeout = null;
+    }
+    pendingSync = null;
+    
+    return sync(state);
+}
+
+/**
+ * Load game with cloud sync
+ * Loads from localStorage first, then syncs with cloud
+ * Returns local state and triggers background sync
+ */
+export interface LoadWithSyncResult {
+    gameState: SavedGameState | null;
+    syncPromise: Promise<SyncResult> | null;
+}
+
+export function loadGameWithSync(currentState?: GameState): LoadWithSyncResult {
+    // Load from localStorage first (offline-first)
+    const localState = loadGame();
+    
+    // If Supabase is configured and we have a state to sync with, start background sync
+    let syncPromise: Promise<SyncResult> | null = null;
+    
+    if (isSupabaseConfigured() && currentState) {
+        syncPromise = sync(currentState);
+    }
+    
+    return {
+        gameState: localState,
+        syncPromise,
+    };
+}
+
+/**
+ * Get current sync state
+ */
+export function getCloudSyncState(): SyncState {
+    return getSyncState();
+}
+
+/**
+ * Subscribe to sync state changes
+ */
+export function onCloudSyncStateChange(callback: (state: SyncState) => void): () => void {
+    return onSyncStateChange(callback);
+}
+
+/**
+ * Check if cloud sync is available
+ */
+export function isCloudSyncAvailable(): boolean {
+    return isSupabaseConfigured();
 }
 

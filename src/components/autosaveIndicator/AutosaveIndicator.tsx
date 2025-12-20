@@ -1,12 +1,17 @@
 /**
  * AutosaveIndicator Component
  * 
- * Shows a subtle save icon in the top-right corner when autosaving.
- * Fades in/out smoothly with a spinning animation during save.
+ * Shows a minimal save status in the top-right corner.
  */
 
 import React, { useEffect, useState } from 'react';
 import styles from './AutosaveIndicator.module.css';
+import { 
+    onCloudSyncStateChange, 
+    getCloudSyncState, 
+    isCloudSyncAvailable,
+    SyncStatus 
+} from '../../save';
 
 interface AutosaveIndicatorProps {
     isSaving: boolean;
@@ -16,17 +21,40 @@ interface AutosaveIndicatorProps {
 export function AutosaveIndicator({ isSaving, lastSavedAt }: AutosaveIndicatorProps): React.ReactElement | null {
     const [visible, setVisible] = useState(false);
     const [showCheckmark, setShowCheckmark] = useState(false);
+    const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+    const [showSyncStatus, setShowSyncStatus] = useState(false);
+    
+    // Subscribe to sync state changes
+    useEffect(() => {
+        if (!isCloudSyncAvailable()) return;
+        
+        setSyncStatus(getCloudSyncState().status);
+        
+        const unsubscribe = onCloudSyncStateChange((state) => {
+            setSyncStatus(state.status);
+            
+            if (state.status === 'syncing' || state.status === 'synced' || state.status === 'offline') {
+                setShowSyncStatus(true);
+                
+                if (state.status !== 'syncing') {
+                    const timer = setTimeout(() => {
+                        setShowSyncStatus(false);
+                    }, 2000);
+                    return () => clearTimeout(timer);
+                }
+            }
+        });
+        
+        return unsubscribe;
+    }, []);
     
     useEffect(() => {
         if (isSaving) {
-            // Show immediately when saving starts
             setVisible(true);
             setShowCheckmark(false);
         } else if (lastSavedAt > 0) {
-            // Show checkmark briefly after save completes
             setShowCheckmark(true);
             
-            // Hide after delay
             const hideTimer = setTimeout(() => {
                 setVisible(false);
                 setShowCheckmark(false);
@@ -36,48 +64,38 @@ export function AutosaveIndicator({ isSaving, lastSavedAt }: AutosaveIndicatorPr
         }
     }, [isSaving, lastSavedAt]);
     
-    if (!visible && !isSaving) {
+    const showLocalSave = visible || isSaving;
+    const showCloud = showSyncStatus && isCloudSyncAvailable();
+    
+    if (!showLocalSave && !showCloud) {
         return null;
     }
     
+    // Determine icon and text
+    const getContent = () => {
+        if (syncStatus === 'syncing') {
+            return { icon: '↻', text: 'syncing', spinning: true };
+        }
+        if (isSaving && !showCheckmark) {
+            return { icon: '↻', text: 'saving', spinning: true };
+        }
+        if (syncStatus === 'offline' && showCloud) {
+            return { icon: '✕', text: 'offline', spinning: false };
+        }
+        if (showCheckmark || (syncStatus === 'synced' && showCloud)) {
+            return { icon: '✓', text: 'saved', spinning: false };
+        }
+        return { icon: '✓', text: 'saved', spinning: false };
+    };
+    
+    const { icon, text, spinning } = getContent();
+    const isOffline = syncStatus === 'offline' && showCloud;
+    
     return (
-        <div className={`${styles.container} ${visible ? styles.visible : ''}`}>
-            <div className={`${styles.icon} ${isSaving ? styles.spinning : ''}`}>
-                {showCheckmark ? (
-                    // Checkmark icon
-                    <svg 
-                        viewBox="0 0 24 24" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        strokeWidth="2.5"
-                        strokeLinecap="round" 
-                        strokeLinejoin="round"
-                        className={styles.checkmark}
-                    >
-                        <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                ) : (
-                    // Save/floppy disk icon
-                    <svg 
-                        viewBox="0 0 24 24" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        strokeWidth="2"
-                        strokeLinecap="round" 
-                        strokeLinejoin="round"
-                    >
-                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                        <polyline points="17 21 17 13 7 13 7 21" />
-                        <polyline points="7 3 7 8 15 8" />
-                    </svg>
-                )}
-            </div>
-            <span className={styles.text}>
-                {isSaving ? 'Saving...' : 'Saved'}
-            </span>
-        </div>
+        <p className={`${styles.indicator} ${isOffline ? styles.offline : ''}`}>
+            <span className={spinning ? styles.spinning : ''}>{icon}</span> {text}
+        </p>
     );
 }
 
 export default AutosaveIndicator;
-
