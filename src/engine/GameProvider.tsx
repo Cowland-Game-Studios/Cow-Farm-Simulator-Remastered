@@ -17,6 +17,12 @@ import {
     loadGame as loadGameFromStorage,
     deleteSave,
     SAVE_CONFIG,
+    // Cloud sync
+    initializeCloudSync,
+    cleanupCloudSync,
+    saveGameWithSync,
+    syncNow,
+    isCloudSyncAvailable,
 } from '../save';
 import { GameState, GameAction, Position, Cow, GameResources, Inventory, CraftingQueueItem, ToolState, UIState, DraggingCow, ChaosImpulses, ActiveBoardCraft, Color, Recipe, GameStats, AchievementState } from './types';
 
@@ -187,6 +193,32 @@ export function GameProvider({ children }: GameProviderProps): React.ReactElemen
         stateRef.current = state;
     }, [state]);
 
+    // ---- Initialize Cloud Sync ----
+    useEffect(() => {
+        if (isCloudSyncAvailable()) {
+            initializeCloudSync().then(() => {
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('Cloud sync initialized');
+                }
+                // Trigger initial sync after initialization
+                syncNow(stateRef.current).then((result) => {
+                    if (process.env.NODE_ENV === 'development') {
+                        console.log('Initial sync result:', result);
+                    }
+                    // If server has newer data, reload the page to get it
+                    if (result.success && result.direction === 'pull' && result.data) {
+                        console.log('Server has newer save, reloading...');
+                        window.location.reload();
+                    }
+                });
+            });
+        }
+
+        return () => {
+            cleanupCloudSync();
+        };
+    }, []);
+
     // ---- Perform Save ----
     const performSave = useCallback(() => {
         const now = Date.now();
@@ -197,7 +229,10 @@ export function GameProvider({ children }: GameProviderProps): React.ReactElemen
         
         setSaveLoadState(prev => ({ ...prev, saving: true, error: null }));
         
-        const result = saveGameToStorage(stateRef.current);
+        // Use cloud sync if available, otherwise just local save
+        const result = isCloudSyncAvailable() 
+            ? saveGameWithSync(stateRef.current)
+            : saveGameToStorage(stateRef.current);
         
         if (result.success) {
             lastSaveTimeRef.current = now;
